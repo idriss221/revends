@@ -3040,3 +3040,60 @@ l'URL de `revends-api`, puis `SITE_URL` / `CORS_ORIGINS` l'URL de
   uploadées sont perdues à chaque redéploiement. Pour de la prod réelle :
   plan payant + disque persistant, ou stockage objet (S3/Supabase).
 - `docs/api.md` toujours désynchronisé (`PHOTO_MISSING`, borne min 3).
+
+---
+
+## 21 octobre 2026 (suite 2) — Mise en ligne SANS carte bancaire
+
+### Contrainte
+L'utilisateur refuse toute carte bancaire. Or **Render** (création de
+service web refusée : « Payment information is required »), **Fly.io**
+(fin du free tier pour les nouveaux comptes, essai 7 jours puis carte
+obligatoire) et **Railway** exigent tous une carte à l'inscription. Une
+clé API Render a été fournie et utilisée pour tenter le déploiement :
+l'API Blueprint est en *early access* (inaccessible), et l'API
+`POST /v1/services` a renvoyé l'exigence de carte.
+
+### Nettoyage Render (aucune ressource payante laissée)
+Deux ressources `free` avaient été créées puis **supprimées** (HTTP 204) :
+`revends-db` (Postgres) et `revends-redis` (Key-Value). Vérifié : plus
+aucun `revends-*` sur le compte (seuls les services RANGA subsistent).
+
+### Solution retenue : exposition publique via Cloudflare Tunnel
+Le site tourne sur la machine (stack Docker + nginx, déjà opérationnelle)
+et est exposé en **HTTPS public** par `cloudflared` — **gratuit, sans
+compte, sans carte**.
+
+- URL en ligne : `https://qualifications-vault-proceeding-beliefs.trycloudflare.com`
+- Script rendant l'opération rejouable : `scripts/deploy-tunnel.sh`
+  (`start` | `url` | `status` | `stop` | `logs`), idempotent, avec
+  vérification publique automatique.
+
+### Vérifications publiques (preuves, depuis l'extérieur)
+| Contrôle | Résultat |
+|---|---|
+| Accueil `GET /` | **200** `text/html`, titre « ReVends… » |
+| `GET /api/health` | `{"status":"ok"}` |
+| `GET /api/categories` | 5 mères + 17 enfants = **22** |
+| `GET /api/products` | **total 0** (site neuf) |
+| `GET /categories/<slug>.jpg?v=…` | **22/22 en 200** |
+| Navigateur réel (Playwright) | **7/7 `<img>` chargées** (hero + 5 tuiles + editorial), 0 erreur JS, 0 réponse ≥400 (hors `auth/me`), 0 carte produit |
+
+### Limites assumées de cette mise en ligne (à arbitrer par l'utilisateur)
+1. **URL éphémère** : l'URL `trycloudflare` change si le tunnel redémarre.
+   Pour une URL **stable et gratuite** : domaine + tunnel nommé
+   (`cloudflared tunnel create revends` + `route dns`) — procédure
+   documentée en fin de `scripts/deploy-tunnel.sh`.
+2. **La machine doit rester allumée** et la stack Docker démarrée : le
+   site n'est pas hébergé sur une infra cloud redondante.
+3. **Cold start côté tunnel/nginx** : latence variable selon la connexion.
+4. **Uploads non persistants** à l'échelle d'un vrai hébergement : dépend
+   du volume Docker ; sur cette machine, un volume apporterait la
+   persistance (voir `UPLOAD_DIR`).
+5. **Sécurité** : un quick tunnel n'authentifie pas les visiteurs — c'est
+   voulu pour un site public, mais il faut éviter d'y exposer l'admin.
+
+### Sécurité — clé API Render
+La clé Render a circulé en clair dans la conversation : à **révoquer**
+(`dashboard.render.com/u/settings#api-keys`). Portée : compte
+« My Workspace » contenant le projet RANGA.
