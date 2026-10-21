@@ -1,0 +1,49 @@
+{
+  "name": "revends-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API REST ReVends — plateforme de revente d'articles d'occasion",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "seed:demo": "node --import tsx scripts/seed-demo-catalog.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "job:expire": "tsx src/jobs/expire-reservations.ts",
+    "job:scheduler": "tsx src/jobs/run.ts",
+    "test": "fail=0; for f in test/*.test.ts; do echo \"\\n==== $f ====\"; node --import tsx --import ./test/env.ts --test --test-concurrency=1 --test-force-exit \"$f\" || fail=1; done; echo; if [ \"$fail\" -eq 0 ]; then echo \"✅ ALL SUITES GREEN\"; else echo \"❌ SOME SUITES FAILED\"; exit 1; fi"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "connect-pg-simple": "^10.0.0",
+    "connect-redis": "^10.0.0",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
+    "multer": "^2.4.0",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.0.12",
+    "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.23.0",
+    "redis": "^6.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/express-session": "^1.19.0",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.15.0",
+    "autocannon": "^8.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

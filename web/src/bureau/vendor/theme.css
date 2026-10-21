@@ -1,0 +1,522 @@
+/* =====================================================================
+   REVENDS — DESIGN SYSTEM · DEUX THÈMES (LIGHT + DARK)
+   ---------------------------------------------------------------------
+   Chargé EN DERNIER (voir index.html), après styles.css + glass.css +
+   editorial.css.
+
+   Principe : DESIGN TOKENS SÉMANTIQUES.
+   Tous les composants existants s'appuient déjà sur des jetons
+   (--ink, --ivory, --terra, --line, --paper, --beige…). On redéfinit
+   CES MÊMES JETONS à partir de tokens sémantiques, une seule fois par
+   thème : le passage clair/sombre ne réécrit aucun composant.
+
+     ☀ LIGHT  « WHITE & BURGUNDY »   blanc #FFFFFF · bordeaux #6B1728
+     ☾ DARK   « BURGUNDY NIGHT »    warm charcoal · brown · burgundy · ivory
+
+   Le sélecteur de thème vit sur <html data-theme="light|dark">.
+   Persistance : localStorage "rv:theme" (voir app.js + no-flash head).
+   Login (glassmorphism) : INTACT — aucune règle .auth ici.
+   ===================================================================== */
+
+/* =====================================================================
+   PARTIE 1 — TOKENS SÉMANTIQUES · LIGHT « WHITE & BURGUNDY »
+   ===================================================================== */
+:root,
+:root[data-theme="light"]{
+  color-scheme:light;
+
+  /* primitives sémantiques — LIGHT strict : BLANC + BORDEAUX uniquement.
+     Aucune couleur de surface supplémentaire (ni beige, ni crème, ni gris coloré) :
+     tout est #FFFFFF, seules des bordures NEUTRES séparent les blocs. */
+  --color-bg-primary:#FFFFFF;
+  --color-bg-secondary:#FFFFFF;
+  --color-surface:#FFFFFF;
+  --color-surface-soft:#FFFFFF;
+  --color-surface-elevated:#FFFFFF;
+  --color-surface-hover:#FFFFFF;
+  --color-text-primary:#171514;
+  --color-text-secondary:#6E6E6E;
+  --color-text-tertiary:#9A9A9A;
+  --color-border:#ECECEC;
+  --color-border-strong:#DEDEDE;
+  --color-accent:#6B1728;
+  --color-accent-hover:#52111F;
+  --color-button-primary:#6B1728;
+  --color-button-primary-hover:#52111F;
+  --color-accent-soft:#FFFFFF;
+  --color-on-accent:#FFFFFF;
+  --color-overlay:rgba(23,21,20,.35);
+  --color-shadow:rgba(23,21,20,.08);
+  --color-champagne:#CFCFCF;
+
+  /* --- map des jetons historiques (utilisés par styles.css) --- */
+  --white:#FFFFFF;          /* blanc littéral (texte sur accent/foncé) */
+  --ivory:#FFFFFF;
+  --ivory-2:#FFFFFF;
+  --ink:var(--color-text-primary);
+  --muted:var(--color-text-secondary);
+  --muted-2:var(--color-text-tertiary);
+  --terra:var(--color-accent);
+  --terra-dark:var(--color-accent-hover);
+  --brown:#171514;
+  --brown-2:#171514;
+  --champ:#CFCFCF;
+  --line:var(--color-border);
+  --line-2:#EDEDED;
+
+  /* jetons introduits par editorial.css */
+  --paper:var(--color-bg-primary);
+  --paper-2:var(--color-bg-secondary);
+  --beige:var(--color-surface-soft);
+  --bordeaux:var(--color-accent);
+  --bordeaux-dark:var(--color-accent-hover);
+  --charbon:var(--color-text-primary);
+  --gris:var(--color-text-secondary);
+  --champagne:var(--color-border-strong);
+
+  color-scheme:light;
+}
+
+/* =====================================================================
+   PARTIE 2 — TOKENS SÉMANTIQUES · DARK « BURGUNDY NIGHT »
+   ===================================================================== */
+:root[data-theme="dark"]{
+  --color-bg-primary:#11100F;
+  --color-bg-secondary:#161413;
+  --color-surface:#191716;
+  --color-surface-soft:#211D1B;
+  --color-surface-elevated:#211D1B;
+  --color-surface-hover:#282321;
+
+  --color-text-primary:#F7F3ED;
+  --color-text-secondary:#AAA19A;
+  --color-text-tertiary:#766F69;
+
+  --color-border:#292522;
+  --color-border-strong:#352F2C;
+
+  --color-accent:#8F2940;
+  --color-accent-hover:#A83A52;
+  --color-button-primary:#8F2940;
+  --color-button-primary-hover:#A83A52;
+  --color-accent-soft:#211D1B;
+
+  --color-overlay:rgba(0,0,0,.60);
+  --color-shadow:rgba(0,0,0,.55);
+
+  /* --- remap des jetons legacy pour le sombre ----
+     --white reste blanc pur (texte sur accents) ; tout le reste bascule. */
+  --white:#FFFFFF;
+  --ivory:#F7F3ED;
+  --ivory-2:#211D1B;
+  --ink:#F7F3ED;
+  --muted:#AAA19A;
+  --muted-2:#766F69;
+  --terra:#8F2940;
+  --terra-dark:#A83A52;
+  --brown:#F7F3ED;
+  --brown-2:#11100F;
+  --champ:#D8C5AB;          /* beige premium : accent chaud, identique */
+  --line:#292522;
+  --line-2:#292522;
+
+  --paper:#11100F;
+  --paper-2:#161413;
+  --beige:#211D1B;
+  --bordeaux:#8F2940;
+  --bordeaux-dark:#A83A52;
+  --charbon:#F7F3ED;
+  --gris:#AAA19A;
+  --champagne:#352F2C;
+
+  color-scheme:dark;
+}
+
+/* =====================================================================
+   PARTIE 3 — TRANSITION DE THÈME (douce, 250–400 ms, jamais un flash)
+   ===================================================================== */
+.theme-anim,
+.theme-anim *:not(.i),
+.theme-anim *::before,
+.theme-anim *::after{
+  transition:background-color .3s var(--ease),border-color .3s var(--ease),
+    color .3s var(--ease),fill .3s var(--ease),box-shadow .3s var(--ease) !important;
+}
+
+/* =====================================================================
+   PARTIE 4 — LIGHT : alignements sur la spec (blanc dominant)
+   ===================================================================== */
+header.site{border-bottom:1px solid var(--color-border)}
+body.home header.site.solid{border-bottom-color:var(--color-border)}
+.search input{background:var(--color-bg-secondary);border-color:var(--color-border-strong)}
+.search input:focus{border-color:var(--color-accent)}
+.tag-nav b,.top-strip b{color:var(--color-accent)}
+
+/* Cartes produit — LIGHT : blanches, bordure fine, image #FAF8F5 (spec) */
+.card{background:var(--color-surface);border-color:var(--color-border);
+  box-shadow:0 1px 2px rgba(23,21,20,.03)}
+.card:hover{background:var(--color-surface-hover)}
+.card .im{background:var(--color-bg-secondary);box-shadow:0 0 0 1px var(--color-border)}
+.card .price{color:var(--color-text-primary)}
+.card .by{color:var(--color-text-tertiary)}
+
+/* =====================================================================
+   PARTIE 4b — CARTES PRODUIT · structure & proportions (partagé)
+   Référence : 2 colonnes mobiles · photo dominante · carte blanche
+   compacte · cœur outline dans un cercle blanc.
+   ===================================================================== */
+
+/* Grille : respiration régulière (mobile 2 col.). */
+.grid{gap:clamp(28px,3.4vw,52px) clamp(18px,2.2vw,30px)}
+@media (max-width:760px){
+  .grid,.grid.three{grid-template-columns:repeat(2,1fr);gap:28px 16px}
+}
+/* Aucune carte plus large qu'une autre (fin du 1er item « héro »). */
+.grid.three .card:first-child{grid-column:auto}
+
+/* Carte : compacte, légèrement arrondie, sans décoration. */
+.card{border-radius:14px;padding:8px 8px 14px}
+/* La photo occupe la majorité de la carte — cadrage UNIFORME (portrait). */
+.card .im,.grid .card .im,.grid.three .card .im,.grid.three .card:first-child .im{
+  aspect-ratio:3/4;border-radius:10px}
+.card .body{padding:12px 2px 0}
+.card .name{font:400 16.5px/1.3 var(--serif);margin-top:6px}
+.card .cat-lbl{font:700 10px/1 var(--sans);letter-spacing:.18em}
+.card .meta{margin-top:5px}
+.card .price{font:700 15px/1.3 var(--sans);margin-top:8px}
+.card .by{margin-top:5px}
+
+/* Mobile : partie basse plus compacte → la photo reste l'élément dominant. */
+@media (max-width:760px){
+  .card .body{padding-top:10px}
+  .card .name{font-size:15px;line-height:1.28;margin-top:5px}
+  .card .cat-lbl{font-size:9.5px}
+  .card .meta{font-size:11.5px;margin-top:4px}
+  .card .price{font-size:14px;margin-top:6px}
+  .card .by{display:none}
+}
+
+/* Cœur favori : petit cercle blanc, cœur CONTOUR (jamais plein par défaut),
+   bordeaux + plein une fois le produit ajouté. */
+.card .fav{width:34px;height:34px;top:10px;right:10px;background:#FFFFFF;
+  -webkit-backdrop-filter:none;backdrop-filter:none;border:0;
+  box-shadow:0 1px 3px rgba(23,21,20,.20);color:var(--color-text-primary);opacity:1}
+.card .fav:hover{background:#FFFFFF;transform:translateY(-1px);
+  box-shadow:0 3px 9px rgba(23,21,20,.24)}
+.card .fav .i{width:16px;height:16px}
+.card .fav[aria-pressed="true"]{color:var(--color-accent)}
+.card .fav[aria-pressed="true"] .i{fill:var(--color-accent)}
+
+/* =====================================================================
+   PARTIE 5 — DARK : surcharges ciblées (bandes inversées & surfaces)
+   ===================================================================== */
+
+/* --- Fond & navbar --- */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] body.home{background-color:var(--color-bg-primary)}
+:root[data-theme="dark"] header.site{
+  background:var(--color-bg-primary);border-bottom:1px solid var(--color-border)}
+:root[data-theme="dark"] body.home header.site.solid{
+  background:var(--color-bg-primary);border-bottom-color:var(--color-border)}
+:root[data-theme="dark"] .top-strip{
+  background:var(--color-bg-secondary);color:var(--color-text-secondary);
+  border-bottom:1px solid var(--color-border)}
+:root[data-theme="dark"] .search input{
+  background:var(--color-surface);border-color:var(--color-border);
+  color:var(--color-text-primary)}
+:root[data-theme="dark"] .search input::placeholder{color:var(--color-text-tertiary)}
+:root[data-theme="dark"] .search input:focus{
+  border-color:var(--color-accent-hover);box-shadow:0 0 0 3px rgba(168,58,82,.22)}
+:root[data-theme="dark"] .search .i{color:var(--color-text-tertiary)}
+:root[data-theme="dark"] .ic:hover,
+:root[data-theme="dark"] .burger:hover{background:var(--color-surface)}
+:root[data-theme="dark"] nav.cats a{color:var(--color-text-primary)}
+:root[data-theme="dark"] nav.cats a::after{background:var(--color-accent-hover)}
+
+/* --- Boutons (default + light reverse) --- */
+:root[data-theme="dark"] .btn{
+  --bg:var(--color-button-primary);--bd:var(--color-button-primary);--fg:#F7F3ED}
+:root[data-theme="dark"] .btn:hover{
+  --bg:var(--color-button-primary-hover);--bd:var(--color-button-primary-hover)}
+:root[data-theme="dark"] .btn.terra{--bg:var(--color-accent);--bd:var(--color-accent);--fg:#F7F3ED}
+:root[data-theme="dark"] .btn.terra:hover{--bg:var(--color-accent-hover);--bd:var(--color-accent-hover)}
+:root[data-theme="dark"] .btn.ghost{
+  --bg:transparent;--fg:var(--color-text-primary);--bd:var(--color-border-strong)}
+:root[data-theme="dark"] .btn.ghost:hover{
+  --bg:var(--color-accent);--bd:var(--color-accent);--fg:#F7F3ED}
+:root[data-theme="dark"] .btn.light{
+  --bg:var(--color-surface-soft);--fg:var(--color-text-primary);--bd:var(--color-border-strong)}
+:root[data-theme="dark"] .btn.light:hover{
+  --bg:var(--color-surface-hover);--bd:var(--color-border-strong)}
+:root[data-theme="dark"] .skip{background:var(--color-accent);color:#F7F3ED}
+
+/* --- Cartes produit --- */
+:root[data-theme="dark"] .card{
+  background:var(--color-surface);border-color:var(--color-border);
+  box-shadow:0 1px 0 rgba(0,0,0,.25)}
+:root[data-theme="dark"] .card:hover{
+  background:var(--color-surface-hover);box-shadow:0 18px 40px -32px rgba(0,0,0,.7)}
+:root[data-theme="dark"] .card .im{background:var(--color-surface-soft)}
+:root[data-theme="dark"] .card .fav{
+  background:#FFFFFF;color:#171514;border-color:transparent;
+  box-shadow:0 1px 3px rgba(0,0,0,.5)}
+:root[data-theme="dark"] .card .fav:hover{background:#FFFFFF;
+  box-shadow:0 3px 9px rgba(0,0,0,.55)}
+:root[data-theme="dark"] .card .fav[aria-pressed="true"]{color:var(--color-accent-hover)}
+:root[data-theme="dark"] .card .fav[aria-pressed="true"] .i{fill:var(--color-accent-hover)}
+:root[data-theme="dark"] .card .cond-flag{
+  background:var(--color-surface-soft);color:var(--champ)}
+:root[data-theme="dark"] .card .flag{background:var(--color-accent);color:#F7F3ED}
+:root[data-theme="dark"] .card .by{color:var(--color-text-tertiary)}
+:root[data-theme="dark"] .card .price{color:var(--color-text-primary)}
+:root[data-theme="dark"] .cat{background:var(--color-surface-soft)}
+
+/* --- Bandes inversées --- */
+:root[data-theme="dark"] .editorial{
+  background:var(--color-surface);color:var(--color-text-primary);
+  border-block:1px solid var(--color-border)}
+:root[data-theme="dark"] .editorial .pic{background:var(--color-surface-elevated)}
+:root[data-theme="dark"] .editorial p{color:var(--color-text-secondary)}
+:root[data-theme="dark"] .commission{background:var(--color-surface-elevated);color:var(--color-text-primary)}
+:root[data-theme="dark"] .commission b{color:var(--champ)}
+:root[data-theme="dark"] .commission .net{color:var(--color-text-primary)}
+:root[data-theme="dark"] .mmenu{background:var(--color-bg-primary);color:var(--color-text-primary)}
+:root[data-theme="dark"] .mmenu .mhead,
+:root[data-theme="dark"] .mmenu .mgrid a,
+:root[data-theme="dark"] .mmenu .mlinks a,
+:root[data-theme="dark"] .mmenu .mlinks .mlogout{border-color:var(--color-border-subtle,var(--color-border))}
+:root[data-theme="dark"] .mmenu .mgrid a{color:var(--color-text-primary)}
+:root[data-theme="dark"] .mmenu .mlinks a{color:var(--color-text-secondary)}
+:root[data-theme="dark"] .mmenu .mclose{border-color:var(--color-border-strong);color:var(--color-text-primary)}
+:root[data-theme="dark"] .toast{background:var(--color-text-primary);color:var(--color-bg-primary)}
+:root[data-theme="dark"] .toast .i{color:var(--color-accent)}
+
+/* --- Filtres / champs --- */
+:root[data-theme="dark"] .sel,
+:root[data-theme="dark"] .inp,
+:root[data-theme="dark"] .opt,
+:root[data-theme="dark"] .chip,
+:root[data-theme="dark"] .cbtn,
+:root[data-theme="dark"] .qty{
+  background:var(--color-surface);border-color:var(--color-border);color:var(--color-text-primary)}
+:root[data-theme="dark"] .sel:focus,
+:root[data-theme="dark"] .inp:focus{
+  border-color:var(--color-accent-hover);box-shadow:0 0 0 3px rgba(168,58,82,.22)}
+:root[data-theme="dark"] .opt:hover,
+:root[data-theme="dark"] .chip:hover,
+:root[data-theme="dark"] .cbtn:hover{border-color:var(--color-border-strong)}
+:root[data-theme="dark"] .opt.on,
+:root[data-theme="dark"] .chip.on,
+:root[data-theme="dark"] .cbtn.primary,
+:root[data-theme="dark"] .cbtn.facet.on{
+  background:var(--color-accent);color:#F7F3ED;border-color:var(--color-accent)}
+:root[data-theme="dark"] .fgroup{border-top-color:var(--color-border)}
+:root[data-theme="dark"] .fgroup>h3{color:var(--color-text-tertiary)}
+:root[data-theme="dark"] .sel option{background:var(--color-surface);color:var(--color-text-primary)}
+
+/* --- Fiche produit --- */
+:root[data-theme="dark"] .gallery .main,
+:root[data-theme="dark"] .thumbs button,
+:root[data-theme="dark"] .line .t{background:var(--color-surface-soft)}
+:root[data-theme="dark"] .thumbs button[aria-current="true"]{border-color:var(--color-accent-hover)}
+:root[data-theme="dark"] .buy .tag{background:var(--color-surface-soft);color:var(--champ);border-color:var(--color-border-strong)}
+:root[data-theme="dark"] .buy h1{color:var(--color-text-primary)}
+:root[data-theme="dark"] .buy-price .price{color:var(--color-text-primary)}
+:root[data-theme="dark"] .buy-price .save{background:rgba(168,58,82,.14);color:var(--color-accent-hover)}
+:root[data-theme="dark"] .buy .desc{color:var(--color-text-secondary)}
+:root[data-theme="dark"] .spec dt{color:var(--color-text-tertiary)}
+:root[data-theme="dark"] .spec dd{color:var(--color-text-primary)}
+:root[data-theme="dark"] .confbox{background:var(--color-surface);border-color:var(--color-border)}
+:root[data-theme="dark"] .confbox .row{color:var(--color-text-secondary)}
+:root[data-theme="dark"] .confbox b{color:var(--color-text-primary)}
+:root[data-theme="dark"] .note{border-left-color:var(--color-accent);color:var(--color-text-secondary)}
+:root[data-theme="dark"] .seller{border-top-color:var(--color-border)}
+:root[data-theme="dark"] .seller .who-name{color:var(--color-text-primary)}
+:root[data-theme="dark"] .seller .av,
+:root[data-theme="dark"] .acct .who .av{color:var(--champ)}
+:root[data-theme="dark"] .vbadge{border-color:var(--champ);color:var(--champ)}
+:root[data-theme="dark"] .seller .facts{color:var(--color-text-secondary)}
+:root[data-theme="dark"] .seller .facts b{color:var(--color-accent-hover)}
+
+/* --- Panier / commande --- */
+:root[data-theme="dark"] .box,
+:root[data-theme="dark"] .stat{background:var(--color-surface);border-color:var(--color-border)}
+:root[data-theme="dark"] .acct .who{background:var(--color-surface);border-color:var(--color-border)}
+:root[data-theme="dark"] .acct nav a{color:var(--color-text-secondary)}
+:root[data-theme="dark"] .acct nav a:hover{background:var(--color-surface);color:var(--color-text-primary)}
+:root[data-theme="dark"] .acct nav a.on{background:var(--color-accent);color:#F7F3ED}
+:root[data-theme="dark"] .line{border-bottom-color:var(--color-border)}
+:root[data-theme="dark"] .sum .r.total{border-top-color:var(--color-border)}
+:root[data-theme="dark"] .qty button:hover{background:var(--color-surface-hover);color:var(--color-accent-hover)}
+:root[data-theme="dark"] .linkbtn:hover{color:var(--color-accent-hover)}
+
+/* --- Publier --- */
+:root[data-theme="dark"] .steps{border-bottom-color:var(--color-border)}
+:root[data-theme="dark"] .steps .s i{border-color:var(--color-border-strong)}
+:root[data-theme="dark"] .steps .s.done{color:var(--color-text-secondary)}
+:root[data-theme="dark"] .steps .s.done i{background:var(--color-surface-hover);color:var(--color-text-primary);border-color:var(--color-border-strong)}
+:root[data-theme="dark"] .steps .s.cur i{background:var(--color-accent);color:#F7F3ED;border-color:var(--color-accent)}
+:root[data-theme="dark"] .drop{background:var(--color-surface);border-color:var(--color-border-strong)}
+:root[data-theme="dark"] .drop:hover{background:var(--color-surface-soft);border-color:var(--color-accent-hover)}
+:root[data-theme="dark"] .drop .i,
+:root[data-theme="dark"] .drop label{color:var(--color-accent-hover)}
+:root[data-theme="dark"] .pv img{border-color:var(--color-border)}
+:root[data-theme="dark"] .preview-card .im{background:var(--color-surface-soft)}
+
+/* --- Empty & skeleton --- */
+:root[data-theme="dark"] .empty{background:var(--color-bg-secondary);border-color:var(--color-border)}
+:root[data-theme="dark"] .empty .i{color:var(--champ)}
+
+/* --- Pied de page --- */
+:root[data-theme="dark"] footer.site{
+  background:var(--color-bg-secondary);color:var(--color-text-secondary);
+  border-top:1px solid var(--color-border)}
+:root[data-theme="dark"] footer .top{border-bottom-color:var(--color-border)}
+:root[data-theme="dark"] footer .logo{color:var(--color-text-primary)}
+:root[data-theme="dark"] footer .tagline{color:var(--champ)}
+:root[data-theme="dark"] footer .col h4{color:var(--color-text-primary)}
+:root[data-theme="dark"] footer .col a{color:var(--color-text-secondary)}
+:root[data-theme="dark"] footer .col a:hover{color:var(--color-text-primary)}
+:root[data-theme="dark"] footer .bottom .socials a{
+  border-color:var(--color-border-strong);color:var(--color-text-secondary)}
+:root[data-theme="dark"] footer .bottom .socials a:hover{
+  background:var(--color-accent);color:#F7F3ED;border-color:var(--color-accent)}
+
+/* --- Motifs « couture » : lisibles sur fond sombre --- */
+:root[data-theme="dark"] .eyebrow::before,
+:root[data-theme="dark"] .buy h1::after{
+  background:repeating-linear-gradient(90deg,var(--champ) 0 4px,transparent 4px 7px)}
+:root[data-theme="dark"] .empty .i{color:var(--champ)}
+
+/* --- Mobile : panneaux --- */
+@media (max-width:760px){
+  :root[data-theme="dark"] .chipbar,
+  :root[data-theme="dark"] .filters,
+  :root[data-theme="dark"] .fx-foot,
+  :root[data-theme="dark"] .sheet{background:var(--color-surface);border-color:var(--color-border)}
+  :root[data-theme="dark"] .fx-head{border-bottom-color:var(--color-border)}
+  :root[data-theme="dark"] .fx-head .grab{background:var(--color-border-strong)}
+  :root[data-theme="dark"] .sopt{border-bottom-color:var(--color-border);color:var(--color-text-primary)}
+  :root[data-theme="dark"] .sopt.on{color:var(--color-accent-hover)}
+  :root[data-theme="dark"] .cbtn{background:var(--color-surface);border-color:var(--color-border)}
+}
+
+/* =====================================================================
+   PARTIE 5b — LOGIN : champs sur surface CLAIRE, quel que soit le thème
+   (la page de connexion est visuellement autonome : le fond photo peut être
+   sombre comme clair, une icône « de la couleur du champ » en devenait
+   invisible → on garantit ici un contraste constant).
+   ===================================================================== */
+.auth .inp,
+:root[data-theme="dark"] .auth .inp{
+  background:#FFFFFF;border-color:rgba(23,21,19,.14);color:var(--ink)}
+:root[data-theme="dark"] .auth .inp:hover{border-color:rgba(107,23,40,.45)}
+:root[data-theme="dark"] .auth .inp:focus{
+  border-color:var(--bordeaux);box-shadow:0 0 0 4px rgba(107,23,40,.15)}
+.auth .ctl .fi,
+:root[data-theme="dark"] .auth .ctl .fi{color:var(--bordeaux)}
+.auth .ctl label,
+:root[data-theme="dark"] .auth .ctl label{color:rgba(23,21,19,.55)}
+.auth .ctl .inp:focus+label,
+.auth .ctl .inp:not(:placeholder-shown)+label,
+:root[data-theme="dark"] .auth .ctl .inp:focus+label,
+:root[data-theme="dark"] .auth .ctl .inp:not(:placeholder-shown)+label{color:var(--bordeaux)}
+:root[data-theme="dark"] .auth .toggle{color:rgba(23,21,19,.45)}
+
+/* =====================================================================
+   PARTIE 6 — BOUTON DE THÈME (☼ / ☾)
+   ===================================================================== */
+.themebtn{position:relative}
+.themebtn .i{transition:transform .3s var(--ease)}
+.theme-anim .themebtn .i{transition:none}
+.themebtn:active .i{transform:rotate(-22deg)}
+.mmenu .mlinks .themebtn{
+  display:flex;align-items:center;gap:13px;width:100%;padding:14px 0;text-align:left;
+  font:600 15px/1 var(--sans);color:inherit;
+  border-bottom:1px solid rgba(247,243,236,.09);cursor:pointer}
+:root[data-theme="dark"] .mmenu .mlinks .themebtn{border-color:var(--color-border)}
+.mmenu .mlinks .themebtn .i{color:var(--terra);flex:none}
+
+/* Menu mobile : CTA & icônes d'univers (toujours sur fond sombre) */
+:root[data-theme="dark"] .mmenu .mcta{background:var(--color-accent);box-shadow:0 14px 34px -16px rgba(0,0,0,.65)}
+:root[data-theme="dark"] .mmenu .mgrid a .i{color:var(--color-accent-hover)}
+:root[data-theme="dark"] .mmenu .mlink-all{color:var(--color-accent-hover)}
+
+/* =====================================================================
+   PARTIE 6b — Micro-annotation éditoriale (identité REVENDS)
+   ===================================================================== */
+.micro-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;
+  font:700 10.5px/1 var(--sans);letter-spacing:.28em;text-transform:uppercase;
+  color:var(--color-text-tertiary)}
+.micro-eyebrow::before{content:"";width:22px;height:1px;background:var(--color-accent)}
+:root[data-theme="dark"] .micro-eyebrow::before{background:var(--color-accent-hover)}
+
+/* =====================================================================
+   PARTIE 8 — LOADER SIGNATURE : « LE CŒUR COUTURE »
+   Un cœur qui se coud (surpiqûres) puis se remplit et bat. Utilisé
+   pour le splash d'ouverture (grand format) et les micro-chargements
+   (mini-cœur pulsatnt sur les boutons).
+   ===================================================================== */
+:root{ --rv-accent: var(--color-accent); }
+:root[data-theme="dark"]{ --rv-accent: #A83A52; }
+
+/* Cœur couture — grand format */
+.rv-heart{ width:104px; height:98px; display:block; overflow:visible; }
+.rv-heart .hp{
+  fill:var(--rv-accent); fill-opacity:0;
+  stroke:var(--rv-accent); stroke-width:3.4;
+  stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:6 6;
+  transform-box:fill-box; transform-origin:center;
+  filter:drop-shadow(0 12px 20px rgba(107,23,40,.28));
+  animation:rvHeart 3.1s cubic-bezier(.5,.05,.3,1) infinite;
+}
+.rv-heart .shine{
+  fill:none; stroke:rgba(255,255,255,.85); stroke-width:2;
+  stroke-linecap:round; opacity:0;
+  animation:rvShine 3.1s ease-in-out infinite;
+}
+@keyframes rvHeart{
+  0%     { stroke-dashoffset:430; fill-opacity:0; transform:scale(1) }
+  52%    { stroke-dashoffset:0;   fill-opacity:0; transform:scale(1) }
+  66%    { fill-opacity:1;        transform:scale(1.09) }
+  74%    { transform:scale(1) }
+  83%    { transform:scale(1.06) }
+  90%    { transform:scale(1) }
+  100%   { stroke-dashoffset:0; fill-opacity:0; transform:scale(1) }
+}
+@keyframes rvShine{ 0%,66%{opacity:0} 74%{opacity:.85} 86%,100%{opacity:0} }
+
+/* Splash d'ouverture */
+.rv-splash{
+  position:fixed; inset:0; z-index:9999;
+  display:grid; place-items:center;
+  background:var(--color-bg-primary);
+  transition:opacity .5s var(--ease);
+}
+.rv-splash.is-out{ opacity:0; pointer-events:none; }
+.rv-splash__box{ display:flex; flex-direction:column; align-items:center; gap:22px; }
+.rv-splash__cap{
+  font:700 11px/1 var(--sans); letter-spacing:.5em; text-indent:.5em;
+  text-transform:uppercase; color:var(--color-text-secondary);
+  animation:rvCap var(--t-slow) var(--ease) both;
+}
+@keyframes rvCap{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+
+/* Mini-cœur — chargements internes (boutons) */
+.rv-mini{ width:16px; height:16px; transform-origin:center; }
+@keyframes rvMiniPulse{ 0%,100%{ transform:scale(1); opacity:1 } 50%{ transform:scale(.76); opacity:.6 } }
+.auth .form .btn.block .rv-mini{ display:none; }
+.auth .form .btn.block.loading .rv-mini{ display:inline-block; animation:rvMiniPulse .8s ease-in-out infinite; }
+
+/* =====================================================================
+   PARTIE 7 — MOUVEMENT RÉDUIT
+   ===================================================================== */
+@media (prefers-reduced-motion:reduce){
+  .theme-anim,.theme-anim *{transition:none !important}
+  .themebtn .i{transition:none}
+  .rv-heart .hp{animation:none; stroke-dashoffset:0; fill-opacity:1}
+  .rv-heart .shine{animation:none; opacity:0}
+  .rv-splash__cap{animation:none}
+  .rv-splash{transition:none}
+  .rv-mini{animation:none !important}
+}

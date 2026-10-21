@@ -1,0 +1,684 @@
+/* =====================================================================
+   CORRECTIFS ÉCRITS À LA MAIN (Option A — fidélité Bureau/main)
+   ---------------------------------------------------------------------
+   `bureau.css` est GÉNÉRÉ : il est scopé sous `.market-site` à partir de
+   `Bureau/main/assets/{styles,editorial,theme}.css` et ne doit JAMAIS être
+   édité à la main (régénérer via le script de scoping).
+   Toute règle qui n'existe PAS dans la maquette mais que la recette
+   exige vit donc ICI. Ce fichier est importé APRÈS `bureau.css`
+   (`main.tsx`) pour pouvoir compléter les jetons de la maquette.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. WCAG 2.5.8 — cible tactile ≥ 24×24 px
+   ---------------------------------------------------------------------
+   Le wordmark du header est un `<a class="logo">` dont la hauteur de ligne
+   tombe à 22 px sous 760 px (`--logo: 22px`, `line-height: 1`). Mesuré sur
+   les 5 largeurs du DA : c'est le SEUL contrôle sous le seuil.
+   On agrandit la ZONE DE CLIC, pas la taille d'affichage.
+
+   ⚠️ On utilise `display:flex` et non `inline-flex` : le test e2e exclut
+   légitimement les liens dont `display` contient `inline` (liens de texte
+   inline, exception WCAG). Un `inline-flex` ferait disparaître le défaut
+   du rapport au lieu de le corriger.
+   --------------------------------------------------------------------- */
+.market-site header.site .bar .logo,
+.market-site .mmenu .mhead .logo {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+/* Les « lien-flèche » de section (`.link-arrow`) mesurent 22 px de haut :
+   `font:600 12px/1` + `padding-bottom:5px` + `border-bottom` = 12+5+1 = 18… 22
+   selon le navigateur. Mesuré par la recette sur / à 1440px :
+   « Parcourir la sélection » 212×22 · « Tout voir » 101×22 · « Voir tout »
+   101×22. On agrandit la ZONE DE CLIC, sans toucher au rendu (mêmes raisons
+   que le wordmark ci-dessus, et même exclusion `inline` du test WCAG).
+   --------------------------------------------------------------------- */
+.market-site .link-arrow {
+  min-height: 24px;
+  padding-top: 3px;
+}
+
+/* ---------------------------------------------------------------------
+   2. Pied de page — contrôle `<button>` (déconnexion)
+   ---------------------------------------------------------------------
+   La maquette rend la colonne « Mon compte » avec des `<a>` ; l'app React
+   y ajoute un bouton de déconnexion (visibilité session + confirmation).
+   Il reprend exactement la mise en forme des liens de colonne, dans les
+   deux thèmes (`--gris` / `--ink` sont redéfinis par la maquette).
+   --------------------------------------------------------------------- */
+.market-site footer .col button {
+  display: block;
+  width: 100%;
+  padding: 7px 0;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--gris);
+  cursor: pointer;
+  transition: color var(--t) var(--ease);
+}
+.market-site footer .col button:hover {
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------------
+   3. Suggestions de recherche (CA-V5-136)
+   ---------------------------------------------------------------------
+   La maquette n'a PAS de suggestions (statique, sans backend) : il n'existe
+   donc aucune règle pour le panneau dans `bureau.css`. On le style ici avec
+   les SEULS jetons de la maquette (aucune couleur inventée), pour qu'il
+   appartienne au même langage visuel que le reste du chrome.
+   --------------------------------------------------------------------- */
+.market-site .search .sug {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 70;
+  padding: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--sh);
+  max-height: min(70vh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* En-tête de groupe — Articles / Catégories / Marques */
+.market-site .search .sug-group {
+  padding: 12px 12px 6px;
+  font: 700 10px/1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* Ligne de suggestion : `<Link role="option">` (navigation réelle) */
+.market-site .search .sug-opt {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  transition: background-color var(--t-fast) var(--ease);
+}
+.market-site .search .sug-opt:hover,
+.market-site .search .sug-opt.on {
+  background: var(--line-2);
+}
+/* État actif clavier : double indice (fond + liseré), jamais le seul color */
+.market-site .search .sug-opt.on {
+  box-shadow: inset 3px 0 0 0 var(--terra);
+}
+
+.market-site .search .sug-thumb {
+  display: grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  overflow: hidden;
+  background: var(--ivory-2);
+  border-radius: 8px;
+  color: var(--muted-2);
+}
+.market-site .search .sug-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.market-site .search .sug-body {
+  min-width: 0;
+  flex: 1;
+}
+.market-site .search .sug-label {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.market-site .search .sug-meta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--terra);
+}
+.market-site .search .sug-type {
+  flex: none;
+  font: 700 10px/1 var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* États muets : chargement, vide (CA-V5-143), erreur — jamais un panneau vide */
+.market-site .search .sug-note {
+  padding: 14px 12px;
+}
+.market-site .search .sug-note strong {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+}
+.market-site .search .sug-note span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.market-site .search .sug-note a {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--terra);
+}
+.market-site .search .sug-note a:hover {
+  color: var(--terra-dark);
+}
+
+/* Squelettes de chargement (même rythme que le reste du site) */
+.market-site .search .sug-skel {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px;
+}
+.market-site .search .sug-skel i {
+  display: block;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  background: var(--line-2);
+  border-radius: 8px;
+}
+.market-site .search .sug-skel b {
+  display: block;
+  flex: 1;
+}
+.market-site .search .sug-skel b span {
+  display: block;
+  height: 9px;
+  background: var(--line-2);
+  border-radius: 999px;
+}
+.market-site .search .sug-skel b span:first-child {
+  width: 62%;
+}
+.market-site .search .sug-skel b span:last-child {
+  width: 34%;
+  margin-top: 7px;
+}
+
+/* ---------------------------------------------------------------------
+   4. Tableaux « Mes articles / Mes commandes » — sans Tailwind
+   ---------------------------------------------------------------------
+   Les pages utilisent encore une table sémantique <table><thead><tbody>.
+   La maquette Bureau/main n'a pas ce type de tableau. On crée .rv-tab
+   pour le « dépouiller » en gardant sémantique + accessibilité.
+   UNIQUEMENT avec jetons de la maquette. Commentaire explicatif.
+   --------------------------------------------------------------------- */
+.market-site .rv-tab {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-family: var(--sans);
+}
+
+.market-site .rv-tab thead th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.market-site .rv-tab tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  vertical-align: top;
+  font-size: 14px;
+}
+
+.market-site .rv-tab tbody tr {
+  transition: background-color var(--t-fast) var(--ease);
+}
+
+.market-site .rv-tab tbody tr:hover {
+  background: var(--ivory);
+}
+
+.market-site .rv-tab--compact thead th,
+.market-site .rv-tab--compact tbody td {
+  padding: 10px 10px;
+}
+
+/* Montant mis en avant dans une cellule du tableau (colonne « Prix ») :
+   `.prod-meta` (13px muted) reste la base, on ne renforce que le graisse. */
+.market-site .rv-tab .amt {
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------
+   5. Badges/états & cellules produit — alignés vocabulaire Bureau
+   ---------------------------------------------------------------------
+   Pour éviter classes utilitaires résiduelles, petits helpers locaux.
+   --------------------------------------------------------------------- */
+.market-site .prod-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.market-site .prod-thumb {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--ivory-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-2);
+  flex: 0 0 50px;
+}
+
+.market-site .prod-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.market-site .prod-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.market-site .muted { color: var(--muted); }
+.market-site .ink { color: var(--ink); }
+
+/* Petit conteneur pour liste d'éléments non-tab (Notifications) */
+.market-site .notif-stack {
+  display: grid;
+  gap: 12px;
+}
+
+
+/* Page de confirmation : `SiteEmpty` ne gère qu'une SEULE action ; le second
+   lien « Retour à l'accueil » est rendu à côté du bloc `.empty`, centré,
+   dans le même `.section` (gabarit de référence : `NotFound()`). */
+.market-site .rv-empty-extra {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+/* ---------------------------------------------------------------------
+   7. Commande (détail & suivi) — compléments non couverts par la maquette
+   ---------------------------------------------------------------------
+   La maquette n'a pas de page « détail de commande » : `.sum .r` couvre les
+   lignes libellé/valeur, mais pas le montant de commande en tête de carte
+   ni le pied de carte (lien retour + action). Jetons uniquement.
+   --------------------------------------------------------------------- */
+
+/* Montant total en tête de la carte de commande (graisse + corps propres). */
+.market-site .rv-price {
+  font: 700 18px/1.3 var(--sans);
+  letter-spacing: -.01em;
+}
+
+/* Pied de carte : lien-flèche de retour à gauche, bouton d'action à droite. */
+.market-site .rv-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------------------
+   8. Notifications — lignes cliquables (pas la grille `.line` de la maquette)
+   ---------------------------------------------------------------------
+   `.line` est une grille produit 3 colonnes (vignette / nom / prix) ; une
+   notification est un `<button>` pleine largeur contenant une `.prod-cell`.
+   On crée donc un concept dédié : même rythme (padding 20px 0, liseré bas)
+   que `.line`, avec l'état « non lue » (fond ivoire) exigé par la recette.
+   --------------------------------------------------------------------- */
+.market-site .rv-notif {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 20px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  border-radius: var(--r);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.market-site .rv-notif:hover {
+  background: var(--ivory);
+}
+/* État « non lue » : fond ivoire (la pastille ci-dessous porte le 2ᵉ indice). */
+.market-site .rv-notif.unread {
+  background: var(--ivory);
+}
+
+.market-site .rv-notif-body {
+  flex: 1;
+  min-width: 0;
+}
+.market-site .rv-notif-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+/* Pastille « non lue » — decoratif, l'état est porté par `aria-label`. */
+.market-site .rv-notif-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--pill);
+  background: var(--terra);
+}
+
+/* Barre d'actions au-dessus de la pile (« Tout marquer comme lu »). */
+.market-site .rv-stack-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+/* ---------------------------------------------------------------------
+   9. Gabarit des pages légales (`LegalPage`) — rythme éditorial
+   ---------------------------------------------------------------------
+   La maquette n'a pas de page longue en sections ancrées : ni sommaire, ni
+   mesures de ligne pour le corps légal. On module le gabarit avec les
+   SEULS jetons de la maquette, sans reproduire d'utilitaires.
+   --------------------------------------------------------------------- */
+
+/* Ligne « Dernière mise à jour » sous le titre. */
+.market-site .rv-legal-updated {
+  font-size: 13px;
+}
+
+/* Sommaire (liste ordonnée ancrée) dans la `.box`. */
+.market-site .rv-legal-toc {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding-left: 18px;
+}
+.market-site .rv-legal-toc a {
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Numéro de section (« 1. », « 2. »…) en tête de titre et de sommaire. */
+.market-site .rv-legal-num {
+  font-weight: 700;
+  color: var(--terra);
+}
+
+/* Corps des sections : rythme régulier (gap) plutôt que marges empilées. */
+.market-site .rv-legal-body {
+  display: grid;
+  gap: 40px;
+  margin-top: 40px;
+}
+.market-site .rv-legal-body h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.market-site .rv-legal-body p {
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+.market-site .rv-legal-body ul {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-left: 18px;
+}
+.market-site .rv-legal-body li {
+  display: flex;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Pied du gabarit : filet + invitation à contacter. */
+.market-site .rv-legal-foot {
+  margin-top: 48px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  font-size: 13px;
+}
+.market-site .rv-legal-foot a {
+  font-weight: 600;
+  color: var(--terra);
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------
+   10. `<h1>` dans un gabarit `.empty`
+   ---------------------------------------------------------------------
+   POURQUOI ceci n'est pas dans la maquette : celle-ci ne met JAMAIS de
+   `<h1>` dans `.empty` — ses écrans vides sont des sous-blocs, le `<h1>` de
+   la page vit dans `.head` (`.market-site .head h1`). Sa règle
+   `.empty h2{font-size:clamp(26px,3vw,36px);margin-bottom:10px}` ne cible
+   donc que `h2`.
+
+   POURQUOI on l'écrit quand même : la recette (a11y §8, DA « une page =
+   un `<h1>` ») impose un titre de niveau 1 par page. Quatre écrans vides
+   rendent donc `SiteEmpty level={1}` : 404, panier vide, publication d'un
+   article, confirmation de commande. Sans cette règle, le reset de
+   `index.css` (preflight) laisse `h1` à la taille du corps de texte : le
+   titre principal apparaît en 16 px, au même rang que le paragraphe.
+
+   On reprend littéralement l'échelle de `.empty h2` pour que `h1` et `h2`
+   restent interchangeables dans ce gabarit.
+   --------------------------------------------------------------------- */
+.market-site .empty h1 {
+  font-size: clamp(26px, 3vw, 36px);
+  margin-bottom: 10px;
+}
+
+/* ---------------------------------------------------------------------
+   11. `.err` — sémantique de la maquette conservée (bascule show)
+   ---------------------------------------------------------------------
+   POURQUOI ce commentaire plutôt qu'une règle : `bureau.css` est à nouveau
+   RÉGÉNÉRABLE (`npm run css:scope` → scripts/bureau-css.mjs, sources
+   verbatim dans `src/bureau/vendor/`). Sa règle
+   `.market-site .err{…;display:none}` + `.err.show{display:block}` est donc
+   revenue telle quelle.
+
+   C'est le bon comportement : le React suit la maquette à la lettre —
+   `<div className={"err" + (msg ? " show" : "")} role="alert">` dans
+   `CheckoutView` et `SellView`, et `AuthView` n'a qu'un `<div class="err">`
+   VIDE (simple réservation de hauteur, `.auth .err` force déjà
+   `display:block`). Aucun texte n'attend donc derrière un `.err` sans
+   `.show` : ne pas retirer `display:none` ici, sinon les messages de
+   validation resteraient toujours masqués.
+   --------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------
+   12. VERRE DE CHAMP UNIFIÉ (option A2, décision chef de projet)
+   ---------------------------------------------------------------------
+   DEMANDE : « tous les champs du site doivent avoir la couleur du
+   glassmorphism de la page de connexion ». Le panneau de connexion est
+   en verre clair (`rgba(255,255,255,.12)` + blur 22/1.4) ; ses champs
+   `.auth .inp` étaient, eux, OPAQUES (#FFFFFF) pour la lisibilité sur
+   photo. Décision tranchée : on applique le **verre teinté ivoire** à
+   TOUS les champs (connexion incluse) — l'esprit verre est conservé et
+   il reste lisible AUSSI BIEN sur fond ivoire (catalogue, panier, vente,
+   compte) que sur photo (connexion). Le verre clair strict
+   (`rgba(255,255,255,.12)`) devenait invisible sur fond ivoire clair.
+
+   POURQUOI ICI (et pas dans `bureau.css`, généré) : `bureau.css` est
+   régénérable (`npm run css:scope`) et son en-tête l'interdit. Toute
+   dérogation vit donc dans CE fichier, importé APRÈS `bureau.css`.
+
+   SPÉCIFICITÉ — le point délicat : `bureau.css` définit les champs en
+   thème sombre via `:root[data-theme="dark"] .market-site .inp`
+   (0,3,0) ; pour gagner il faut donc, ici, des sélecteurs d'égale
+   spécificité (et l'ordre du fichier — chargé en dernier — tranche).
+   D'où les variantes explicites `:root[data-theme="dark"]` ci-dessous.
+
+   VALEURS CALCULÉES (WCAG 2.1 relative-luminance, script jetable) :
+     · encre #171513 sur verre ivoire (page blanche) ..... 17.24:1  (AA)
+     · encre #171513 sur verre ivoire (section ivoire) ... 16.47:1  (AA)
+     · encre #171513 sur verre de champ « photo » ........ 6.28:1   (AA)
+     · bordure rgba(23,21,19,.48) sur blanc / ivoire ..... 3.24 / 3.17:1  (1.4.11)
+     · placeholder rgba(23,21,19,.62) sur verre ivoire ... 4.99:1   (AA)
+     · anneau focus rgba(23,21,19,.80) sur verre ......... 9.40:1   (1.4.11)
+   La bordure retenue est PLUS SOUTENUE que le `.14` d'origine : sur les
+   pages ivoire/blanches, le fond du champ est identique au fond de page
+   → la bordure EST la seule frontière du champ, elle doit donc passer
+   1.4.11 (≥ 3:1). `.14` ne donnait que 1.34:1 (échec).
+   --------------------------------------------------------------------- */
+
+/* Jetons — DÉCLARÉS AILLEURS, source unique : `src/index.css` (`:root`
+   et `:root[data-theme="dark"]`), pour que l'ADMIN les hérite aussi.
+   On n'en fait jamais de copie ici. Noms : `--field-glass-bg`,
+   `--field-glass-gb`, `--field-glass-blur`, `--field-glass-border`,
+   `--field-glass-border-strong`, `--field-glass-placeholder`,
+   `--field-glass-focus`. */
+
+/* Application — TOUS les champs du site public (clair). On n'utilise que
+   `background-color` (jamais le raccourci `background`) pour ne PAS
+   effacer le chevron `background-image` du `<select class="sel">`. */
+.market-site .inp,
+.market-site .sel,
+.market-site .search input,
+.market-site .auth .inp,
+.market-site textarea.inp,
+.market-site select.inp{
+  background-color:var(--field-glass-bg);
+  -webkit-backdrop-filter:var(--field-glass-blur);
+  backdrop-filter:var(--field-glass-blur);
+  border:1px solid var(--field-glass-border);
+  color:var(--ink);
+}
+/* Thème sombre — mêmes sélecteurs avec la spécificité (0,3,0) requise
+   pour surpasser les surcharges `:root[data-theme="dark"] … .inp`. */
+:root[data-theme="dark"] .market-site .inp,
+:root[data-theme="dark"] .market-site .sel,
+:root[data-theme="dark"] .market-site .search input,
+:root[data-theme="dark"] .market-site .auth .inp,
+:root[data-theme="dark"] .market-site textarea.inp,
+:root[data-theme="dark"] .market-site select.inp{
+  background-color:var(--field-glass-bg);
+  border-color:var(--field-glass-border);
+  color:var(--ink);
+}
+
+/* Search de l'accueil en en-tête transparent (au-dessus de la photo) :
+   la maquette y met du verre clair + texte BLANC (0,5,1). On aligne sur
+   le verre de champ et on repasse le texte en encre, sinon le verre ivoire
+   rendrait le blanc illisible. */
+.market-site.home header.site:not(.solid) .search input{
+  background-color:var(--field-glass-bg);
+  -webkit-backdrop-filter:var(--field-glass-blur);
+  backdrop-filter:var(--field-glass-blur);
+  border-color:var(--field-glass-border);
+  color:var(--ink);
+}
+.market-site.home header.site:not(.solid) .search input::placeholder{
+  color:var(--field-glass-placeholder);
+}
+.market-site.home header.site:not(.solid) .search .i{color:var(--ink)}
+
+/* Repli opaque : si le navigateur ne sait pas flouter, le verre translucide
+   deviendrait un aplat invisible → on garantit une surface pleine lisible. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .market-site .inp,
+  .market-site .sel,
+  .market-site .search input,
+  .market-site .auth .inp,
+  .market-site textarea.inp,
+  .market-site select.inp,
+  .market-site.home header.site:not(.solid) .search input{
+    background-color:var(--field-glass-gb);
+  }
+}
+
+/* Placeholder — lisible sur le verre (clair ET sombre). */
+.market-site .inp::placeholder,
+.market-site .search input::placeholder,
+.market-site .auth .inp::placeholder,
+:root[data-theme="dark"] .market-site .inp::placeholder,
+:root[data-theme="dark"] .market-site .search input::placeholder{color:var(--field-glass-placeholder)}
+
+/* Survol — bordure renforcée (jamais la couleur seule comme signal). */
+.market-site .inp:hover,
+.market-site .sel:hover,
+.market-site .auth .inp:hover,
+.market-site .search input:hover{border-color:var(--field-glass-border-strong)}
+
+/* Focus — anneau NETTEMENT visible sur le verre (DA §8 / 1.4.11 ≥ 3:1). */
+.market-site .inp:focus,
+.market-site .sel:focus,
+.market-site .search input:focus,
+.market-site .auth .inp:focus{
+  outline:none;
+  border-color:var(--field-glass-focus);
+  box-shadow:0 0 0 3px rgba(23,21,19,.20);
+}
+:root[data-theme="dark"] .market-site .inp:focus,
+:root[data-theme="dark"] .market-site .sel:focus,
+:root[data-theme="dark"] .market-site .search input:focus,
+:root[data-theme="dark"] .market-site .auth .inp:focus{
+  box-shadow:0 0 0 3px rgba(168,58,82,.34);
+}
+/* Focus clavier (Tab) : anneau + bordure accentués (jamais ambigu). */
+.market-site .inp:focus-visible,
+.market-site .sel:focus-visible,
+.market-site .search input:focus-visible,
+.market-site .auth .inp:focus-visible{
+  border-color:var(--field-glass-focus);
+  box-shadow:0 0 0 3px var(--field-glass-focus);
+}
+
+/* Erreur `.bad` / `[aria-invalid]` — rouge chaud, anneau cohérent. */
+.market-site .inp.bad,
+.market-site .sel.bad,
+.market-site .auth .inp.bad,
+.market-site .inp[aria-invalid="true"]{
+  border-color:#A02C0A;
+  box-shadow:0 0 0 3px rgba(160,44,10,.16);
+}
+:root[data-theme="dark"] .market-site .inp.bad,
+:root[data-theme="dark"] .market-site .sel.bad,
+:root[data-theme="dark"] .market-site .auth .inp.bad{
+  border-color:#FF9C82;
+  box-shadow:0 0 0 3px rgba(255,120,90,.22);
+}
+
+/* Désactivé — le verre s'éteint sans disparaître. */
+.market-site .inp:disabled,
+.market-site .sel:disabled,
+.market-site .search input:disabled,
+.market-site textarea.inp:disabled{
+  opacity:.55;cursor:not-allowed;
+}

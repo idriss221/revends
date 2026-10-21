@@ -1,0 +1,121 @@
+# =====================================================================
+# REVENDS — Development Override (Hot Reload, Debug)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.override.yml up
+#
+# Note : ce fichier ne contient aucun secret. Les identifiants des outils de
+# dev (pgAdmin) proviennent de l'environnement (voir .env.example).
+# =====================================================================
+
+services:
+  # ---------------------------------------------------
+  # FRONTEND DEV — Vite HMR
+  # ---------------------------------------------------
+  web-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      target: builder
+    container_name: revends_web_dev
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:4001
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+    networks:
+      - revends_net
+    depends_on:
+      - api1
+    profiles:
+      - dev
+
+  # ---------------------------------------------------
+  # API DEV — tsx watch (hot reload)
+  # ---------------------------------------------------
+  api1:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      target: builder
+    command: npm run dev
+    environment:
+      - NODE_ENV=development
+      - INSTANCE_ID=api1-dev
+      - RATE_LIMIT_DISABLED=true
+      # Dev en HTTP : pas de cookie Secure.
+      - COOKIE_SECURE=false
+      - RUN_MIGRATIONS=true
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - revends_uploads:/data/uploads/products
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  # ---------------------------------------------------
+  # Override production API instances (disable in dev profile)
+  # ---------------------------------------------------
+  api2:
+    profiles: ["!dev"]
+  api3:
+    profiles: ["!dev"]
+  nginx:
+    profiles: ["!dev"]
+
+  # ---------------------------------------------------
+  # Dev-only: pgAdmin for database inspection
+  # ---------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: revends_pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@revends.local}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD est requis (voir .env.example)}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "127.0.0.1:5050:80"
+    volumes:
+      - revends_pgadmin:/var/lib/pgadmin
+    networks:
+      - revends_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - dev
+      - tools
+
+  # ---------------------------------------------------
+  # Dev-only: Redis Commander for Redis inspection
+  # (Redis est protégé par mot de passe : on le fournit à l'outil)
+  # ---------------------------------------------------
+  redis-commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    container_name: revends_redis_commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:?REDIS_PASSWORD est requis (voir .env.example)}
+    ports:
+      - "127.0.0.1:8081:8081"
+    networks:
+      - revends_net
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - dev
+      - tools
+
+networks:
+  revends_net:
+    driver: bridge
+
+volumes:
+  revends_pgadmin:

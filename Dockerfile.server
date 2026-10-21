@@ -1,0 +1,62 @@
+# =====================================================================
+# REVENDS — Backend API (Multi-stage: TS Build → Node Runtime)
+# =====================================================================
+
+# ---- Stage 1: Build ----
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# Install deps (cache layer)
+COPY server/package*.json ./
+RUN npm ci
+
+# Copy source and build
+COPY server/ ./
+RUN npm run build
+
+# ---- Stage 2: Runtime ----
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
+# Copy built dist + package.json for production deps
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+
+# Migrations SQL : nécessaires au CMD (node dist/db/migrate.js).
+# Sans cette copie, `RUN_MIGRATIONS=true` échoue (ENOENT /app/migrations)
+# et le schéma de prod dérive (ex. table password_reset_tokens absente).
+COPY --from=builder /app/migrations ./migrations
+
+# Install production deps only
+RUN npm ci --omit=dev
+
+# Non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G nodejs nodejs && \
+    chown -R nodejs:nodejs /app
+
+# Répertoire d'uploads (`UPLOAD_DIR=/data/uploads/products`, cf. docker-compose).
+# Créé **et chowné avant le `USER nodejs`** : sans cela, le volume nommé monté
+# par Docker naît `root:root` et l'écriture des photos échoue en `EACCES`
+# (constaté à l'e2e : `createProduct` → 500, cycle de vie article KO). Le chown
+# du répertoire-image garantit les volumes **futurs** ; un volume déjà existant
+# et root-owned doit être chowné une fois (voir docs/journal.md).
+RUN mkdir -p /data/uploads/products && chown -R nodejs:nodejs /data
+
+USER nodejs
+
+# Environment (overridden by docker-compose)
+ENV NODE_ENV=production \
+    PORT=4000
+
+EXPOSE 4000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:4000/api/health || exit 1
+
+# Boot idempotent : migrations (schema_migrations) → seed (ON CONFLICT) → API.
+# migrate.ts prend un verrou consultatif PostgreSQL, donc 3 instances peuvent
+# démarrer en parallèle sans se marcher dessus.
+CMD ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && node dist/index.js"]

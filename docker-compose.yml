@@ -1,0 +1,327 @@
+# =============================================================================
+# ReVends — stack Docker (production-like)
+#
+# Architecture (décision 2026) : UN SEUL PostgreSQL = source de vérité unique,
+# plus de sharding ni de réplication. Redis (sessions + rate-limit + cache) est
+# protégé par mot de passe.
+#
+# Aucun secret n'est en dur dans ce fichier : tous les mots de passe passent par
+# des variables d'environnement (voir .env.example). `POSTGRES_PASSWORD` et
+# `REDIS_PASSWORD` sont OBLIGATOIRES : `docker compose` échoue explicitement si
+# elles sont absentes (`${VAR:?message}`).
+# =============================================================================
+
+# Environnement commun aux instances API (mutualisé via ancre YAML).
+x-api-env: &api-env
+  NODE_ENV: production
+  PORT: "4000"
+  # PostgreSQL unique. Le mot de passe n'apparaît jamais en clair : il est
+  # injecté depuis l'environnement.
+  DATABASE_URL: "postgres://${POSTGRES_USER:-revends}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis (voir .env.example)}@postgres:5432/${POSTGRES_DB:-revends}"
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: ${POSTGRES_USER:-revends}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis (voir .env.example)}
+  DB_NAME: ${POSTGRES_DB:-revends}
+  PG_POOL_MAX: ${PG_POOL_MAX:-10}
+  SESSION_SECRET: ${SESSION_SECRET}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@revends.com}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+  # Redis protégé par mot de passe.
+  REDIS_URL: redis://redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD est requis (voir .env.example)}
+  REDIS_PREFIX: "revends:"
+  REDIS_CONNECT_TIMEOUT_MS: ${REDIS_CONNECT_TIMEOUT_MS:-2000}
+  REDIS_CACHE_TTL_SECONDS: "60"
+  CACHE_ENABLED: "true"
+  SESSION_STORE: redis
+  RATE_LIMIT_BACKEND: redis
+  # `RATE_LIMIT_DISABLED=true` lève tout plafond (demande produit). Laisser
+  # `false` en production publique (protection anti-brute-force / anti-DoS).
+  RATE_LIMIT_DISABLED: ${RATE_LIMIT_DISABLED:-false}
+  RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-20}
+  RATE_LIMIT_GLOBAL_MAX: ${RATE_LIMIT_GLOBAL_MAX:-300}
+  RUN_MIGRATIONS: "true"
+  DISABLE_CRON: ${DISABLE_CRON:-false}
+  # HTTPS terminé devant l'API (nginx 443 / proxy TLS) => cookie de session Secure.
+  # ⚠️ Surchargable : en local via http://localhost:8080 (sans TLS), il FAUT
+  # `COOKIE_SECURE=false`, sinon express-session n'émet JAMAIS `connect.sid`
+  # (lh.secure=false) => aucune session, l'utilisateur n'est jamais connecté.
+  # En production derrière TLS, laisser `true` (défaut).
+  COOKIE_SECURE: ${COOKIE_SECURE:-true}
+  MAIL_ENABLED: ${MAIL_ENABLED:-false}
+  MAIL_HOST: ${MAIL_HOST:-}
+  MAIL_PORT: ${MAIL_PORT:-587}
+  MAIL_SECURE: ${MAIL_SECURE:-false}
+  MAIL_USER: ${MAIL_USER:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_FROM: ${MAIL_FROM:-}
+  UPLOAD_DIR: /data/uploads/products
+  WEB_DIST: /app/web/dist
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+  SITE_URL: ${SITE_URL:-http://localhost:8080}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+  FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+  GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:8080/api/auth/google/callback}
+  FACEBOOK_CALLBACK_URL: ${FACEBOOK_CALLBACK_URL:-https://localhost/api/auth/facebook/callback}
+
+services:
+  # ---------------------------------------------------------------------------
+  # Point d'entrée public : sert le SPA (web/dist) et reverse-proxy /api vers
+  # les instances api1..3 (voir server/nginx/nginx.conf).
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: revends_nginx
+    ports:
+      - "8080:80"
+      - "443:443"
+    volumes:
+      - ./server/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Certificat auto-signé pour l'écouteur TLS local (443) — redirections OAuth https.
+      - ./server/nginx/certs:/etc/nginx/certs:ro
+      # Build Vite (web/dist) servi en statique par nginx. Sans ce montage,
+      # nginx expose sa page d'accueil par défaut au lieu du SPA ReVends.
+      - ./web/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - api1
+      - api2
+      - api3
+    networks:
+      - revends_net
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://127.0.0.1/health
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # API sans état ×3, même image. Le port publié est lié à la boucle locale :
+  # en production, seul nginx doit être joignable depuis l'extérieur.
+  # ---------------------------------------------------------------------------
+  api1:
+    entrypoint: ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && node dist/index.js"]
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    healthcheck:
+      disable: true
+    container_name: revends_api1
+    environment:
+      <<: *api-env
+      INSTANCE_ID: api1
+    volumes:
+      - revends_uploads:/data/uploads/products
+    ports:
+      - "127.0.0.1:4001:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - revends_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  api2:
+    entrypoint: ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && node dist/index.js"]
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    healthcheck:
+      disable: true
+    container_name: revends_api2
+    environment:
+      <<: *api-env
+      INSTANCE_ID: api2
+      # Un seul planificateur : le cron tourne sur api1 uniquement.
+      DISABLE_CRON: "true"
+    volumes:
+      - revends_uploads:/data/uploads/products
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - revends_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  api3:
+    entrypoint: ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && node dist/index.js"]
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    healthcheck:
+      disable: true
+    container_name: revends_api3
+    environment:
+      <<: *api-env
+      INSTANCE_ID: api3
+      # Un seul planificateur : le cron tourne sur api1 uniquement.
+      DISABLE_CRON: "true"
+    volumes:
+      - revends_uploads:/data/uploads/products
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - revends_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # Instance DÉDIÉE À LA RECETTE E2E (profil `e2e`, non démarrée par défaut).
+  #
+  # Pourquoi : la suite Playwright enchaîne beaucoup d'appels sur `/api` et
+  # `/api/auth` ; elle doit être immunisée contre tout plafond pour éviter des
+  # faux négatifs (429 → session absente → tests admin rouges). Le limiteur
+  # « auth » de prod ne couvre désormais que register/login/forgot/reset
+  # (`/auth/me` et les redirections OAuth ne consomment plus le quota), mais
+  # cette instance de recette lève tout plafond (`RATE_LIMIT_DISABLED=true`)
+  # SANS toucher aux 3 instances de prod : la limitation reste testée par la
+  # suite serveur (`limits.test.ts`).
+  #
+  # Démarrage :  docker compose --profile e2e up -d api-e2e
+  # (ou `npm run e2e:api:up` depuis `web/`). Le front e2e proxifie `/api` ici.
+  #
+  # Note : `COOKIE_SECURE=false` est volontaire — cette instance de recette est
+  # servie en HTTP (proxifiée localement), contrairement aux instances de prod.
+  # ---------------------------------------------------------------------------
+  api-e2e:
+    profiles: ["e2e"]
+    entrypoint: ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && node dist/index.js"]
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    healthcheck:
+      disable: true
+    container_name: revends_api_e2e
+    environment:
+      <<: *api-env
+      INSTANCE_ID: api-e2e
+      # Base DÉDIÉE à la recette : la suite Playwright crée/supprime des articles,
+      # elle ne doit JAMAIS polluer la base principale (`revends`).
+      # La recette ne doit JAMAIS envoyer d'e-mail réel : chaque inscription d'un
+      # spec enverrait sinon un vrai message (SMTP Gmail), polluerait la boîte de
+      # l'exploitant et consommerait le quota d'envoi. Le code d'envoi est prouvé
+      # par `server/test/emails.test.ts`, qui active `MAIL_ENABLED` lui-même.
+      MAIL_ENABLED: "false"
+      DB_NAME: ${POSTGRES_DB:-revends}_e2e
+      DATABASE_URL: "postgres://${POSTGRES_USER:-revends}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis (voir .env.example)}@postgres:5432/${POSTGRES_DB:-revends}_e2e"
+      # Dérogation de recette : voir le commentaire ci-dessus.
+      RATE_LIMIT_DISABLED: "true"
+      COOKIE_SECURE: "false"
+    volumes:
+      - revends_uploads:/data/uploads/products
+    ports:
+      - "127.0.0.1:4002:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - revends_net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — SOURCE DE VÉRITÉ UNIQUE (plus de shard / réplica).
+  # Le port publié est lié à 127.0.0.1 (jamais 0.0.0.0) : accès local seulement.
+  # 5433 = port du dev local (server/docker-compose.yml) ; surchargeable via
+  # POSTGRES_HOST_PORT.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: revends_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-revends}
+      POSTGRES_USER: ${POSTGRES_USER:-revends}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis (voir .env.example)}
+    volumes:
+      - revends_postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    networks:
+      - revends_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # Redis — sessions + rate-limit + cache, protégé par `requirepass`.
+  # Port publié lié à 127.0.0.1 uniquement (dev) ; retirer `ports` en prod.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: revends_redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD est requis (voir .env.example)}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD est requis (voir .env.example)}
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - revends_redis:/data
+    networks:
+      - revends_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  revends_net:
+    driver: bridge
+
+volumes:
+  revends_postgres:
+  revends_redis:
+  revends_uploads:

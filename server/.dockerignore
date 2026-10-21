@@ -1,0 +1,16 @@
+# Contextes de build : ne PAS envoyer au daemon Docker ce qui est superflu ou
+# sensible. Le builder recompile depuis src/ (pas besoin de dist/ local) ;
+# `web-dist/` est VOLONTAIREMENT gardé (front embarqué dans l'image).
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.example
+dist
+uploads
+test
+tsconfig.tsbuildinfo
+*.log
+.DS_Store
+.railway
+scripts

@@ -1,0 +1,33 @@
+{
+  // Projet TS dédié aux **tests e2e / Playwright**.
+  //
+  // Pourquoi ce fichier existe : `tsconfig.app.json` n'inclut que `src`, donc
+  // `npm run typecheck` (`tsc -b`) ne voyait **jamais** `e2e/` ni
+  // `playwright.config.ts`. Deux défauts ont ainsi survécu à un typecheck vert :
+  //   1. `playwright.config.ts` : double `import` de `helpers/target` →
+  //      `VarRedeclaration` au parse → **toute** la suite e2e inexécutable ;
+  //   2. `e2e/functional/admin.spec.ts` : `waitForContent` appelé sans être
+  //      importé → `ReferenceError` à l'exécution.
+  // Un test qui ne compile pas ne peut pas non plus être une preuve.
+  //
+  // `types: ["node"]` : les helpers lisent `node:fs` / `node:path` et
+  // `process.cwd()`. `moduleResolution: bundler` aligne la résolution sur celle
+  // de Vite (extensions d'import optionnelles).
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["node"]
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}

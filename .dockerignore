@@ -1,0 +1,21 @@
+# Contexte de build de la racine (Dockerfile.server, Dockerfile.web).
+#
+# Deux pièges évités :
+#  1. `**/node_modules` hébergés : copiés, ils écrasent les deps posées par
+#     `npm ci` dans l'image et font exploser la taille du contexte envoyé au
+#     démon.
+#  2. **`server/dist` local** : s'il entre dans le contexte, il est copié dans
+#     le builder ; si la couche `RUN npm run build` est servie depuis le cache,
+#     l'image embarque alors un JS PÉRIMÉ (ancien `dist` hébergé) — constaté en
+#     stack prod-like : l'API démarrait sans les dernières sources. Le builder
+#     recompile TOUJOURS depuis `src` : `dist` n'a rien à faire ici.
+#
+# `server/Dockerfile` a un contexte propre (`server/`) : il n'est pas concerné.
+**/node_modules
+server/dist
+.git
+**/.git
+*.log
+**/*.log
+**/test-results
+**/playwright-report

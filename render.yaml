@@ -1,0 +1,200 @@
+# =====================================================================
+# ReVends — Infrastructure as Code (Render Blueprint)
+# =====================================================================
+#
+# Ce fichier décrit TOUTE l'infrastructure de production. Render le lit
+# au premier déploiement (Blueprint) puis à chaque synchronisation.
+#
+# Architecture déployée :
+#   - revends-api      : API Express/Node (image Docker, Dockerfile.server)
+#   - revends-web      : front React/Vite (site statique, CDN mondial)
+#   - revends-db       : PostgreSQL managé (source de vérité unique, pas
+#                        de sharding — cf. server/src/config.ts:17)
+#   - revends-redis    : Key Value pour sessions + cache + rate-limit
+#                        (SESSION_STORE=redis ⇒ obligatoire, sinon le
+#                        serveur refuse de démarrer — index.ts:21)
+#
+# ⚠️ SECRETS : aucun n'est écrit ici. Les variables sensibles utilisent
+# `sync: false` → Render les demande dans le Dashboard et ne les stocke
+# pas dans ce fichier (qui est versionné).
+#
+# ⚠️ Le web est servi par son propre service statique. L'API ne sert donc
+# PAS les fichiers du front : `WEB_DIST` côté API n'est pas utilisé en prod.
+# Le front doit pointer vers l'API via `VITE_API_URL` (build-time).
+# =====================================================================
+
+services:
+  # -------------------------------------------------------------------
+  # 1. API — image Docker (Dockerfile.server)
+  # -------------------------------------------------------------------
+  - type: web
+    name: revends-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile.server
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+
+      # --- Base de données (injectée par Render) ---------------------
+      # Render fournit l'URL complète ; le code la lit en priorité
+      # (config.ts:235 — DATABASE_URL ?? reconstruction DB_*).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: revends-db
+          property: connectionString
+
+      # --- Redis (sessions + cache + rate-limit) ---------------------
+      # `connectionString` d'un Key Value Render a EXACTEMENT le format
+      # attendu par le code : `redis://red-xxxx:6379` (doc officielle
+      # Blueprint §Supported properties → connectionString). SESSION_STORE
+      # =redis impose que Redis soit joignable dès le boot (index.ts:21).
+      - key: REDIS_URL
+        fromService:
+          name: revends-redis
+          type: keyvalue
+          property: connectionString
+      - key: SESSION_STORE
+        value: redis
+      - key: CACHE_ENABLED
+        value: 'true'
+      - key: RATE_LIMIT_BACKEND
+        value: redis
+
+      # --- Migrations au démarrage -----------------------------------
+      # Le CMD du Dockerfile enchaîne migrate → seed → API. Le seed est
+      # idempotent (ON CONFLICT) et ne crée QUE bannières + admin, jamais
+      # de produits.
+      - key: RUN_MIGRATIONS
+        value: 'true'
+
+      # --- Sécurité --------------------------------------------------
+      # COOKIE_SECURE=true : HTTPS obligatoire côté Render (certificat
+      # managé), indispensable pour que les cookies de session passent.
+      - key: COOKIE_SECURE
+        value: 'true'
+      # SESSION_SECRET : généré par Render (base64 256 bits), jamais écrit
+      # dans ce fichier.
+      - key: SESSION_SECRET
+        generateValue: true
+      # ⚠️ NE PAS laisser le rate-limit désactivé en prod.
+      - key: RATE_LIMIT_DISABLED
+        value: 'false'
+
+      # --- Admin initial (seed) --------------------------------------
+      # Le seed crée l'admin uniquement si la table users est vide.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      # --- E-mails transactionnels (SendGrid/SMTP) -------------------
+      - key: MAIL_ENABLED
+        value: 'true'
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: '587'
+      - key: MAIL_SECURE
+        value: 'false'
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+      # --- URLs publiques & CORS -------------------------------------
+      # À RENSEIGNER après le premier déploiement du web statique :
+      # CORS_ORIGINS = origine exacte du site (sans slash final).
+      - key: SITE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+      # --- OAuth social (optionnel) ----------------------------------
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      - key: FACEBOOK_CALLBACK_URL
+        sync: false
+
+      # --- Uploads (photos produits) ---------------------------------
+      # Sur le plan free, pas de disque persistant : les fichiers écrits
+      # sont perdus au redéploiement. Voir « Risques » dans le journal.
+      - key: UPLOAD_DIR
+        value: /data/uploads/products
+
+  # -------------------------------------------------------------------
+  # 2. Web — front React/Vite (site statique, CDN mondial)
+  # -------------------------------------------------------------------
+  # Pas de `region` : un site statique est servi par le CDN Render, la
+  # région est refusée par le schéma officiel (definition staticService).
+  - type: web
+    name: revends-web
+    runtime: static
+    buildCommand: cd web && npm ci && npm run build
+    staticPublishPath: ./web/dist
+    autoDeployTrigger: commit
+    envVars:
+      # VITE_API_URL est INLINÉE au build par Vite : le front appellera
+      # l'API à cette adresse. À renseigner AVANT le premier build du web
+      # (l'URL de revends-api, ex. https://revends-api.onrender.com).
+      - key: VITE_API_URL
+        sync: false
+    headers:
+      # Immutabilité des assets fingerprintés (hash dans le nom).
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # Les photos de catégories sont versionnées (?v=) : cache long.
+      - path: /categories/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+    routes:
+      # SPA : toute route inconnue retombe sur index.html (React Router).
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # -------------------------------------------------------------------
+  # 3. Redis — sessions, cache, rate-limit
+  # -------------------------------------------------------------------
+  - type: keyvalue
+    name: revends-redis
+    plan: free
+    region: frankfurt
+    maxmemoryPolicy: noeviction
+    ipAllowList: [] # Réseau privé uniquement — jamais exposé sur Internet.
+
+databases:
+  # -------------------------------------------------------------------
+  # 4. PostgreSQL managé — source de vérité unique
+  # -------------------------------------------------------------------
+  - name: revends-db
+    plan: free
+    region: frankfurt
+    databaseName: revends
+    user: revends

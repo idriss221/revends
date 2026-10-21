@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Thème clair/sombre appliqué AVANT le premier rendu (anti-flash).
+         Défaut = SOMBRE (« Burgundy Night ») ; seul un choix explicite
+         "light" repasse en clair. Clé de persistance : "rv:theme". -->
+    <script>
+      ;(function () {
+        var t = null
+        try {
+          t = localStorage.getItem('rv:theme')
+        } catch (e) {}
+        var mode = t === 'light' ? 'light' : 'dark'
+        document.documentElement.setAttribute('data-theme', mode)
+        var m = document.querySelector('meta[name="theme-color"]')
+        if (m) m.setAttribute('content', mode === 'dark' ? '#11100F' : '#FFFFFF')
+      })()
+    </script>
+    <!-- Favicons REVENDS (DA §2) : SVG 32 prioritaire, ICO 16/32 en repli. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <!-- Couleur de la barre d'adresse par défaut (thème sombre) : mise à jour par le script ci-dessus. -->
+    <meta name="theme-color" content="#11100F" />
+    <meta
+      name="description"
+      content="ReVends — achetez et vendez vos articles d'occasion en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
+    />
+    <!-- Token CSRF pour les requêtes mutantes (POST/PATCH/DELETE).
+         Rempli par le backend via cookie `csrf_token` ou header de réponse.
+         Le client (apiClient.ts) lit ce meta tag en fallback. -->
+    <meta name="csrf-token" content="" />
+    <title>ReVends - Donnez une seconde vie aux belles choses</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,329 @@
+/* =====================================================================
+   REVENDS — Direction artistique « LUXURY SECOND-HAND EDITORIAL »
+   ---------------------------------------------------------------------
+   Fichier chargé APRÈS styles.css ET glass.css (voir index.html).
+   Blanc pur dominant · beige luxe #F1E8DC · bordeaux signature #6B1728
+   · noir charbon #171514 · gris chaud #756F6A · champagne #D8C5AB.
+
+   PÉRIMÈTRE RESPECTÉ :
+   - Aucune règle sur .auth (le glassmorphism de la page de connexion
+     est intégralement conservé : flou, transparence, hiérarchie).
+   - Aucune modification de structure / navigation / logo / logique.
+
+   POUR REVENIR À LA VERSION GLASSMORPHISM :
+     retirer la ligne
+       <link rel="stylesheet" href="assets/editorial.css">
+     dans index.html (le thème verre reprend alors la main).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------
+   1. Palette — Luxury Second-Hand Editorial
+   --------------------------------------------------------------- */
+:root{
+  --paper:#FFFFFF;        /* blanc pur (dominant) */
+  --paper-2:#FAF8F5;      /* blanc cassé */
+  --beige:#F1E8DC;        /* beige luxe */
+  --bordeaux:#6B1728;     /* signature */
+  --bordeaux-dark:#52111F;/* hover / actif */
+  --charbon:#171514;      /* texte principal */
+  --gris:#756F6A;         /* texte secondaire */
+  --champagne:#D8C5AB;    /* bordures / détails */
+
+  /* remap des jetons du design system (styles.css) */
+  --white:#FFFFFF;
+  --ivory:#FAF8F5;
+  --ivory-2:#F1E8DC;
+  --ink:#171514;
+  --muted:#756F6A;
+  --muted-2:#9C948C;
+  --terra:#6B1728;
+  --terra-dark:#52111F;
+  --brown:#171514;
+  --brown-2:#171514;
+  --champ:#D8C5AB;
+  --line:#E6DDCE;
+  --line-2:#EFE8DC;
+
+  /* formes & profondeur : élégantes, jamais massives */
+  --r:10px;
+  --r-lg:14px;
+  --sh-sm:0 4px 14px -10px rgba(23,21,20,.30);
+  --sh:0 18px 40px -26px rgba(23,21,20,.32);
+}
+
+/* ---------------------------------------------------------------
+   2. Fond : blanc dominant, mat
+   --------------------------------------------------------------- */
+body{background:var(--paper);background-image:none}
+body.home{background-color:var(--paper)}
+
+/* ---------------------------------------------------------------
+   3. En-tête : blanche, fine séparation, zéro verre
+   --------------------------------------------------------------- */
+.top-strip{background:var(--paper);color:var(--gris);border-bottom:1px solid var(--champagne);
+  -webkit-backdrop-filter:none;backdrop-filter:none;letter-spacing:.2em;font-weight:600}
+.top-strip b{color:var(--bordeaux)}
+
+header.site{background:var(--paper);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border-bottom:1px solid var(--champagne)}
+body.home header.site.solid{background:var(--paper);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border-bottom-color:var(--champagne)}
+
+.bar .logo{letter-spacing:.2em}
+nav.cats a::after{background:var(--bordeaux)}
+
+.search input{border:1px solid var(--champagne);border-radius:10px;background:var(--paper)}
+.search input:focus{border-color:var(--bordeaux);box-shadow:0 0 0 3px rgba(107,23,40,.10)}
+.search .i{color:var(--gris)}
+.ic:hover,.burger:hover{background:var(--beige)}
+
+/* ---------------------------------------------------------------
+   4. Boutons : bordeaux, formes élégantes, hover sobre
+   --------------------------------------------------------------- */
+.btn{border-radius:10px;letter-spacing:.13em;transition:background var(--t) var(--ease),
+  color var(--t) var(--ease),border-color var(--t) var(--ease),transform var(--t) var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(0)}
+.btn.terra{--bg:var(--bordeaux);--bd:var(--bordeaux);--fg:var(--white)}
+.btn.terra:hover{--bg:var(--bordeaux-dark);--bd:var(--bordeaux-dark)}
+.btn.ghost{--bd:var(--champagne);--fg:var(--ink);--bg:transparent}
+.btn.ghost:hover{--bg:var(--bordeaux);--bd:var(--bordeaux);--fg:var(--white)}
+.link-arrow{border-bottom-color:var(--bordeaux);color:var(--ink)}
+.link-arrow:hover{color:var(--bordeaux);border-color:var(--bordeaux)}
+
+/* ---------------------------------------------------------------
+   5. Structure, titres, détails « étiquette de mode »
+   --------------------------------------------------------------- */
+.section{padding-block:clamp(56px,8.5vw,120px)}
+.section.tight{padding-block:clamp(32px,5vw,60px)}
+.section.ivory{background:var(--paper-2)}
+
+/* motif 1 : couture pointillée sous l'eyebrow */
+.eyebrow{color:var(--bordeaux);letter-spacing:.24em}
+.eyebrow::before{width:28px;height:1px;background:repeating-linear-gradient(90deg,var(--champagne) 0 4px,transparent 4px 7px)}
+
+.head h2,.head h1{letter-spacing:-.01em}
+.crumb a:hover{color:var(--bordeaux)}
+
+/* ---------------------------------------------------------------
+   6. Pont éditorial sous le Hero + bandeau de confiance
+   --------------------------------------------------------------- */
+.mh-bridge{background:var(--paper-2);border-bottom:1px solid var(--champagne)}
+.mh-bridge .br-line em{color:var(--bordeaux)}
+
+.trust{background:var(--paper);border-block:1px solid var(--champagne);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.trust .it{border-right-color:var(--champagne)}
+.trust .i{color:var(--bordeaux)}
+
+/* ---------------------------------------------------------------
+   7. Catégories : cadres fins champagne, radius modéré
+   --------------------------------------------------------------- */
+.catgrid{gap:clamp(12px,1.5vw,20px)}
+.cat{border-radius:var(--r-lg)}
+
+/* anneau fin partagé par toutes les photos encadrées */
+.cat,.card .im,.gallery .main,.editorial .pic,.preview-card .im,.line .t,.thumbs button{
+  box-shadow:0 0 0 1px var(--champagne)
+}
+
+/* ---------------------------------------------------------------
+   8. Grille produits + cartes beige subtiles
+   --------------------------------------------------------------- */
+.grid{gap:clamp(30px,3.6vw,56px) clamp(16px,2vw,28px)}
+
+.card{background:var(--beige);border:1px solid var(--champagne);border-radius:var(--r-lg);
+  padding:10px 10px 18px;
+  box-shadow:0 1px 2px rgba(23,21,20,.03);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  transition:transform var(--t) var(--ease),box-shadow var(--t) var(--ease),background var(--t) var(--ease)}
+.card:hover{transform:translateY(-3px);background:#F5EDE2;box-shadow:0 22px 42px -30px rgba(23,21,20,.42)}
+.card .im{background:var(--beige);border-radius:10px}
+.card .fav{background:rgba(255,255,255,.92);border-color:transparent;box-shadow:0 2px 8px -4px rgba(23,21,20,.35);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.card .fav:hover{background:var(--paper);transform:translateY(-1px)}
+.card .fav[aria-pressed="true"]{color:var(--bordeaux)}
+.card .flag{background:var(--bordeaux);border-radius:8px}
+.card .cond-flag{background:rgba(255,255,255,.94);color:var(--ink);border-radius:8px}
+.card .peek{background:rgba(23,21,20,.78);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:8px}
+.card .body{padding:16px 4px 2px}
+.card .cat-lbl{color:var(--bordeaux);letter-spacing:.16em}
+.card .price{color:var(--ink);font-weight:700}
+.card .by{color:var(--muted-2)}
+
+/* variations éditoriales : retirées (spec — toutes les cartes ont la même
+   largeur et le même cadrage photo). Voir theme.css PARTIE 4b. */
+
+/* ---------------------------------------------------------------
+   9. Bandeau éditorial (unique respiration sombre)
+   --------------------------------------------------------------- */
+.editorial{background:var(--charbon);color:var(--ivory);
+  -webkit-backdrop-filter:none;backdrop-filter:none;border-block:0}
+.editorial .pic{background:var(--charbon)}
+.editorial h2 em,.editorial .eyebrow{color:var(--champagne)}
+.editorial p{color:rgba(250,248,245,.78)}
+
+/* ---------------------------------------------------------------
+   9b. État vide
+   --------------------------------------------------------------- */
+.empty{background:var(--paper-2);border:1px solid var(--champagne);border-radius:var(--r-lg)}
+.empty .i{color:var(--champagne)}
+
+/* ---------------------------------------------------------------
+   10. Filtres & champs : blanc/beige, bordure fine, focus bordeaux
+   --------------------------------------------------------------- */
+.fgroup{border-top:1px solid var(--champagne)}
+.fgroup>h3{color:var(--gris)}
+
+.sel,.inp{background:var(--paper);border:1px solid var(--champagne);border-radius:10px;color:var(--ink)}
+.sel:focus,.inp:focus{border-color:var(--bordeaux);box-shadow:0 0 0 3px rgba(107,23,40,.10)}
+option{color:var(--ink)}
+
+.opt,.chip,.cbtn{background:var(--paper);border:1px solid var(--champagne);border-radius:10px;color:var(--ink)}
+.opt:hover,.chip:hover,.cbtn:hover{border-color:var(--bordeaux)}
+.opt.on,.opt[aria-pressed="true"],.chip.on,.cbtn.primary,.cbtn.facet.on{
+  background:var(--bordeaux);color:var(--white);border-color:var(--bordeaux)}
+.cbtn.facet .i{opacity:.9}
+.cbadge,.fx-n{background:var(--bordeaux);color:var(--white)}
+input[type=range]{accent-color:var(--bordeaux)}
+#fMaxVal{color:var(--bordeaux)}
+
+/* ---------------------------------------------------------------
+   11. Fiche produit : grande photo, infos aérées
+   --------------------------------------------------------------- */
+.gallery .main{background:var(--beige);border-radius:var(--r-lg)}
+.thumbs button{background:var(--beige);border-radius:8px}
+.thumbs button[aria-current="true"]{border-color:var(--bordeaux)}
+
+.buy .cat-lbl{color:var(--bordeaux)}
+.buy .tag{background:var(--paper);color:var(--bordeaux);border:1px solid var(--champagne);
+  border-radius:6px;letter-spacing:.16em;padding:5px 10px}
+.buy h1{font-size:clamp(30px,3.6vw,46px);padding-bottom:18px;position:relative}
+/* motif 2 : couture sous le titre produit (étiquette) */
+.buy h1::after{content:"";position:absolute;left:0;bottom:0;width:60px;height:1px;
+  background:repeating-linear-gradient(90deg,var(--champagne) 0 5px,transparent 5px 9px)}
+
+.buy-price .price{color:var(--ink)}
+.buy-price .price s{color:var(--muted-2)}
+.buy-price .save{background:rgba(107,23,40,.09);color:var(--bordeaux)}
+.buy .desc{color:var(--charbon);line-height:1.7;max-width:52ch}
+
+.spec dt{color:var(--gris);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase}
+.spec dd{color:var(--charbon)}
+
+.confbox{background:var(--paper-2);border:1px solid var(--champagne);border-radius:var(--r-lg);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.confbox .row{color:var(--charbon)}
+.confbox .i{color:var(--bordeaux)}
+
+.note{background:transparent;border:0;border-left:2px solid var(--bordeaux);border-radius:0;
+  padding:6px 0 6px 15px;color:var(--gris)}
+.note.info{border-left-color:var(--charbon)}
+
+/* Bloc vendeur (humain, sobre) */
+.seller{background:transparent;border:0;border-top:1px solid var(--champagne);border-radius:0;
+  padding:22px 0 6px;-webkit-backdrop-filter:none;backdrop-filter:none}
+.seller .av{background:var(--bordeaux);color:var(--champagne)}
+.seller .who-name{display:inline-flex;align-items:center;gap:8px;font:700 15.5px/1.3 var(--sans);color:var(--ink)}
+.vbadge{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:50%;
+  border:1px solid var(--bordeaux);color:var(--bordeaux)}
+.vbadge .i{width:11px;height:11px;stroke-width:2.4}
+.seller .meta-line{font-size:12.5px;color:var(--muted);margin-top:3px}
+.seller .facts{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px;
+  font:600 12px/1 var(--sans);color:var(--gris)}
+.seller .facts b{color:var(--bordeaux)}
+
+/* ---------------------------------------------------------------
+   12. Panier / commande
+   --------------------------------------------------------------- */
+.box{background:var(--paper-2);border:1px solid var(--champagne);border-radius:var(--r-lg);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.sum .r.total{border-top:1px solid var(--champagne)}
+.line{border-bottom:1px solid var(--champagne)}
+.line .t{background:var(--beige);border-radius:8px}
+.line .nm a:hover{color:var(--bordeaux)}
+.qty{border:1px solid var(--champagne);border-radius:10px;background:var(--paper)}
+.qty button:hover{background:var(--beige);color:var(--bordeaux)}
+.linkbtn:hover{color:var(--bordeaux)}
+
+/* ---------------------------------------------------------------
+   13. Publier une annonce
+   --------------------------------------------------------------- */
+.steps{border-bottom:1px solid var(--champagne)}
+.steps .s i{border-color:var(--champagne)}
+.steps .s.cur i{background:var(--bordeaux);border-color:var(--bordeaux)}
+.steps .s.done i{background:var(--ink);border-color:var(--ink)}
+.steps .s.done{color:var(--charbon)}
+
+.drop{border:1.5px dashed var(--champagne);background:var(--paper-2);border-radius:var(--r-lg)}
+.drop:hover{border-color:var(--bordeaux);background:var(--beige)}
+.drop .i,.drop label{color:var(--bordeaux)}
+
+.preview-card .body{background:transparent;border:0;box-shadow:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.preview-card .im{background:var(--beige)}
+
+.commission{background:var(--ink);color:var(--ivory);border-radius:var(--r-lg);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.commission b{color:var(--champagne)}
+
+/* ---------------------------------------------------------------
+   14. Compte
+   --------------------------------------------------------------- */
+.acct .who{background:var(--beige);border:1px solid var(--champagne);border-radius:var(--r-lg);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.acct .who .av{background:var(--bordeaux);color:var(--champagne)}
+.acct nav a{border-radius:10px;color:var(--gris)}
+.acct nav a:hover{background:var(--beige);color:var(--ink)}
+.acct nav a.on{background:var(--bordeaux);color:var(--white)}
+
+.stat{background:var(--beige);border:1px solid var(--champagne);border-radius:var(--r-lg);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.stat .n{font-family:var(--serif)}
+
+/* ---------------------------------------------------------------
+   15. Pied de page clair (le blanc domine)
+   --------------------------------------------------------------- */
+footer.site{background:var(--paper-2);color:var(--gris);border-top:1px solid var(--champagne);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+footer .top{border-bottom:1px solid var(--champagne)}
+footer .logo{color:var(--ink)}
+footer .tagline{color:var(--bordeaux)}
+footer .col h4{color:var(--ink)}
+footer .col a{color:var(--gris)}
+footer .col a:hover{color:var(--ink)}
+footer .bottom .socials a{border-color:var(--champagne);background:transparent;color:var(--gris)}
+footer .bottom .socials a:hover{background:var(--bordeaux);color:var(--white);border-color:var(--bordeaux)}
+
+/* ---------------------------------------------------------------
+   15b. Menu mobile (panneau encre, accents bordeaux)
+   --------------------------------------------------------------- */
+.mmenu{background:var(--ink);-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* ---------------------------------------------------------------
+   15c. Toast
+   --------------------------------------------------------------- */
+.toast{background:var(--ink);-webkit-backdrop-filter:none;backdrop-filter:none}
+.toast .i{color:var(--champagne)}
+
+/* ---------------------------------------------------------------
+   16. Responsive : panneau de filtres mobile élégant
+   --------------------------------------------------------------- */
+@media (max-width:1080px){
+  .grid{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:760px){
+  .grid,.grid.three{grid-template-columns:repeat(2,1fr)}
+  .chipbar{background:var(--paper-2);border-bottom:1px solid var(--champagne);
+    -webkit-backdrop-filter:none;backdrop-filter:none}
+  .filters{background:var(--paper-2);border-top:1px solid var(--champagne);
+    -webkit-backdrop-filter:none;backdrop-filter:none}
+  .fx-head{border-bottom:1px solid var(--champagne)}
+  .fx-head .grab{background:var(--champagne)}
+  .fx-head h3{font-family:var(--serif)}
+  .fx-foot{background:var(--paper-2);border-top:1px solid var(--champagne)}
+  .sheet{background:var(--paper-2);border-top:1px solid var(--champagne)}
+  .sopt.on{color:var(--bordeaux)}
+  .cbtn{background:var(--paper);border-color:var(--champagne)}
+  .cbtn.primary,.cbtn.facet.on{background:var(--bordeaux);color:var(--white);border-color:var(--bordeaux)}
+}

@@ -1,0 +1,20 @@
+<!--
+  Favicon ReVends — docs/design-system-revends-v5.md §2, ligne « Favicon 16–32 px ».
+  Tuile carrée `bg-ink` aux coins `rounded-[7px]` (7 px sur une tuile de 32 px,
+  soit rx 5.25 dans ce viewBox 24×24) + symbole « la Boucle » en `on-dark`,
+  `stroke-width="3"`, **sans triangle** (lisibilité à 16 px).
+
+  Le viewBox 24×24 est celui de <Boucle strokeWidth={3} withoutHead /> : ce
+  favicon est le MÊME glyphe que le logo, à la seule différence de la tête
+  supprimée. Couleurs littérales autorisées ici (SVG du logo, DA §9.1).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" role="img" aria-label="ReVends">
+  <rect width="24" height="24" rx="5.25" fill="#171513" />
+  <path
+    d="M 17.73 7.98 A 7 7 0 1 0 17.73 16.02"
+    fill="none"
+    stroke="#F7F3EC"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+</svg>

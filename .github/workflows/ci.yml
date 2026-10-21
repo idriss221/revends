@@ -1,0 +1,93 @@
+# ============================================================================
+# CI ReVends — lint/tests/build sur GitHub Actions (activé au premier push).
+#
+# Déploiement : les déploiements Railway passent par le CLI
+# (`cd server && bash scripts/stage-web.sh && railway up`), cf. docs/deploiement.md.
+# Cette pipeline ne fait que QUALIFIER (typecheck + tests + builds) — l'étape
+# « image Docker » prouve en plus que le Dockerfile de production se construit
+# avec le front embarqué.
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  server:
+    name: Serveur — typecheck + tests d'intégration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: revends
+          POSTGRES_PASSWORD: StrongDevPassword123
+          POSTGRES_DB: revends
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U revends -d revends"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Installer les dépendances
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests d'intégration (Postgres de service)
+        run: npm test
+        env:
+          # ⚠️ `TEST_DATABASE_URL`, PAS `DATABASE_URL` : `test/env.ts` recalcule
+          # volontairement `DATABASE_URL` depuis `TEST_DATABASE_URL` et ignore
+          # donc la variable `DATABASE_URL`. La renseigner n'avait aucun effet.
+          TEST_DATABASE_URL: postgres://revends:StrongDevPassword123@127.0.0.1:5433/revends_test
+
+  web:
+    name: Web — build + tests unitaires
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Installer les dépendances
+        run: npm ci
+      - name: Build SPA (web/dist)
+        run: npm run build
+      - name: Tests unitaires (vitest)
+        run: npm test
+
+  docker-image:
+    name: Image Docker serveur (avec front embarqué)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build front (web/dist)
+        working-directory: web
+        run: npm ci && npm run build
+      - name: Stager le front dans server/web-dist/
+        working-directory: server
+        run: bash scripts/stage-web.sh
+      - name: Construire l'image de production
+        working-directory: server
+        run: docker build -t revends-server:ci .

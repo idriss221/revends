@@ -1,0 +1,14 @@
+node_modules
+dist
+*.local
+.env*
+!.env.example
+.DS_Store
+*.log
+# Playwright
+e2e/.session.json
+playwright-report/
+test-results/
+
+# Captures recette
+captures/

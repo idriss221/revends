@@ -1,0 +1,473 @@
+@import "tailwindcss";
+
+/* ============================================================
+   POLICES — auto-hébergées (woff2, font-display: swap)
+   ============================================================ */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/Manrope-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/Manrope-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "DM Serif Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/DMSerifDisplay-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "DM Serif Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/DMSerifDisplay-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+/* Plus Jakarta Sans — police du design system REVENDS (admin + défaut). */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/PlusJakartaSans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/PlusJakartaSans-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ============================================================
+   SOCLE — TOKENS « REVENDS 2026 » (docs/design-system-revends-v5.md §1.1)
+   Collé tel quel. C'est la source de vérité GLOBALE : elle alimente les
+   utilitaires Tailwind ET l'espace admin (qui n'est PAS re-skinné).
+   ============================================================ */
+@theme static {   /* `static` : toutes les variables sont émises dans :root, même celles utilisées via var() dans @layer */
+  /* ── Surfaces & texte (60 %) ─────────────────────────────── */
+  --color-ink: #171513;   --color-ink-2: #241E1A;   /* Charcoal : texte, navbar, footer, sidebar admin · survol = ink-2 */
+  --color-ivory: #F7F3EC; --color-white: #FFFFFF;    /* fond de page · cartes, surfaces, modales */
+  --color-chocolate: #3A2923;                       /* titres secondaires, nav, texte sur fond doux */
+  --color-muted: #7B6D5D;   /* texte secondaire — AA sur blanc (5.91) ET ivoire (4.53) */
+  --color-faint: #A2958A;   /* décoratif / disabled / icône non porteuse d'info — jamais du texte */
+  --color-line: #E6DED0;    --color-line-strong: #9A8A70;  /* séparateur (décoratif) · bordure de champ (3.36:1, 1.4.11) */
+
+  /* ── Accent secondaire (30 %) ─────────────────────────────── */
+  --color-champagne: #DCC8A8;        /* aplat, filet, icône sur fond sombre (11.16:1) */
+  --color-champagne-soft: #F1E7D5;   /* bande de section, badge « en attente » (chocolate 11.26:1) */
+  --color-champagne-deep: #B39C6E;   /* bordure/icône sur champagne-soft (décoratif) */
+
+  /* ── Accent principal (10 %) — la seule couleur d'action ──── */
+  --color-terracotta: #C85A2A;        /* marque, aplat décoratif, badge, PRIX ≥ 19px/700 (4.24 = grand texte) */
+  --color-terracotta-strong: #B84D20; /* FOND du bouton primaire (blanc 5.10:1) + pressé */
+  --color-terracotta-ink: #A9471F;   /* TOUT texte Terracotta < 19px (5.82:1 blanc / 5.26:1 ivoire) */
+  --color-terracotta-deep: #8C3817;  --color-terracotta-soft: #F8E7DC;  /* survol de lien · fond de badge */
+  --color-terracotta-wash: rgba(200, 90, 42, 0.08);   --color-terracotta-glow: rgba(200, 90, 42, 0.25);  /* survol de tuile · halo du CTA */
+
+  /* ── États (jamais décoratifs) ───────────────────────────── */
+  --color-positive: #2F6B4F;  --color-positive-dark: #24573F;  --color-positive-soft: #E1EFE6;  /* payé, livré, réussi (5.30:1) */
+  --color-danger: #A32C22;    --color-danger-dark: #86211A;    --color-danger-soft: #F7E4E1;     /* erreur, suppression (5.83:1) */
+  /* « En attente / attention » = champagne-soft + chocolate (11.26:1). Pas d'ambre dans la palette. */
+
+  /* ── Texte sur fond sombre (navbar, footer, sidebar) ───────── */
+  --color-on-dark: #F7F3EC;  --color-on-dark-muted: #B5A899;  --color-on-dark-accent: #E08A5F;  /* 16.47 · 7.83 · 6.91 :1 */
+
+  --color-overlay: rgba(23, 21, 19, 0.55);   /* voile modale / drawer */
+
+  /* Jetons hérités encore référencés (1×) par des classes mortes/rares. */
+  --color-gray-light: #E5E7EB;
+  --color-soft-primary: var(--color-terracotta-wash);
+
+  /* ── Rayons (12 → 20) ─────────────────────────────────────── */
+  --radius-sm: 12px;   /* badge, chip, vignette, mini-carte */
+  --radius-md: 16px;   /* carte, champ, bouton, section */
+  --radius-lg: 20px;   /* modale, tuile catégorie, hero panel */
+
+  /* ── Ombres (Charcoal, jamais noir) ───────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(23, 21, 19, 0.05);
+  --shadow-sm: 0 2px 8px rgba(23, 21, 19, 0.06);    /* cartes au repos */
+  --shadow-md: 0 8px 24px rgba(23, 21, 19, 0.10);   /* survol carte, barre de filtre */
+  --shadow-lg: 0 18px 48px rgba(23, 21, 19, 0.16);  /* modale, bottom sheet */
+  --shadow-nav: 0 1px 0 rgba(23,21,19,.07), 0 4px 16px rgba(23,21,19,.06);   --shadow-cta: 0 6px 20px rgba(200,90,42,.25);
+  --shadow-focus: 0 0 0 3px rgba(200, 90, 42, 0.35);  --shadow-focus-dark: 0 0 0 3px rgba(247, 243, 236, 0.50);
+
+  /* ── Typographie ───────────────────────────────────────────── */
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "DM Serif Display", "Playfair Display", Georgia, serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;   /* n° de commande, n° de suivi */
+
+  /* ── Conteneurs ────────────────────────────────────────────── */
+  --container-content: 1280px;  --container-wide: 1440px;  /* pages publiques · admin */
+  --container-form: 800px;      --container-read: 680px;   /* vendre / paramètres · texte éditorial */
+
+  /* ── Breakpoints (1440 / 1280 / 1024 / 834 / 768 / 640) ────── */
+  --breakpoint-3xl: 1440px;  --breakpoint-xl: 1280px;  --breakpoint-lg: 1024px;
+  --breakpoint-tab: 834px;   --breakpoint-md: 768px;   --breakpoint-sm: 640px;
+
+  /* ── Durées & courbes ──────────────────────────────────────── */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);   --ease-base: cubic-bezier(0.4, 0, 0.2, 1);  --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ── Animations (4 conservées + 6 nouvelles) ───────────────── */
+  --animate-page-in: page-in 0.4s var(--ease-soft) both;      --animate-skeleton: skeleton-pulse 1.4s var(--ease-base) infinite;
+  --animate-pop-in: pop-in 0.28s var(--ease-spring) both;    --animate-notif-in: notif-in 0.22s var(--ease-spring) both;
+  --animate-fade-rise: fade-rise 0.36s var(--ease-soft) both; --animate-sheet-up: sheet-up 0.3s var(--ease-soft) both;
+  --animate-heart-pop: heart-pop 0.42s var(--ease-spring);    --animate-cart-bump: cart-bump 0.34s var(--ease-spring);
+  --animate-toast-in: toast-in 0.28s var(--ease-soft) both;  --animate-count-up: count-up 0.4s var(--ease-base) both;
+
+  @keyframes page-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  @keyframes fade-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes skeleton-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+  @keyframes pop-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  @keyframes notif-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+  @keyframes heart-pop { 0% { transform: scale(1); } 35% { transform: scale(1.32); } 60% { transform: scale(0.92); } 100% { transform: scale(1); } }
+  @keyframes cart-bump { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.18); } }
+  @keyframes count-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+
+/* ============================================================
+   VERRE DE CHAMP — JETON GLOBAL (option A2, décision chef de projet)
+   ------------------------------------------------------------
+   « Tous les champs du site doivent avoir la couleur du
+   glassmorphism de la page de connexion. »
+
+   Le panneau de connexion est en verre CLAIR ; ses champs étaient
+   opaques (#FFFFFF). Décision tranchée : verre TEINTÉ IVOIRE partout.
+   Pourquoi l'ivoire et non le verre clair strict : les champs vivent
+   sur fond ivoire (catalogue, panier, vente, compte, admin) ET sur photo
+   (connexion) ; `rgba(255,255,255,.12)` sur ivoire devient invisible et
+   fait chuter le texte sous AA. L'ivoire translucide garde l'esprit verre
+   et reste lisible PARTOUT.
+
+   Déclaré sur `:root` (et non sous `.market-site`) pour que l'ADMIN
+   (`.market-admin`, hors `.market-site`) hérite des mêmes jetons : une
+   seule source à changer demain. La variante sombre est aussi ici.
+   Valeurs calculées (WCAG 2.1) — voir rapport.
+   ============================================================ */
+:root {
+  --field-glass-bg: rgba(247, 243, 236, 0.55);      /* ivoire #F7F3EC à 55 % */
+  --field-glass-gb: rgba(247, 243, 236, 0.94);      /* repli opaque (sans blur) */
+  --field-glass-blur: blur(22px) saturate(1.4);
+  --field-glass-border: rgba(23, 21, 19, 0.48);     /* 3.17:1 sur ivoire — 1.4.11 */
+  --field-glass-border-strong: rgba(23, 21, 19, 0.62);
+  --field-glass-placeholder: rgba(23, 21, 19, 0.62);/* 4.99:1 sur verre ivoire — AA */
+  --field-glass-focus: rgba(23, 21, 19, 0.80);      /* anneau focus ≥ 3:1 — 1.4.11 */
+}
+:root[data-theme="dark"] .market-site {
+  --field-glass-bg: rgba(247, 243, 237, 0.15);      /* ivoire 15 % sur surface sombre */
+  --field-glass-gb: rgba(33, 29, 27, 0.94);
+  --field-glass-border: rgba(247, 243, 237, 0.38);  /* 3.34:1 vs #11100F — 1.4.11 */
+  --field-glass-border-strong: rgba(247, 243, 237, 0.55);
+  --field-glass-placeholder: rgba(247, 243, 237, 0.70);
+  --field-glass-focus: rgba(217, 138, 159, 0.95);
+}
+
+/* ============================================================
+   BASE — docs/design-system-revends-v5.md §1.2
+   ============================================================ */
+@layer base {
+  body { background-color: var(--color-ivory); color: var(--color-ink);
+         font-family: var(--font-sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { letter-spacing: -0.015em; }
+  ::selection { background: var(--color-terracotta-soft); color: var(--color-ink); }
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: none; box-shadow: var(--shadow-focus); border-radius: var(--radius-sm); }
+  .on-dark :where(a, button, input, select, [tabindex]):focus-visible { box-shadow: var(--shadow-focus-dark); }
+  .no-scrollbar { scrollbar-width: none; }  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .table-scroll::-webkit-scrollbar { height: 8px; }
+  .table-scroll::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 9999px; }
+}
+
+/* ============================================================
+   UTILITAIRES — docs/design-system-revends-v5.md §1.2 / §1.3
+   ============================================================ */
+@layer utilities {
+  /* .card — surface blanche (utilisée aussi par l'admin : AdminOrderDetailPage). */
+  .card { background: var(--color-white); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm); }
+
+  .field-input {
+    width: 100%; background-color: var(--field-glass-bg); color: var(--color-ink);
+    -webkit-backdrop-filter: var(--field-glass-blur); backdrop-filter: var(--field-glass-blur);
+    border: 1px solid var(--field-glass-border); border-radius: var(--radius-md);
+    padding: 0.875rem 1rem; font-size: 1rem; line-height: 1.4;
+    transition: border-color 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base);
+  }
+  .field-input::placeholder { color: var(--field-glass-placeholder); }
+  .field-input:hover { border-color: var(--field-glass-border-strong); }
+  .field-input:focus { outline: none; border-color: var(--field-glass-focus); box-shadow: var(--shadow-focus); }
+  .field-input[aria-invalid="true"] { border-color: var(--color-danger); }
+  .field-input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .section-underline { padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-line); }
+  .page-enter { animation: var(--animate-page-in); }
+  .stagger-1 { animation-delay: 60ms; }
+  .stagger-2 { animation-delay: 120ms; }
+  .stagger-3 { animation-delay: 180ms; }
+  .stagger-4 { animation-delay: 240ms; }
+  .rail { display: flex; gap: 0.75rem; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail > * { scroll-snap-align: start; }
+  .table-scroll { overflow-x: auto; }
+
+  /* Lien d'évitement (accessibilité) — public + admin. */
+  .skip-link {
+    position: absolute; left: 1rem; top: -64px; z-index: 200;
+    background: var(--color-ink); color: var(--color-white);
+    padding: 12px 18px; border-radius: var(--radius-md); font-weight: 600;
+    transition: top 0.2s var(--ease-base);
+  }
+  .skip-link:focus { top: 12px; }
+
+  /* Safe-areas (encoche / barre gestuelle). */
+  .pt-safe-nav { padding-top: env(safe-area-inset-top); }
+  .pb-safe-nav { padding-bottom: env(safe-area-inset-bottom); }
+
+  /* Cascade des cartes produit (ProductCard : data-stagger="0..11"). */
+  .market-product-card { animation: var(--animate-fade-rise); }
+}
+
+/* Espace réservé à la bottom-nav fixe (64 px, mobile uniquement). */
+@media (max-width: 767.98px) {
+  .pb-nav-space { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}
+
+/* Mascotte « la Boucle » — hochement unique au montage. */
+@keyframes mascotte-nod {
+  0%, 72%, 100% { transform: rotate(0deg); }
+  78% { transform: rotate(6deg); }
+  84% { transform: rotate(-4deg); }
+  90% { transform: rotate(2deg); }
+}
+@layer utilities {
+  .mascotte-nod { animation: mascotte-nod 2.4s var(--ease-soft) 1 both; }
+}
+@keyframes stagger-delay-0 { from { opacity: 0; } to { opacity: 1; } }
+[data-stagger="0"] { animation-delay: 0ms; }
+[data-stagger="1"] { animation-delay: 50ms; }
+[data-stagger="2"] { animation-delay: 100ms; }
+[data-stagger="3"] { animation-delay: 150ms; }
+[data-stagger="4"] { animation-delay: 200ms; }
+[data-stagger="5"] { animation-delay: 250ms; }
+[data-stagger="6"] { animation-delay: 300ms; }
+[data-stagger="7"] { animation-delay: 350ms; }
+[data-stagger="8"] { animation-delay: 400ms; }
+[data-stagger="9"] { animation-delay: 450ms; }
+[data-stagger="10"] { animation-delay: 500ms; }
+[data-stagger="11"] { animation-delay: 550ms; }
+
+/* ============================================================
+   THÈME — mécanique Bureau (transition douce + bouton ☼/☾)
+   Source : Bureau/main/assets/theme.css (parties 3 & 6).
+   ============================================================ */
+.theme-anim,
+.theme-anim *:not(.i),
+.theme-anim *::before,
+.theme-anim *::after {
+  transition: background-color 0.3s var(--ease-base), border-color 0.3s var(--ease-base),
+    color 0.3s var(--ease-base), fill 0.3s var(--ease-base), box-shadow 0.3s var(--ease-base) !important;
+}
+.themebtn { position: relative; }
+.themebtn .i { transition: transform 0.3s var(--ease-soft); }
+.theme-anim .themebtn .i { transition: none; }
+.themebtn:active .i { transform: rotate(-22deg); }
+
+/* ============================================================
+   LOADER SIGNATURE — « LE CŒUR COUTURE »
+   Source : Bureau/main/assets/theme.css (partie 8). Splash + mini-cœur.
+   ============================================================ */
+:root { --rv-accent: #6B1728; }
+:root[data-theme="dark"] { --rv-accent: #A83A52; }
+
+/* Fond du document en mode sombre (rebond de scroll / overscroll mobile).
+   Le shell public `.market-site` ET le shell admin `.market-admin` couvrent
+   tous deux `min-h-screen` : cette couleur n'est visible que sur l'overscroll,
+   jamais derrière le contenu. */
+:root[data-theme="dark"] { background-color: #11100F; }
+
+.rv-heart { width: 104px; height: 98px; display: block; overflow: visible; }
+.rv-heart .hp {
+  fill: var(--rv-accent); fill-opacity: 0;
+  stroke: var(--rv-accent); stroke-width: 3.4;
+  stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 6 6;
+  transform-box: fill-box; transform-origin: center;
+  filter: drop-shadow(0 12px 20px rgba(107, 23, 40, 0.28));
+  animation: rvHeart 3.1s cubic-bezier(0.5, 0.05, 0.3, 1) infinite;
+}
+.rv-heart .shine {
+  fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 2;
+  stroke-linecap: round; opacity: 0;
+  animation: rvShine 3.1s ease-in-out infinite;
+}
+@keyframes rvHeart {
+  0%     { stroke-dashoffset: 430; fill-opacity: 0; transform: scale(1); }
+  52%    { stroke-dashoffset: 0;   fill-opacity: 0; transform: scale(1); }
+  66%    { fill-opacity: 1;        transform: scale(1.09); }
+  74%    { transform: scale(1); }
+  83%    { transform: scale(1.06); }
+  90%    { transform: scale(1); }
+  100%   { stroke-dashoffset: 0; fill-opacity: 0; transform: scale(1); }
+}
+@keyframes rvShine { 0%, 66% { opacity: 0; } 74% { opacity: 0.85; } 86%, 100% { opacity: 0; } }
+
+.rv-splash {
+  position: fixed; inset: 0; z-index: 9999;
+  display: grid; place-items: center;
+  background: var(--color-ivory);
+  transition: opacity 0.5s var(--ease-base);
+}
+.rv-splash.is-out { opacity: 0; pointer-events: none; }
+.rv-splash__box { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.rv-splash__cap {
+  font: 700 11px/1 var(--font-sans); letter-spacing: 0.5em; text-indent: 0.5em;
+  text-transform: uppercase; color: var(--color-muted);
+  animation: rvCap 0.4s var(--ease-base) both;
+}
+@keyframes rvCap { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.rv-mini { width: 16px; height: 16px; transform-origin: center; }
+@keyframes rvMiniPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.76); opacity: 0.6; } }
+.rv-loading .rv-mini { animation: rvMiniPulse 0.8s ease-in-out infinite; }
+
+/* ============================================================
+   MOUVEMENT RÉDUIT
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .theme-anim, .theme-anim * { transition: none !important; }
+  .rv-heart .hp { animation: none; stroke-dashoffset: 0; fill-opacity: 1; }
+  .rv-heart .shine { animation: none; opacity: 0; }
+  .rv-splash__cap { animation: none; }
+  .rv-splash { transition: none; }
+  .mascotte-nod { animation: none; }
+}
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   RE-SKIN PUBLIC — PALETTE BUREAU/MAIN
+   ───────────────────────────────────────────────────────────
+   MÉTHODE (documentée) : Tailwind v4 `@theme` (non-inline) génère
+   des utilitaires qui référencent `var(--color-*)`. On ne touche donc
+   AUCUN composant : il suffit de REMAPPER ces variables dans le scope
+   public `.market-site` (posé par SiteShell). L'admin (`.market-admin`,
+   DashboardLayout) reste HORS scope → il conserve les tokens REVENDS
+   2026 ci-dessus, et reste INSENSIBLE à `data-theme`.
+
+   ☀ LIGHT  « White & Burgundy »   blanc #FFFFFF · bordeaux #6B1728
+   ☾ DARK   « Burgundy Night »     fond #11100F · accent #8F2940
+   Le sélecteur de thème vit sur <html data-theme="light|dark">.
+   ============================================================ */
+
+/* ---------- PUBLIC · LIGHT « WHITE & BURGUNDY » ---------- */
+.market-site {
+  font-family: var(--font-sans);
+  /* Typographie Bureau : Manrope pour le texte (display = DM Serif Display). */
+  --font-sans: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Surfaces & texte */
+  --color-ivory: #FFFFFF;          /* fond de page */
+  --color-white: #FFFFFF;          /* cartes / surfaces + texte sur accent */
+  --color-ink: #171514;            /* texte principal (charbon) */
+  --color-ink-2: #241E1A;
+  --color-chocolate: #171514;      /* nav / titres secondaires */
+  --color-muted: #6E6E6E;          /* texte secondaire */
+  --color-faint: #9A9A9A;
+  --color-line: #ECECEC;           /* bordures neutres */
+  --color-line-strong: #DEDEDE;
+
+  /* Accent secondaire */
+  --color-champagne: #D8C5AB;
+  --color-champagne-soft: #F1E8DC;
+  --color-champagne-deep: #B39C6E;
+
+  /* Accent principal — BORDEAUX */
+  --color-terracotta: #6B1728;
+  --color-terracotta-strong: #6B1728;   /* fond bouton primaire */
+  --color-terracotta-ink: #6B1728;      /* texte accent */
+  --color-terracotta-deep: #52111F;     /* survol */
+  --color-terracotta-soft: #F7E9ED;     /* fond de badge (teinte dérivée) */
+  --color-terracotta-wash: rgba(107, 23, 40, 0.08);
+  --color-terracotta-glow: rgba(107, 23, 40, 0.25);
+
+  /* Voile & ombres */
+  --color-overlay: rgba(23, 21, 20, 0.35);
+  --shadow-cta: 0 6px 20px rgba(107, 23, 40, 0.25);
+  --shadow-focus: 0 0 0 3px rgba(107, 23, 40, 0.30);
+}
+
+/* ---------- PUBLIC · DARK « BURGUNDY NIGHT » ---------- */
+:root[data-theme="dark"] .market-site {
+  --color-ivory: #11100F;          /* fond de page */
+  --color-white: #F7F3ED;          /* TEXTE sur accent (surface gérée plus bas) */
+  --color-ink: #F7F3ED;            /* texte principal (surface via .bg-ink) */
+  --color-ink-2: #211D1B;
+  --color-chocolate: #C7BDB3;      /* nav / titres secondaires */
+  --color-muted: #AAA19A;          /* texte secondaire */
+  --color-faint: #766F69;
+  --color-line: #292522;           /* bordures */
+  --color-line-strong: #352F2C;
+
+  --color-champagne: #D8C5AB;
+  --color-champagne-soft: #211D1B;
+  --color-champagne-deep: #352F2C;
+
+  /* Accent bordeaux « nuit » */
+  --color-terracotta: #8F2940;
+  --color-terracotta-strong: #8F2940;
+  --color-terracotta-ink: #D98A9F;      /* texte accent éclairci (contraste AA sur #11100F) */
+  --color-terracotta-deep: #A83A52;     /* survol */
+  --color-terracotta-soft: #2A1A20;     /* fond de badge */
+  --color-terracotta-wash: rgba(143, 41, 64, 0.16);
+  --color-terracotta-glow: rgba(168, 58, 82, 0.35);
+
+  /* États (éclaircis pour rester lisibles sur fond sombre) */
+  --color-positive: #5FBF8E;
+  --color-positive-dark: #3E9A70;
+  --color-positive-soft: #16241C;
+  --color-danger: #E5807A;
+  --color-danger-dark: #C25B55;
+  --color-danger-soft: #2A1715;
+
+  --color-overlay: rgba(0, 0, 0, 0.60);
+  --shadow-cta: 0 6px 20px rgba(168, 58, 82, 0.35);
+  --shadow-focus: 0 0 0 3px rgba(168, 58, 82, 0.45);
+}
+
+/* Le jeton `white` est surchargé (surface ET texte) : sur fond sombre on
+   rétablit la bonne surface pour `bg-white` (cartes, modales, barres) et pour
+   `bg-ink` (footer charbon), SANS toucher aux composants. Les variantes
+   translucides (`bg-white/90`, `/95`) restent claires (= cercles favori). */
+:root[data-theme="dark"] .market-site .bg-white { background-color: var(--color-ink-2); }
+:root[data-theme="dark"] .market-site .bg-ink { background-color: #161413; }
+:root[data-theme="dark"] .market-site .bg-chocolate { background-color: var(--color-ink-2); }
+:root[data-theme="dark"] .market-site .bg-danger { background-color: var(--color-danger-dark); }
+:root[data-theme="dark"] .market-site .bg-positive { background-color: var(--color-positive-dark); }

@@ -1,0 +1,54 @@
+# =====================================================================
+# ReVends — fichiers à NE JAMAIS versionner
+# =====================================================================
+
+# ---- Secrets / variables d'environnement ----------------------------
+# Tous les .env sont ignorés, sauf le modèle `.env.example` (placeholders).
+# Cela couvre aussi .env.bak.*, .env.local, .env.test, server/.env, etc.
+.env
+.env.*
+!.env.example
+
+# Fichiers locaux contenant des secrets en clair (clés SMTP, cookies de
+# session). À nettoyer/roter : ne doivent jamais entrer dans le dépôt.
+mail_config.txt
+cookies.txt
+
+# ---- Dépendances & artefacts de build -------------------------------
+node_modules/
+dist/
+build/
+coverage/
+server/web-dist/
+
+# ---- Uploads utilisateurs (contenu local, volumineux) ----------------
+uploads/
+
+# ---- Logs ------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Tests / recette -------------------------------------------------
+e2e/.session.json
+playwright-report/
+test-results/
+captures/
+
+# ---- OS / éditeurs ---------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ---- Clés privées (jamais versionnées, même en dev) ------------------
+# Certificat auto-signé du nginx de dev (CN=localhost). Il est régénéré
+# localement (voir docs/journal.md) ; une clé privée ne doit pas entrer
+# dans le dépôt, même sans valeur en production.
+server/nginx/certs/*.key
+server/nginx/certs/*.pem
+
+# ---- Sauvegardes locales (dumps BDD, arbres périmés) -----------------
+# Contient des données et parfois des .env d'anciennes versions.
+.backup/
