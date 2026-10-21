@@ -49,6 +49,15 @@ services:
         fromDatabase:
           name: revends-db
           property: connectionString
+      # DB_PASSWORD est OBLIGATOIRE même avec DATABASE_URL : la garde
+      # `validateDbPassword` (config.ts:208) s'exécute dans TOUS les
+      # environnements sur `DB_PASSWORD || POSTGRES_PASSWORD` et fait
+      # `process.exit(1)` si vide ou < 12 caractères. Sans cette ligne,
+      # le conteneur refuse de démarrer (reproduit en local).
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: revends-db
+          property: password
 
       # --- Redis (sessions + cache + rate-limit) ---------------------
       # `connectionString` d'un Key Value Render a EXACTEMENT le format
@@ -95,8 +104,14 @@ services:
         sync: false
 
       # --- E-mails transactionnels (SendGrid/SMTP) -------------------
+      # ⚠️ En production, MAIL_ENABLED=true exige les 4 variables
+      # MAIL_HOST / MAIL_USER / MAIL_PASSWORD / MAIL_FROM, sinon le
+      # conteneur fait `process.exit(1)` (config.ts:227-230) et le
+      # déploiement échoue. On démarre donc DÉSACTIVÉ : le premier
+      # déploiement passe sans dépendre de secrets mail.
+      # Pour activer : renseigner les 4 variables puis passer à 'true'.
       - key: MAIL_ENABLED
-        value: 'true'
+        value: 'false'
       - key: MAIL_HOST
         sync: false
       - key: MAIL_PORT
