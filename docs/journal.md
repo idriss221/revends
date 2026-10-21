@@ -2964,3 +2964,79 @@ production**, avec de belles photos illustrant chaque catégorie.
 - Rendu **esthétique** des 22 visuels à valider par l'utilisateur (le modèle
   ne lit pas les images) ; le chargement réel, lui, est **prouvé**.
 
+
+---
+
+## 21 octobre 2026 (suite) — Préparation du déploiement production (Render)
+
+### Objectif
+Déployer ReVends en production. Plateforme retenue : **Render** (Blueprint
+`render.yaml`), code hébergé sur **GitHub**.
+
+### Infrastructure décrite (`render.yaml`, validée)
+| Ressource | Type | Détail |
+|---|---|---|
+| `revends-api` | web / **docker** | `Dockerfile.server`, health `/api/health` |
+| `revends-web` | web / **static** | `cd web && npm run build`, publish `./web/dist` |
+| `revends-db` | **PostgreSQL** | managé, `DATABASE_URL` injectée |
+| `revends-redis` | **keyvalue** | `REDIS_URL` via `connectionString` |
+
+- `render.yaml` **validé contre le schéma officiel** Render
+  (`https://render.com/schema/render.yaml.json`) avec `jsonschema` →
+  verdict `✅ VALIDE` (0 erreur).
+- Aucun secret dans le fichier : `sync: false` (Render demande la valeur)
+  et `generateValue: true` (`SESSION_SECRET`).
+
+### Dépôt GitHub
+- **https://github.com/idriss221/revends** — **privé**, branche `main`.
+- `.env`, `mail_config.txt`, clés privées et `.backup/` **exclus** via
+  `.gitignore` (ajout des règles `server/nginx/certs/*.key` et `.backup/`).
+- Contrôle d'absence de secret : `gh api .../contents/.env` → **404**.
+
+### Répétition générale du déploiement (preuve, pas intention)
+Image buildée **sans cache** (`docker build --no-cache`, exit 0), puis
+démarrée contre un **PostgreSQL vierge** avec la séquence du CMD
+`migrate → seed → index` :
+- **11 migrations** appliquées, **compte admin créé**, **3 bannières**,
+  API démarrée en `production` ;
+- `GET /api/health` → `{"status":"ok"}` ;
+- `GET /api/categories` → **5 mères / 17 enfants** (22) ;
+- `GET /api/products` → **total 0** (site neuf).
+
+### 3 pièges découverts (et corrigés AVANT le déploiement)
+1. **`DB_PASSWORD` obligatoire même avec `DATABASE_URL`** —
+   `validateDbPassword` (config.ts:208) tourne dans **tous** les
+   environnements sur `DB_PASSWORD || POSTGRES_PASSWORD` et fait
+   `process.exit(1)` si vide. Reproduit en local : le conteneur refusait
+   de démarrer. Corrigé par `DB_PASSWORD: fromDatabase.property=password`.
+2. **`MAIL_ENABLED=true` en production exige les 4 `MAIL_*`** sinon
+   `process.exit(1)` (config.ts:227-230). Démarré à `false` pour que le
+   premier déploiement ne dépende d'aucun secret mail.
+3. **`region` interdit sur un site statique** — refusé par le schéma
+   officiel (definition `staticService`, `additionalProperties: false`).
+   Détecté par la validation, retiré.
+
+Deux gardes de sécurité du code ont fait leur travail et **bloqué** des
+secrets de test faibles (`SESSION_SECRET` contenant « test »,
+`DB_PASSWORD` < 12 caractères) : la validation des secrets est donc
+réellement active en production.
+
+### Reste à faire (action utilisateur)
+La création des services Render exige une **clé API Render**
+(`dashboard.render.com/u/settings#api-keys`) — absente de l'environnement
+(`GET api.render.com/v1/owners` → 401). Deux voies :
+- **Dashboard** : `dashboard.render.com/blueprints` → New Blueprint
+  Instance → dépôt `idriss221/revends` → renseigner les `sync: false` →
+  Apply.
+- **Clé API** fournie au chef de projet → création et déploiement en CLI.
+
+Après le premier déploiement, `VITE_API_URL` (côté web) doit recevoir
+l'URL de `revends-api`, puis `SITE_URL` / `CORS_ORIGINS` l'URL de
+`revends-web`.
+
+### Risques signalés (non bloquants)
+- **Plan free Render** : mise en veille après ~15 min d'inactivité
+  (cold start 30-60 s) et **disque éphémère** → les photos produits
+  uploadées sont perdues à chaque redéploiement. Pour de la prod réelle :
+  plan payant + disque persistant, ou stockage objet (S3/Supabase).
+- `docs/api.md` toujours désynchronisé (`PHOTO_MISSING`, borne min 3).
