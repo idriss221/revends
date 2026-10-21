@@ -97,55 +97,35 @@ services:
         value: 'false'
 
       # --- Admin initial (seed) --------------------------------------
-      # Le seed crée l'admin uniquement si la table users est vide.
+      # SEULES variables réellement obligatoires à la saisie : le seed
+      # crée l'admin, et validateAdminPassword (config.ts:169) refuse un
+      # mot de passe < 12 caractères ou contenant admin/password/123456/
+      # test/dev/change (→ process.exit(1)).
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
 
-      # --- E-mails transactionnels (SendGrid/SMTP) -------------------
-      # ⚠️ En production, MAIL_ENABLED=true exige les 4 variables
-      # MAIL_HOST / MAIL_USER / MAIL_PASSWORD / MAIL_FROM, sinon le
-      # conteneur fait `process.exit(1)` (config.ts:227-230) et le
-      # déploiement échoue. On démarre donc DÉSACTIVÉ : le premier
-      # déploiement passe sans dépendre de secrets mail.
-      # Pour activer : renseigner les 4 variables puis passer à 'true'.
+      # --- E-mails transactionnels (optionnel) -----------------------
+      # Désactivé au premier déploiement : MAIL_ENABLED=true exigerait les
+      # 4 variables MAIL_* (config.ts:227). `value: ''` = pas de saisie
+      # imposée par Render ; à renseigner dans le Dashboard pour activer.
       - key: MAIL_ENABLED
         value: 'false'
-      - key: MAIL_HOST
-        sync: false
       - key: MAIL_PORT
         value: '587'
       - key: MAIL_SECURE
         value: 'false'
-      - key: MAIL_USER
-        sync: false
-      - key: MAIL_PASSWORD
-        sync: false
-      - key: MAIL_FROM
-        sync: false
 
-      # --- URLs publiques & CORS -------------------------------------
-      # À RENSEIGNER après le premier déploiement du web statique :
-      # CORS_ORIGINS = origine exacte du site (sans slash final).
+      # --- URLs publiques & CORS (à renseigner après le 1er déploiement)
+      # Vides au départ : `CORS_ORIGINS` vide retombe sur `SITE_URL`
+      # (config.ts:286) et `SITE_URL` a un défaut (localhost:5173) — le
+      # boot n'échoue PAS. À remplacer par les URLs .onrender.com réelles
+      # (CORS_ORIGINS = origine du web, sans slash final, séparateur « , »).
       - key: SITE_URL
-        sync: false
+        value: ''
       - key: CORS_ORIGINS
-        sync: false
-
-      # --- OAuth social (optionnel) ----------------------------------
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GOOGLE_CALLBACK_URL
-        sync: false
-      - key: FACEBOOK_APP_ID
-        sync: false
-      - key: FACEBOOK_APP_SECRET
-        sync: false
-      - key: FACEBOOK_CALLBACK_URL
-        sync: false
+        value: ''
 
       # --- Uploads (photos produits) ---------------------------------
       # Sur le plan free, pas de disque persistant : les fichiers écrits
@@ -166,10 +146,12 @@ services:
     autoDeployTrigger: commit
     envVars:
       # VITE_API_URL est INLINÉE au build par Vite : le front appellera
-      # l'API à cette adresse. À renseigner AVANT le premier build du web
-      # (l'URL de revends-api, ex. https://revends-api.onrender.com).
+      # l'API à cette adresse. Le sous-domaine Render dérive du nom du
+      # service (`revends-api` → revends-api.onrender.com). Si Render
+      # attribue un sous-domaine différent (nom déjà pris), corriger la
+      # valeur ici puis redéployer revends-web.
       - key: VITE_API_URL
-        sync: false
+        value: https://revends-api.onrender.com
     headers:
       # Immutabilité des assets fingerprintés (hash dans le nom).
       - path: /assets/*
