@@ -9,6 +9,50 @@ import crypto from 'node:crypto';
 
 export const authRouter = Router();
 
+/**
+ * URL publique de base, dérivée de la requête entrante.
+ *
+ * Pourquoi : `GOOGLE_CALLBACK_URL` / `SITE_URL` figés en dur cassent le
+ * flux OAuth dès que le site change d'adresse (ex. dev en `localhost`,
+ * prod derrière un tunnel/domaine). Google renverrait alors l'utilisateur
+ * vers une adresse injoignable → « site inaccessible ».
+ *
+ * On fait donc confiance au `Host` réellement visité par l'utilisateur
+ * (nginx transmet `Host` et `X-Forwarded-Proto`, et `trust proxy` est
+ * activé — app.ts:42). Si `SITE_URL`/`*_CALLBACK_URL` sont définis, ils
+ * restent prioritaires (override explicite pour l'admin).
+ */
+function publicBaseUrl(req: Request): string {
+  const host = req.get('host');
+  if (!host) return config.siteUrl.replace(/\/+$/, '');
+
+  const proto = req.get('x-forwarded-proto')?.split(',')[0]?.trim() || req.protocol || 'https';
+  const fromRequest = `${proto}://${host}`;
+
+  const configured = config.siteUrl.replace(/\/+$/, '');
+  const configuredIsLocal = /localhost|127\.0\.0\.1/.test(configured);
+  const requestIsLocal = /localhost|127\.0\.0\.1/.test(host);
+
+  // `SITE_URL` explicite gagne, SAUF s'il désigne localhost alors que la
+  // requête arrive d'ailleurs (cas prod : config de dev oubliée). Sinon
+  // Google renverrait l'utilisateur vers une adresse injoignable.
+  if (configured && !(configuredIsLocal && !requestIsLocal)) return configured;
+
+  return fromRequest;
+}
+
+/** Callback OAuth à déclarer dans la console du fournisseur. */
+function oauthCallbackUrl(req: Request, provider: 'google' | 'facebook', explicit?: string): string {
+  const base = publicBaseUrl(req);
+  // Idem : un callback figé sur localhost est ignoré si la requête vient
+  // d'un vrai domaine (sinon → « site inaccessible » après le consentement).
+  if (explicit && !(/(localhost|127\.0\.0\.1)/.test(explicit) && !/(localhost|127\.0\.0\.1)/.test(base))) {
+    return explicit;
+  }
+  return `${base}/api/auth/${provider}/callback`;
+}
+
+
 /** POST /api/auth/register — 201, session immédiate (CA-AUTH03-01) */
 authRouter.post('/register', async (req, res) => {
   const input = registerSchema.parse(req.body);
@@ -88,7 +132,8 @@ authRouter.get('/me', requireAuth, async (_req: Request, res: Response) => {
 
 /** OAuth routes — Google */
 authRouter.get('/google', async (req: Request, res: Response) => {
-  const { clientId, clientSecret, callbackUrl } = config.oauth.google;
+  const { clientId, clientSecret } = config.oauth.google;
+  const callbackUrl = oauthCallbackUrl(req, 'google', config.oauth.google.callbackUrl);
   if (!clientId || !clientSecret) {
     res.status(503).json({
       error: {
@@ -115,10 +160,11 @@ authRouter.get('/google', async (req: Request, res: Response) => {
 });
 
 authRouter.get('/google/callback', async (req: Request, res: Response) => {
-  const { clientId, clientSecret, callbackUrl } = config.oauth.google;
+  const { clientId, clientSecret } = config.oauth.google;
+  const callbackUrl = oauthCallbackUrl(req, 'google', config.oauth.google.callbackUrl);
   const { code, state, error } = req.query as Record<string, unknown>;
 
-  const redirectError = `${config.siteUrl}/?oauth=error`;
+  const redirectError = `${publicBaseUrl(req)}/?oauth=error`;
   if (!clientId || !clientSecret) {
     res.redirect(redirectError);
     return;
@@ -191,7 +237,7 @@ authRouter.get('/google/callback', async (req: Request, res: Response) => {
         req.session.save((saveErr) => (saveErr ? reject(saveErr) : resolve()));
       });
     });
-    res.redirect(config.siteUrl);
+    res.redirect(publicBaseUrl(req));
   } catch (err) {
     res.redirect(redirectError);
   }
@@ -214,7 +260,7 @@ authRouter.get('/facebook', async (req: Request, res: Response) => {
   await new Promise<void>((resolve, reject) => {
     req.session.save((err) => (err ? reject(err) : resolve()));
   });
-  const callbackUrl = config.oauth.facebook.callbackUrl;
+  const callbackUrl = oauthCallbackUrl(req, 'facebook', config.oauth.facebook.callbackUrl);
   const params = new URLSearchParams({
     client_id: appId,
     redirect_uri: callbackUrl,
@@ -227,10 +273,10 @@ authRouter.get('/facebook', async (req: Request, res: Response) => {
 
 authRouter.get('/facebook/callback', async (req: Request, res: Response) => {
   const { appId, appSecret } = config.oauth.facebook;
-  const callbackUrl = config.oauth.facebook.callbackUrl;
+  const callbackUrl = oauthCallbackUrl(req, 'facebook', config.oauth.facebook.callbackUrl);
   const { code, state, error } = req.query as Record<string, unknown>;
 
-  const redirectError = `${config.siteUrl}/?oauth=error`;
+  const redirectError = `${publicBaseUrl(req)}/?oauth=error`;
   if (!appId || !appSecret) {
     res.redirect(redirectError);
     return;
@@ -296,7 +342,7 @@ authRouter.get('/facebook/callback', async (req: Request, res: Response) => {
         req.session.save((saveErr) => (saveErr ? reject(saveErr) : resolve()));
       });
     });
-    res.redirect(config.siteUrl);
+    res.redirect(publicBaseUrl(req));
   } catch (err) {
     res.redirect(redirectError);
   }

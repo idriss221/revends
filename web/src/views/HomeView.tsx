@@ -41,9 +41,16 @@ import type { Category, ProductCardItem } from '../lib/types'
      (qui naviguait vers la boutique).
    ========================================================================== */
 
-/** `catTile()` (240-246) — tuile de catégorie réelle. */
+/** `catTile()` (240-246) — tuile de catégorie réelle.
+ *
+ *  Composition « bento » : la 1re catégorie est la tuile signature (2×2),
+ *  les suivantes remplissent la droite en carrés — le rectangle est
+ *  entièrement rempli (l'ancienne grille 6 colonnes laissait un vide).
+ *  Le sous-titre annonce le nombre de sous-catégories : une information
+ *  utile plutôt qu'un simple label décoratif. */
 function CatTile({ c, index }: { c: Category; index: number }) {
-  const big = index === 0 || index === 1
+  const big = index === 0
+  const kids = c.children?.length ?? 0
   return (
     <Link
       className={`cat${big ? ' big' : ''} rv`}
@@ -54,15 +61,20 @@ function CatTile({ c, index }: { c: Category; index: number }) {
         src={categoryPhoto(c.name, c.slug)}
         alt={text(c.name)}
         w={big ? 900 : 600}
-        sizes={big ? '(max-width:760px) 100vw, 30vw' : '(max-width:760px) 46vw, 15vw'}
+        sizes={big ? '(max-width:760px) 100vw, 50vw' : '(max-width:760px) 46vw, 25vw'}
         kind={artKindFor(c.name)}
         col="#4A2F25"
         bg="#E6D6BD"
       />
       <span className="lbl">
+        {kids > 0 && (
+          <span className="sub">
+            {kids} sous-catégorie{kids > 1 ? 's' : ''}
+          </span>
+        )}
         <span className="t">{text(c.name)}</span>
         <span className="n">
-          <Ico name="arrow-right" cls="sm" />
+          Explorer <Ico name="arrow-right" cls="sm" />
         </span>
       </span>
     </Link>
@@ -194,7 +206,8 @@ export function HomeView() {
           <div className="wrap">
             <SiteHead
               eyebrow="Explorer par univers"
-              title="Six familles, mille trouvailles"
+              title="Cinq familles, mille trouvailles"
+              sub="Chaque univers rassemble des pièces déjà aimées, prêtes pour une nouvelle histoire."
               link={{ label: 'Tout voir', to: '/search' }}
             />
             <div className="catgrid">

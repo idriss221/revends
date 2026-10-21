@@ -3097,3 +3097,67 @@ compte, sans carte**.
 La clé Render a circulé en clair dans la conversation : à **révoquer**
 (`dashboard.render.com/u/settings#api-keys`). Portée : compte
 « My Workspace » contenant le projet RANGA.
+
+---
+
+## 21 octobre 2026 (suite 3) — Correctif OAuth Google + refonte accueil
+
+### Bug 1 — « site inaccessible » après « Continuer avec Google »
+
+**Cause (reproduite, pas supposée)** : `GOOGLE_CALLBACK_URL` figée à
+`http://localhost:8080/api/auth/google/callback` (défaut de
+`docker-compose.yml:67`) et prioritaire sur `SITE_URL`. Depuis l'URL
+publique, Google renvoyait donc l'utilisateur vers **localhost** → site
+inaccessible chez le visiteur. Deux défauts cumulés : (a) l'URL dépendait
+d'une variable figée, (b) le schéma `$scheme` de nginx valait toujours
+`http` derrière le terminateur TLS du tunnel (Google exige `https`).
+
+**Correction**
+1. `server/src/routes/auth.routes.ts` : helpers `publicBaseUrl(req)` et
+   `oauthCallbackUrl(req, provider, explicit?)`. L'URL de callback et les
+   redirections (`/?oauth=error`, succès) sont **dérivées de la requête**
+   (Host + `X-Forwarded-Proto`, `trust proxy` déjà actif — app.ts:42).
+   Un override explicite reste honoré, **sauf** s'il pointe `localhost`
+   alors que la requête vient d'un domaine réel (config de dev oubliée).
+   Appliqué à Google **et** Facebook (même bug).
+2. `server/nginx/nginx.conf` : `map $http_x_forwarded_proto
+   $forwarded_proto` puis `X-Forwarded-Proto: $forwarded_proto` → l'API
+   voit `https` derrière le tunnel, `http` en local.
+
+**Preuve (deux contextes)**
+| Requête | `redirect_uri` envoyé à Google |
+|---|---|
+| locale (127.0.0.1:8080) | `http://localhost:8080/api/auth/google/callback` |
+| publique (tunnel) | `https://<tunnel>.trycloudflare.com/api/auth/google/callback` |
+
+**Action utilisateur requise** : déclarer cette URL de redirection dans
+la console Google Cloud (sinon `redirect_uri_mismatch`).
+
+### Bug 2 — accueil : grosses tuiles de catégories déséquilibrées
+
+**Audit mesuré** : grille 6 colonnes, `big` attribué par **position**
+(`index===0||1`) → 2 tuiles 391×514 + 3 tuiles 185×247, et **391×514 de
+vide** en bas à gauche (couverture ≈ 62 %). Hiérarchie arbitraire.
+
+**Refonte** (`web/src/styles/bureau.css` + `HomeView.tsx`) : composition
+« bento » **4 colonnes × 2 rangées**, 1 tuile signature (2×2) à gauche
++ 4 carrés à droite, `max-height:min(64vh,560px)` pour ne plus dominer
+la page. Chaque tuile gagne un sous-titre utile (« 4 sous-catégories »,
+issu de `Category.children`), et l'action devient « Explorer → ».
+Titre de section corrigé : « **Cinq** familles » (il annonçait « Six »
+pour 5 catégories réelles). Media queries tablette/mobile réécrites.
+
+**Couverture mesurée après** :
+| Écran | Col. | Couverture | Composition |
+|---|---|---|---|
+| Desktop 1440 | 4 | **95 %** | 550×560 + 4×(265×270) |
+| Tablette 1024 | 2 | **97 %** | 942×530 + 4×(463×463) |
+| Mobile 390 | 2 | **94 %** | 358×201 + 4×(173×173) |
+
+**Preuves** : `tsc -b` 0 · vitest **235/235** · E2E **65 passés / 2
+skipped (opt-in)** · navigateur réel 7/7 images, 0 erreur JS, 0 réponse
+≥400 · serveur `npm test` **541/0**. Vérifié **en ligne** (tunnel) :
+grille 4 col., 95 %, sous-titres présents, nouveau CSS `index-Cz3m-gTB.css`.
+
+Rappel du piège de build : `web/dist` est servi par nginx → tout
+changement front exige `cd web && npm run build` AVANT d'être visible.

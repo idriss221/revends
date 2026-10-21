@@ -286,24 +286,38 @@
 .market-site .trust span{font-size:13px;color:var(--muted)}
 
 /* ---------------------------------------------------------------
-   7. Catégories (composition asymétrique)
-   --------------------------------------------------------------- */
-.market-site .catgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:clamp(12px,1.4vw,18px)}
+   7. Catégories — composition « bento » équilibrée
+   ---------------------------------------------------------------
+   Avant : 6 colonnes, 2 tuiles `big` (index 0 et 1) → la zone sous
+   les tuiles géantes restait VIDE (déséquilibre + hiérarchie
+   arbitraire). Maintenant : un bloc rectangulaire entièrement
+   rempli, une tuile signature (2×2) + 4 secondaires (1×1).
+   Grille 4 col. → droite = 2×2 = exactement 4 carrés. Aucun trou. */
+.market-site .catgrid{display:grid;grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(2,1fr);
+  gap:clamp(12px,1.4vw,18px);
+  aspect-ratio:2/1;max-height:min(64vh,560px)}
 .market-site .cat{position:relative;overflow:hidden;border-radius:var(--r-lg);background:var(--ivory);
-  aspect-ratio:3/4;display:block}
-.market-site .cat.big{grid-column:span 2;grid-row:span 2;aspect-ratio:auto;height:100%}
+  display:block;min-height:0}
+/* Tuile signature (1re catégorie) : occupe la moitié gauche. */
+.market-site .cat.big{grid-column:span 2;grid-row:span 2}
 .market-site .cat img,
 .market-site .cat svg{width:100%;height:100%;object-fit:cover;transition:transform .9s var(--ease)}
 .market-site .cat::after{content:"";position:absolute;inset:0;
-  background:linear-gradient(to top,rgba(23,21,19,.64),rgba(23,21,19,.05) 55%,transparent);transition:opacity var(--t)}
+  background:linear-gradient(to top,rgba(23,21,19,.66),rgba(23,21,19,.06) 58%,transparent);transition:opacity var(--t)}
 .market-site .cat:active img{transform:scale(1.03)}
 .market-site .cat .lbl{position:absolute;left:18px;right:18px;bottom:16px;z-index:2;color:var(--white)}
-.market-site .cat .lbl .t{display:block;font:400 22px/1.1 var(--serif)}
-.market-site .cat.big .lbl .t{font-size:clamp(24px,2.6vw,34px)}
+.market-site .cat .lbl .t{display:block;font:400 20px/1.12 var(--serif)}
+.market-site .cat.big .lbl .t{font-size:clamp(24px,2.6vw,36px)}
 .market-site .cat .lbl .n{display:flex;align-items:center;gap:8px;font:600 11px/1 var(--sans);
   letter-spacing:.16em;text-transform:uppercase;color:var(--champ);margin-top:9px;
   transition:gap var(--t) var(--ease)}
 @media (hover:hover){.market-site .cat:hover img{transform:scale(1.045)}.market-site .cat:hover .lbl .n{gap:13px}}
+/* Sous-titre métadonnée (« 4 sous-catégories ») — petite, estompée,
+   au-dessus du label : donne du sens sans concurrencer le nom. */
+.market-site .cat .lbl .sub{display:block;font:600 10.5px/1 var(--sans);
+  letter-spacing:.18em;text-transform:uppercase;color:var(--champ);
+  opacity:.82;margin-bottom:7px}
 
 /* ---------------------------------------------------------------
    8. Grille produits / carte
@@ -1010,8 +1024,10 @@
 .market-site .filters,
 .market-site .acct .side{position:static}
   .market-site .gallery .main{aspect-ratio:4/3;max-height:clamp(300px,46vh,470px)}
-  .market-site .catgrid{grid-template-columns:repeat(4,1fr)}
-  .market-site .cat.big{grid-column:span 2;grid-row:span 2}
+  .market-site .catgrid{grid-template-columns:repeat(2,1fr);gap:clamp(10px,1.2vw,14px);
+    aspect-ratio:auto;max-height:none;grid-template-rows:none}
+  .market-site .cat.big{grid-column:span 2;grid-row:span 1;aspect-ratio:16/9}
+  .market-site .cat{aspect-ratio:1/1}
   .market-site footer .top{grid-template-columns:1fr 1fr;row-gap:32px}
   .market-site .mh-in{padding-block:clamp(118px,16vh,180px) clamp(80px,12vh,130px)}
 }
@@ -1035,8 +1051,9 @@
   .market-site.home header.site:not(.solid) .bar>.hacts>.btn{display:none}
   .market-site .rv-grid,
 .market-site .rv-grid.three{grid-template-columns:repeat(2,1fr)}
-  .market-site .catgrid{grid-template-columns:repeat(2,1fr);gap:10px}
-  .market-site .cat.big{grid-column:span 2;grid-row:span 2}
+  .market-site .catgrid{grid-template-columns:repeat(2,1fr);gap:10px;
+    aspect-ratio:auto;max-height:none;grid-template-rows:none}
+  .market-site .cat.big{grid-column:span 2;grid-row:span 1;aspect-ratio:16/9}
   .market-site .cat:not(.big){aspect-ratio:1/1}
   .market-site .shop{grid-template-columns:1fr;gap:0}
   .market-site .result-bar{display:none}
