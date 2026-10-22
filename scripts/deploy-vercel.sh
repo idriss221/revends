@@ -31,14 +31,30 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 
+# ── Garde-fou sécurité ───────────────────────────────────────────────────────
+# Le builder Vercel embarque dans le bundle de la fonction TOUT fichier
+# `.env*` présent à la racine du projet (mesuré : le `.env` local, avec les
+# mots de passe Google/Facebook et l'historique du session secret, s'est
+# retrouvé dans `.vercel/output/functions/*.func/.env` → exposé en prod).
+# On refuse donc de déployer tant qu'un `.env*` traîne à la racine.
+LEAKED=$(find "$ROOT" -maxdepth 1 -name ".env*" -not -name ".env.example" -not -name ".env.local" -print 2>/dev/null)
+if [ -n "$LEAKED" ]; then
+  echo "❌ Fichier(s) .env* à la racine — secrets embarqués dans la fonction :" >&2
+  echo "$LEAKED" | sed 's/^/     /' >&2
+  echo "   → déplacez-les hors du dépôt (ex. ~/.revends-secrets/) puis relancez." >&2
+  exit 1
+fi
+
 echo "▸ 1/4 — build du front (web/dist)…"
 npm run build --prefix web
 
-echo "▸ 2/4 — copie web/dist → public/ (sortie statique)…"
-rm -rf "$ROOT/public"
-mkdir -p "$ROOT/public"
+echo "▸ 2/4 — copie web/dist → public/ (sortie statique) + server/public/ (bundle fonction)…"
+rm -rf "$ROOT/public" "$ROOT/server/public"
+mkdir -p "$ROOT/public" "$ROOT/server/public"
 cp -R "$ROOT/web/dist/." "$ROOT/public/"
+cp -R "$ROOT/web/dist/." "$ROOT/server/public/"
 echo "   public/ : $(find "$ROOT/public" -type f | wc -l) fichiers"
+echo "   server/public/ : $(find "$ROOT/server/public" -type f | wc -l) fichiers (embarqués dans la fonction)"
 
 echo "▸ 3/4 — build Vercel local (routes + bundle de la fonction)…"
 rm -rf "$ROOT/.vercel/output"

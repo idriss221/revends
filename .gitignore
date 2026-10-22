@@ -57,3 +57,6 @@ server/nginx/certs/*.pem
 
 # Build Vercel (preset Express : le statique est copié dans public/)
 public/
+
+# Front embarqué dans le bundle de la fonction (artefact de build)
+server/public/

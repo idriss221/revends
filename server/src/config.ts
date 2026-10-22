@@ -1,5 +1,7 @@
 import path from 'node:path';
 import os from 'node:os';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { logger } from './utils/logger.js';
 
@@ -237,7 +239,26 @@ const databaseUrl =
 
 const uploadDir = path.resolve(process.cwd(), env.UPLOAD_DIR);
 const migrationsDir = path.resolve(process.cwd(), env.MIGRATIONS_DIR);
-const webDistDir = path.resolve(process.cwd(), env.WEB_DIST);
+
+// Front web — deux emplacements possibles :
+//  · local / Docker : le build Vite, pointé par WEB_DIST ;
+//  · Vercel (fonction serverless) : le dossier `public/` n'est PAS à la
+//    racine de la fonction. Le build y est embarqué dans `server/public/`
+//    et résolu ici par une RÉFÉRENCE STATIQUE : c'est elle qui fait
+//   .include par le traceur de fichiers de Vercel (nft) le dossier entier.
+//    Sans ce repli, la racine `/` tombait sur le 404 JSON de la fonction.
+const cwdWebDist = path.resolve(process.cwd(), env.WEB_DIST);
+const bundledWebDist = fileURLToPath(new URL('../public', import.meta.url));
+// Le traceur de fichiers de Vercel (nft) n'embarque un dossier que s'il
+// détecte une lecture de son contenu : on liste donc explicitement le
+// dossier du front embarqué, sinon les assets (JS/CSS/images) sont
+// absents de la fonction.
+try {
+  fs.readdirSync(bundledWebDist);
+} catch {
+  /* front non embarqué (local/Docker) : WEB_DIST est utilisé */
+}
+const webDistDir = fs.existsSync(path.join(cwdWebDist, 'index.html')) ? cwdWebDist : bundledWebDist;
 
 const instanceId = env.INSTANCE_ID && env.INSTANCE_ID.trim().length > 0 ? env.INSTANCE_ID.trim() : os.hostname();
 
