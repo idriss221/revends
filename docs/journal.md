@@ -3332,3 +3332,13 @@ scripts/deploy-vercel.sh      # build front → copie public/ → vercel build �
 - Pipeline : `scripts/deploy-vercel.sh` (build local + `--prebuilt`)
 - Production : `https://revends.vercel.app` — **11/11 CONFORME**
 - Secrets : plus aucune fuite, bundle propre.
+
+---
+
+## 2026-10-22 (suite) — Images Pinterest : correction CSP
+
+**Problème** : le CSP par défaut de Helmet (`img-src 'self' data:`) bloquait le chargement des images Pinterest utilisées pour les 5 tuiles de catégories et la bannière bas de page.
+
+**Correctif** : configuration explicite du CSP dans `server/src/app.ts` avec `img-src 'self' data: https://i.pinimg.com`.
+
+**Preuve** : `content-security-policy` contient maintenant `img-src 'self' data: https://i.pinimg.com` ✅, images accessibles avec Referer du site ✅, recette 5/5 ✅.
