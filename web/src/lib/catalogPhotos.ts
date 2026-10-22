@@ -45,14 +45,25 @@ const photo = (name: string): string => `/categories/${name}.jpg?v=${PHOTO_VERSI
  * (`web/public/categories/<slug>.jpg`). La clé est le **slug** (sans accent,
  * stable) et non le nom affiché — « Cuisine & arts de la table » ou
  * « Téléphones & tablettes » ne se déduisent pas d'un mot-clé de nom.
+ *
+ * ⚠️ 5 catégories mères utilisent des URLs externes (Pinterest) sur demande
+ * explicite du PO — le reste reste en local (fiabilité réseau).
  */
+const EXTERNAL_CAT_PHOTOS: Record<string, string> = {
+  mode: 'https://i.pinimg.com/736x/1f/ff/43/1fff4331f5a0f6673e13228b4b93ddc1.jpg',
+  maison: 'https://i.pinimg.com/736x/56/5e/fd/565efd780b344e06f4d5164edf1c4d08.jpg',
+  electronique: 'https://i.pinimg.com/736x/33/d3/63/33d3639c5b649d3e0b50143e75fa7dd5.jpg',
+  electromenager: 'https://i.pinimg.com/1200x/b9/ce/1d/b9ce1dbc302acff45b335c19e513f8d7.jpg',
+  loisirs: 'https://i.pinimg.com/736x/2a/31/68/2a31683abdcca5cdc633f71421ba8e05.jpg',
+}
+
 const SLUG_PHOTOS: Record<string, string> = {
-  // Catégories mères
-  mode: photo('mode'),
-  maison: photo('maison'),
-  electronique: photo('electronique'),
-  electromenager: photo('electromenager'),
-  loisirs: photo('loisirs'),
+  // Catégories mères — externes si définies, sinon locales
+  mode: EXTERNAL_CAT_PHOTOS.mode ?? photo('mode'),
+  maison: EXTERNAL_CAT_PHOTOS.maison ?? photo('maison'),
+  electronique: EXTERNAL_CAT_PHOTOS.electronique ?? photo('electronique'),
+  electromenager: EXTERNAL_CAT_PHOTOS.electromenager ?? photo('electromenager'),
+  loisirs: EXTERNAL_CAT_PHOTOS.loisirs ?? photo('loisirs'),
   // Sous-catégories Mode
   'mode-vetements': photo('mode-vetements'),
   'mode-chaussures': photo('mode-chaussures'),

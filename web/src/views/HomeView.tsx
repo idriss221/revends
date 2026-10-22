@@ -7,6 +7,9 @@ import { SiteCardGrid } from '../components/site/SiteCard'
 import { SiteImage, artKindFor } from '../components/site/SiteImage'
 import { api } from '../lib/api'
 import { EDITORIAL_PHOTO, HERO_PHOTO, categoryPhoto } from '../lib/catalogPhotos'
+
+// Bannière bas de page (demande PO : image Pinterest)
+const BOTTOM_BANNER_PHOTO = 'https://i.pinimg.com/736x/b0/04/6b/b0046bff10d328d8a3b5680a85173287.jpg'
 import type { Category, ProductCardItem } from '../lib/types'
 
 /* ============================================================================
@@ -263,6 +266,21 @@ export function HomeView() {
       </section>
 
       <BudgetSection items={budget} />
+
+      {/* Bannière bas de page — demande PO */}
+      <section className="bottom-banner" aria-labelledby="bottom-banner-title">
+        <div className="wrap">
+          <SiteImage
+            src={BOTTOM_BANNER_PHOTO}
+            alt="Découvrez notre sélection coups de cœur"
+            w={1600}
+            sizes="100vw"
+            kind="coat"
+            col="#4A2F25"
+            bg="#E6D6BD"
+          />
+        </div>
+      </section>
     </>
   )
 }

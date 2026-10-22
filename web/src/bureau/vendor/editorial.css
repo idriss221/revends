@@ -301,6 +301,26 @@ footer .bottom .socials a:hover{background:var(--accent);color:var(--on-accent);
   .fx-foot{background:var(--surface-sunken);border-top:1px solid var(--line)}
   .sheet{background:var(--surface-sunken);border-top:1px solid var(--line)}
   .sopt.on{color:var(--accent-text)}
-  .cbtn{background:var(--surface-raised);border-color:var(--line-strong)}
-  .cbtn.primary,.cbtn.facet.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.cbtn{background:var(--surface-raised);border-color:var(--line-strong)}
+.cbtn.primary,.cbtn.facet.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+}
+
+/* Bannière bas de page — full-width image avec overlay possible */
+.bottom-banner{
+  background:var(--surface-sunken);
+  border-top:1px solid var(--line);
+}
+.bottom-banner .wrap{
+  max-width:none;
+  padding:0;
+}
+.bottom-banner img{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:420px;
+  object-fit:cover;
+}
+@media (max-width: 760px){
+  .bottom-banner img{ max-height:280px; }
 }
