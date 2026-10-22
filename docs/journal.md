@@ -3161,3 +3161,126 @@ grille 4 col., 95 %, sous-titres présents, nouveau CSS `index-Cz3m-gTB.css`.
 
 Rappel du piège de build : `web/dist` est servi par nginx → tout
 changement front exige `cd web && npm run build` AVANT d'être visible.
+
+---
+
+## 2026-10-22 — Mise en ligne permanente sur Vercel Hobby (gratuit, sans carte bancaire)
+
+### Objectif
+
+Remplacer le tunnel Cloudflare (temporaire) par un hébergement **24/7
+gratuit** : Vercel Hobby + Neon (PostgreSQL) + Vercel Blob, sur l'URL fixe
+`https://revends.vercel.app`, en conservant la stack Docker locale comme
+filet de secours. Contrainte dure : **aucune carte bancaire**.
+
+### Résumé exécutif
+
+| Élément | Avant | Après |
+|---|---|---|
+| Hébergement | tunnel Cloudflare (temporaire) | Vercel Hobby (serveurless) |
+| URL | variable | `https://revends.vercel.app` (fixe) |
+| Base | Render (clé à révoquer) | Neon `noisy-breeze-38171898` (free) |
+| Coût | 0 | 0 (plan `hobby`, `billing.status=active`) |
+| Coût Photo | disque local | Vercel Blob (store `revends-photos`) |
+
+### Architecture retenue (et pourquoi)
+
+Le serveur métier (`server/src`, Express 5 + `pg`) est inchangé : il est
+exécuté par **une fonction serverless** qui délègue `(req, res)` à
+`createApp()`.
+
+```text
+app.ts (racine)          → wrapper : boot paresseux (Redis→repli PG), normalisation du corps
+  └─ server/src/app.ts   → createApp() : app métier identique au serveur Node
+api/                     → absent (cf. routes multi-segments ci-dessous)
+public/                  → front compilé, téléversé (sortie statique CDN)
+```
+
+**Écartés après mesure** :
+
+| Option | Résultat mesuré |
+|---|---|
+| preset `Other` + `api/[...path].ts` | la plateforme ne génère que `^/api/([^/]+)$` → `/api/auth/login`, `/api/products/:id` en **404** |
+| preset `express` + `public/` non téléversé | la sortie statique ne peut venir que des fichiers **envoyés** → `GET /` en **404** (API OK) |
+| preset `express` + build distant | le build legacy ignore la réécriture de la racine → `GET /` en **404** |
+| **preset `express` + build local + `--prebuilt`** | ✅ SPA + API + écriture : **11/11** |
+
+### Pièges rencontrés (et correctifs)
+
+1. **« commit author doesn't have permission »** — la CLI transmet
+   l'auteur du dernier commit ; `dioufidrissaa@gmail.com` ≠ compte Vercel
+   `www.idrissadiouf007@gmail.com` → déploiements **bloqués**. *Correctif* :
+   `git config user.email` aligné sur le compte (le repo est à jour).
+2. **`ssoProtection` actif** → le site aurait été privé (Vercel
+   Authentication). *Correctif* : `PATCH /v9/projects/revends` →
+   `{"ssoProtection": null}`.
+3. **La CLI v65 n'applique plus `.gitignore`** (seuls `.vercelignore` +
+   défauts) → `public/` (artefact) et `.env` (mots de passe Docker
+   locaux) étaient **téléversés**. *Correctif* : `.vercelignore` strict.
+4. **ENOENT au packaging** : le `buildCommand` supprimait `public/` après
+   envoi → les fichiers téléversés disparaissaient avant empaquetage.
+   *Correctif* : le build distant ne touche plus `public/`.
+5. **`includeFiles` invalide** au niveau racine de `vercel.json` (il
+   n'existe que dans `functions`, sans effet sur le preset express).
+   *Correctif* : `functions` retiré ; la racine est servie par la route
+   `^/$ → /index.html` issue du build local.
+6. **Échec de build distant** : `@types/express-session|multer|pg` n'étaient
+   dans les devDeps **racine** (le dossier `server/node_modules` n'est pas
+   déployé) → `TS7016`. *Correctif* : devDeps racine alignées.
+7. **`helmet` en namespace** (TS2349 sur le builder distant) → import
+   normalisé (`import * as` + cast).
+8. **Redis injoignable** (hôte `redis` du Docker) → reconnexion **bornée à
+   3 essais** + repli PostgreSQL (`connect-pg-simple`) : les requêtes
+   répondent au lieu de figer.
+
+### Variables d'environnement (Vercel, Production + Preview)
+
+`DATABASE_URL` (Neon pooler) · `BLOB_READ_WRITE_TOKEN` / `BLOB_STORE_ID` ·
+`SESSION_SECRET` *(secret)* · `ADMIN_PASSWORD` *(secret)* · `ADMIN_EMAIL` ·
+`NODE_ENV=production` · `SESSION_STORE=pg` · `CACHE_ENABLED=false` ·
+`RATE_LIMIT_BACKEND=memory` · `MAIL_ENABLED=false` · `RUN_MIGRATIONS=false` ·
+`DISABLE_CRON=true` · `UPLOAD_DIR=/tmp/revends/uploads/products` ·
+`PG_POOL_MAX=2` · `WEB_DIST=public` · `SITE_URL=https://revends.vercel.app`.
+
+### Recette production (11/11 — `scripts/deploy-vercel.sh` puis curl)
+
+| Contrôle | Attendu | Obtenu |
+|---|---|---|
+| `GET /` | 200 (SPA) | ✅ 200 (2041 o, `<title>ReVends…`) |
+| `GET /categorie/vehicules` | 200 | ✅ 200 |
+| `GET /favicon.ico`, `/assets/index-*.js` | 200 | ✅ 200 |
+| `GET /api/health` | 200 | ✅ 200 |
+| `GET /api/categories`, `/api/products` | 200 | ✅ 200 |
+| `GET /api/me` (anonyme) | 401 | ✅ 401 |
+| `POST /api/auth/register` | 201 | ✅ 201 |
+| `GET /api/products/<uuid>` | 404 | ✅ 404 |
+| `GET /api/nexiste-pas` | 404 | ✅ 404 |
+| `GET /api/auth/me` (session) | 200 | ✅ 200 — **store de sessions PostgreSQL validé en prod** |
+| `POST /api/auth/login` (admin) | 200 | ✅ 200 (role `admin`) |
+
+Base de production : migrations 001→010+012 appliquées · **1 seul compte**
+(l'administrateur `admin@revends.com`, créé par `server/scripts/seed-admin.ts`
+— les comptes de recette ont été purgés ✅).
+
+### Commandes
+
+```bash
+scripts/deploy-vercel.sh      # build front → copie public/ → vercel build → deploy --prebuilt
+```
+
+### Reste à faire
+
+- **Photos** : le stockage disque `/tmp` est éphémère et la limite de
+  payload est **4,5 Mo** (4 photos × 5 Mo) → passer l'upload par Vercel
+  Blob (client → Blob, ou compression + upload direct).
+- **Upstash** : conditions marketplace à accepter dans le navigateur, puis
+  `vercel integration add upstash/upstash-kv --plan free` (Redis = cache +
+  rate-limit ; le repli PostgreSQL fonctionne en attendant).
+- **Cron** : sur Hobby, la granularité est **quotidienne** (l'expiration
+  minute des réservations reste portée par le lazy-expiry).
+- **Secrets** : rotation de `SESSION_SECRET`, `ADMIN_PASSWORD`, SendGrid,
+  Gmail/OAuth ; **révoquer la clé API Render** (`rnd_…`) ; purger les
+  44 photos orphelines de `web/public/catalog/` et les 26 comptes
+  non-admin.
+- **Doc** : `docs/api.md` à resynchroniser (`PHOTO_MISSING`, min. 3 photos) ;
+  chunk JS de 547 kB à scinder.
