@@ -8,8 +8,8 @@ import { SiteImage, artKindFor } from '../components/site/SiteImage'
 import { api } from '../lib/api'
 import { EDITORIAL_PHOTO, HERO_PHOTO, categoryPhoto } from '../lib/catalogPhotos'
 
-// Bannière bas de page (demande PO : image Pinterest)
-const BOTTOM_BANNER_PHOTO = 'https://i.pinimg.com/736x/b0/04/6b/b0046bff10d328d8a3b5680a85173287.jpg'
+// Bannière bas de page — version locale (téléchargée depuis Pinterest)
+const BOTTOM_BANNER_PHOTO = '/categories/bottom-banner.jpg?v=2026-10-22'
 import type { Category, ProductCardItem } from '../lib/types'
 
 /* ============================================================================

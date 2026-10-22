@@ -3342,3 +3342,13 @@ scripts/deploy-vercel.sh      # build front → copie public/ → vercel build �
 **Correctif** : configuration explicite du CSP dans `server/src/app.ts` avec `img-src 'self' data: https://i.pinimg.com`.
 
 **Preuve** : `content-security-policy` contient maintenant `img-src 'self' data: https://i.pinimg.com` ✅, images accessibles avec Referer du site ✅, recette 5/5 ✅.
+
+---
+
+## 2026-10-22 (suite) — Images catégories hébergées localement
+
+**Problème** : Pinterest bloque le hotlinking depuis revends.vercel.app (pas de CORS, protection anti-hotlink). Les images externes ne s'affichaient pas.
+
+**Solution** : Téléchargement des 6 images Pinterest → `web/public/categories/` (mode.jpg, maison.jpg, electronique.jpg, electromenager.jpg, loisirs.jpg, bottom-banner.jpg). Mise à jour de `catalogPhotos.ts` et `HomeView.tsx` pour utiliser les chemins locaux (`/categories/...jpg?v=2026-10-22`). CSP restauré à sa config par défaut.
+
+**Preuve** : 6/6 images accessibles en HTTP 200 ✅, recette 5/5 ✅.
