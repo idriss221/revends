@@ -12,8 +12,5 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
-  ],
-  "includeFiles": [
-    "public/index.html"
   ]
 }
