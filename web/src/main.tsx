@@ -7,6 +7,9 @@ import './index.css'
 // Design system de `Bureau/main`, scopé sous `.market-site` — APRÈS index.css
 // pour que les jetons de la maquette l'emportent.
 import './styles/bureau.css'
+// Source unique des jetons du site public : DOIT suivre bureau.css pour
+// écraser ses jetons de palette et précéder bureau-fixes.css qui les consomme.
+import './styles/tokens.css'
 // Correctifs écrits à la main (a11y, états non couverts par la maquette) :
 // DOIT suivre bureau.css pour pouvoir les compléter.
 import './styles/bureau-fixes.css'

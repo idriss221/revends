@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { buttonClasses } from './Button'
 import { Mascotte } from '../brand/Mascotte'
+import { Ico } from '../brand/Ico'
 
 /**
  * États & cartes — design-system-revends-v5 §3.9 / §3.12.
@@ -70,7 +71,7 @@ export function CardHeader({ title, viewAll }: { title: string; viewAll?: { labe
           className="inline-flex items-center gap-1.5 text-sm font-bold text-terracotta-ink transition-colors hover:text-terracotta-deep"
         >
           {viewAll.label}
-          <i className="fas fa-arrow-right text-[10px]" aria-hidden="true" />
+          <Ico name="arrow-right" cls="xs" aria-hidden="true" />
         </Link>
       )}
     </div>

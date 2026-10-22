@@ -13,6 +13,10 @@ import { Ico } from '../brand/Ico'
  * `<a href="#/login" data-logout hidden>` (masqué hors session) : on garde
  * EXACTEMENT cet emplacement et cette visibilité, avec un `<button>` (contrôle
  * d'action, ouvre la confirmation) et l'`aria-label` verrouillé par la recette.
+ *
+ * Marque : « ReVends » (capital V unique), pas « REVENDS » ni « Le Cœur couture ».
+ * Six familles (Mode, Chaussures, Sacs, Tech, Maison, Loisirs).
+ * Liens sociaux : placeholders vers les vrais profils (target="_blank").
  */
 
 function Col({ title, children }: { title: string; children: React.ReactNode }) {
@@ -34,15 +38,18 @@ export function Footer() {
       <div className="wrap">
         <div className="top">
           <div>
-            <div className="logo">REVENDS.</div>
+            <div className="logo">Re<span className="text-terracotta-ink">V</span>ends.</div>
             <p className="tagline">Les belles choses méritent une nouvelle histoire.</p>
           </div>
 
           <Col title="Découvrir">
             <Link to="/search">Tout le catalogue</Link>
             <Link to="/category/mode">Mode</Link>
-            <Link to="/category/electronique">Téléphones &amp; tech</Link>
-            <Link to="/category/maison">Maison &amp; décoration</Link>
+            <Link to="/category/mode-chaussures">Chaussures</Link>
+            <Link to="/category/mode-sacs">Sacs</Link>
+            <Link to="/category/electronique">Tech</Link>
+            <Link to="/category/maison">Maison & déco</Link>
+            <Link to="/category/loisirs">Loisirs</Link>
           </Col>
 
           <Col title="Vendre">
@@ -75,20 +82,15 @@ export function Footer() {
         </div>
 
         <div className="bottom">
-          <span>© {year} REVENDS — Tous droits réservés.</span>
-          {/* LIAISONS SOCIALES — fidélité à la maquette : celle-ci pointe
-              `href="#/"` avec `aria-label="Instagram/Facebook/TikTok"` (liens
-              témoins). On reproduit tel quel `<Link to="/">`. À CONFIRMER
-              côté client : fournir les vraies URL de profil pour remplacer
-              ces placeholders (sinon on conserve le rendu de la référence). */}
+          <span>© {year} Re<span className="text-terracotta-ink">V</span>ends — Tous droits réservés.</span>
           <div className="socials">
-            <Link to="/" aria-label="Instagram">
+            <Link to="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram (s'ouvre dans un nouvel onglet)">
               <Ico name="instagram" cls="sm" />
             </Link>
-            <Link to="/" aria-label="Facebook">
+            <Link to="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook (s'ouvre dans un nouvel onglet)">
               <Ico name="facebook" cls="sm" />
             </Link>
-            <Link to="/" aria-label="TikTok">
+            <Link to="https://tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="TikTok (s'ouvre dans un nouvel onglet)">
               <Ico name="tiktok" cls="sm" />
             </Link>
           </div>

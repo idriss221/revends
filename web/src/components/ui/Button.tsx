@@ -1,45 +1,47 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { Ico } from '../brand/Ico'
 
 /**
  * Button — design-system-revends-v5 §3.1.
  *
  * Contrat : `variant` × `size` × `block` × `loading` (+ `icon` / `iconRight`).
- * · `sm` = 36 px au repos, **≥ 44 px sous 768 px** (`max-md:min-h-[44px]`) — DA §8 ;
- * · `loading` : spinner + `aria-busy`, **le texte est conservé** (pas de saut de
- *   largeur, DA §3.1) ;
+ * · Utilise les classes CSS `.btn` de `bureau-fixes.css` (pas de Tailwind) pour le PUBLIC.
+ * · Variantes publiques : primary | secondary | outline | ghost
+ * · Variantes admin (legacy Tailwind) : positive | danger — conservées pour .market-admin
+ * · `sm` = 36 px au repos, **≥ 44 px sous 768 px** — DA §8 ;
+ * · `loading` : spinner `.spinner` + `aria-busy`, **le texte est conservé** ;
  * · `buttonClasses()` reste exporté : partagé avec les `<Link>` stylés bouton.
+ * · Micro-interactions : hover translateY(-1px), press scale(.98), focus-visible ring.
+ * · Respecte `prefers-reduced-motion` (désactive translate/scale via CSS).
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'positive' | 'danger'
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
-const BASE =
-  'inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-bold transition-all duration-200 select-none active:scale-[0.98] active:shadow-xs disabled:pointer-events-none disabled:opacity-45'
-
-const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-terracotta-strong text-white shadow-cta hover:bg-terracotta-deep',
-  secondary: 'bg-chocolate text-white hover:bg-ink',
-  outline:
-    'border-[1.5px] border-line-strong bg-white text-ink hover:border-terracotta-strong hover:bg-terracotta-wash hover:text-terracotta-ink hover:-translate-y-px',
-  ghost: 'text-ink hover:bg-ink/5',
+const TAILWIND_VARIANTS: Record<'positive' | 'danger', string> = {
   positive: 'bg-positive text-white hover:bg-positive-dark',
   danger: 'bg-danger text-white hover:bg-danger-dark',
 }
 
-const SIZES: Record<ButtonSize, string> = {
-  // 36 px au repos, 44 px sous 768 px (cible tactile, DA §8)
+const TAILWIND_BASE = 'inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-bold transition-all duration-200 select-none active:scale-[0.98] active:shadow-xs disabled:pointer-events-none disabled:opacity-45'
+const TAILWIND_SIZES: Record<ButtonSize, string> = {
   sm: 'h-9 px-4 text-sm max-md:min-h-[44px]',
   md: 'h-11 px-6 text-base',
   lg: 'h-[52px] px-8 text-[17px]',
 }
 
-/** Classes d'un bouton — source unique partagée `<Button>` / `<Link>` (D1). */
+/** Classes CSS pour un bouton — source unique partagée `<Button>` / `<Link>` (D1). */
 export function buttonClasses(
   variant: ButtonVariant = 'primary',
   size: ButtonSize = 'md',
   block = false,
   extra?: string,
 ): string {
-  return [BASE, VARIANTS[variant], SIZES[size], block ? 'w-full' : '', extra ?? ''].filter(Boolean).join(' ')
+  // Variantes publiques → classes CSS .btn
+  if (['primary', 'secondary', 'outline', 'ghost'].includes(variant)) {
+    return ['btn', `btn-${variant}`, `btn-${size}`, block ? 'btn-block' : '', extra ?? ''].filter(Boolean).join(' ')
+  }
+  // Variantes admin (legacy) → classes Tailwind
+  return [TAILWIND_BASE, TAILWIND_VARIANTS[variant as 'positive' | 'danger'], TAILWIND_SIZES[size], block ? 'w-full' : '', extra ?? ''].filter(Boolean).join(' ')
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -47,7 +49,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize
   block?: boolean
   loading?: boolean
-  /** icône à gauche (`fa-*`), décorative */
+  /** icône à gauche (nom du sprite SVG), décorative */
   icon?: string
   iconRight?: string
   children?: ReactNode
@@ -66,6 +68,8 @@ export function Button({
   type = 'button',
   ...rest
 }: ButtonProps) {
+  const isPublicVariant = ['primary', 'secondary', 'outline', 'ghost'].includes(variant)
+
   return (
     <button
       type={type}
@@ -74,10 +78,20 @@ export function Button({
       aria-busy={loading || undefined}
       {...rest}
     >
-      {loading && <i className="fas fa-spinner fa-spin" aria-hidden="true" />}
-      {icon && !loading && <i className={`fas ${icon}`} aria-hidden="true" />}
+      {loading && (
+        <span className={isPublicVariant ? 'spinner spinner-sm' : 'fas fa-spinner fa-spin'} aria-hidden="true" />
+      )}
+      {icon && !loading && (
+        isPublicVariant
+          ? <Ico name={icon} cls="sm" aria-hidden="true" />
+          : <i className={`fas ${icon}`} aria-hidden="true" />
+      )}
       {children}
-      {iconRight && <i className={`fas ${iconRight}`} aria-hidden="true" />}
+      {iconRight && !loading && (
+        isPublicVariant
+          ? <Ico name={iconRight} cls="sm" aria-hidden="true" />
+          : <i className={`fas ${iconRight}`} aria-hidden="true" />
+      )}
     </button>
   )
 }

@@ -47,7 +47,7 @@
    La maquette rend la colonne « Mon compte » avec des `<a>` ; l'app React
    y ajoute un bouton de déconnexion (visibilité session + confirmation).
    Il reprend exactement la mise en forme des liens de colonne, dans les
-   deux thèmes (`--gris` / `--ink` sont redéfinis par la maquette).
+   deux thèmes (`--text-secondary` / `--text-primary` viennent de tokens.css).
    --------------------------------------------------------------------- */
 .market-site footer .col button {
   display: block;
@@ -58,12 +58,12 @@
   text-align: left;
   background: none;
   border: 0;
-  color: var(--gris);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: color var(--t) var(--ease);
 }
 .market-site footer .col button:hover {
-  color: var(--ink);
+  color: var(--text-primary);
 }
 
 /* ---------------------------------------------------------------------
@@ -81,10 +81,10 @@
   left: 0;
   z-index: 70;
   padding: 6px;
-  background: var(--paper);
+  background: var(--surface-base);
   border: 1px solid var(--line);
   border-radius: 16px;
-  box-shadow: var(--sh);
+  box-shadow: var(--shadow-md);
   max-height: min(70vh, 460px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -96,7 +96,7 @@
   font: 700 10px/1 var(--sans);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--muted-2);
+  color: var(--text-tertiary);
 }
 
 /* Ligne de suggestion : `<Link role="option">` (navigation réelle) */
@@ -106,16 +106,16 @@
   align-items: center;
   padding: 9px 12px;
   border-radius: 10px;
-  color: var(--ink);
+  color: var(--text-primary);
   transition: background-color var(--t-fast) var(--ease);
 }
 .market-site .search .sug-opt:hover,
 .market-site .search .sug-opt.on {
-  background: var(--line-2);
+  background: var(--line);
 }
 /* État actif clavier : double indice (fond + liseré), jamais le seul color */
 .market-site .search .sug-opt.on {
-  box-shadow: inset 3px 0 0 0 var(--terra);
+  box-shadow: inset 3px 0 0 0 var(--accent-ui);
 }
 
 .market-site .search .sug-thumb {
@@ -125,9 +125,9 @@
   height: 36px;
   place-items: center;
   overflow: hidden;
-  background: var(--ivory-2);
+  background: var(--surface-sunken);
   border-radius: 8px;
-  color: var(--muted-2);
+  color: var(--text-tertiary);
 }
 .market-site .search .sug-thumb img {
   width: 100%;
@@ -150,14 +150,14 @@
 .market-site .search .sug-meta {
   font-size: 13px;
   font-weight: 700;
-  color: var(--terra);
+  color: var(--accent-text);
 }
 .market-site .search .sug-type {
   flex: none;
   font: 700 10px/1 var(--sans);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted-2);
+  color: var(--text-tertiary);
 }
 
 /* États muets : chargement, vide (CA-V5-143), erreur — jamais un panneau vide */
@@ -167,23 +167,23 @@
 .market-site .search .sug-note strong {
   display: block;
   font-size: 14px;
-  color: var(--ink);
+  color: var(--text-primary);
 }
 .market-site .search .sug-note span {
   display: block;
   margin-top: 4px;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 .market-site .search .sug-note a {
   display: inline-block;
   margin-top: 12px;
   font-size: 14px;
   font-weight: 700;
-  color: var(--terra);
+  color: var(--accent-text);
 }
 .market-site .search .sug-note a:hover {
-  color: var(--terra-dark);
+  color: var(--accent-hover);
 }
 
 /* Squelettes de chargement (même rythme que le reste du site) */
@@ -198,7 +198,7 @@
   flex: none;
   width: 36px;
   height: 36px;
-  background: var(--line-2);
+  background: var(--line);
   border-radius: 8px;
 }
 .market-site .search .sug-skel b {
@@ -208,7 +208,7 @@
 .market-site .search .sug-skel b span {
   display: block;
   height: 9px;
-  background: var(--line-2);
+  background: var(--line);
   border-radius: 999px;
 }
 .market-site .search .sug-skel b span:first-child {
@@ -238,7 +238,7 @@
   text-align: left;
   font-size: 13px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text-secondary);
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   background: transparent;
@@ -247,7 +247,7 @@
 .market-site .rv-tab tbody td {
   padding: 12px;
   border-bottom: 1px solid var(--line);
-  color: var(--ink);
+  color: var(--text-primary);
   vertical-align: top;
   font-size: 14px;
 }
@@ -257,7 +257,7 @@
 }
 
 .market-site .rv-tab tbody tr:hover {
-  background: var(--ivory);
+  background: var(--surface-sunken);
 }
 
 .market-site .rv-tab--compact thead th,
@@ -287,26 +287,26 @@
   height: 50px;
   border-radius: 10px;
   object-fit: cover;
-  background: var(--ivory-2);
+  background: var(--surface-sunken);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted-2);
+  color: var(--text-tertiary);
   flex: 0 0 50px;
 }
 
 .market-site .prod-name {
   font-weight: 600;
-  color: var(--ink);
+  color: var(--text-primary);
 }
 
 .market-site .prod-meta {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
-.market-site .muted { color: var(--muted); }
-.market-site .ink { color: var(--ink); }
+.market-site .muted { color: var(--text-secondary); }
+.market-site .ink { color: var(--text-primary); }
 
 /* Petit conteneur pour liste d'éléments non-tab (Notifications) */
 .market-site .notif-stack {
@@ -336,6 +336,7 @@
 .market-site .rv-price {
   font: 700 18px/1.3 var(--sans);
   letter-spacing: -.01em;
+  color: var(--text-primary);
 }
 
 /* Pied de carte : lien-flèche de retour à gauche, bouton d'action à droite. */
@@ -362,7 +363,7 @@
   width: 100%;
   padding: 20px 0;
   border: 0;
-  border-bottom: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line);
   border-radius: var(--r);
   background: transparent;
   font: inherit;
@@ -372,11 +373,11 @@
   transition: background-color var(--t-fast) var(--ease);
 }
 .market-site .rv-notif:hover {
-  background: var(--ivory);
+  background: var(--surface-sunken);
 }
 /* État « non lue » : fond ivoire (la pastille ci-dessous porte le 2ᵉ indice). */
 .market-site .rv-notif.unread {
-  background: var(--ivory);
+  background: var(--surface-sunken);
 }
 
 .market-site .rv-notif-body {
@@ -394,8 +395,8 @@
   flex: none;
   width: 8px;
   height: 8px;
-  border-radius: var(--pill);
-  background: var(--terra);
+  border-radius: var(--r-pill);
+  background: var(--accent-ui);
 }
 
 /* Barre d'actions au-dessus de la pile (« Tout marquer comme lu »). */
@@ -416,6 +417,7 @@
 /* Ligne « Dernière mise à jour » sous le titre. */
 .market-site .rv-legal-updated {
   font-size: 13px;
+  color: var(--text-secondary);
 }
 
 /* Sommaire (liste ordonnée ancrée) dans la `.box`. */
@@ -427,7 +429,7 @@
 }
 .market-site .rv-legal-toc a {
   font-weight: 600;
-  color: var(--ink);
+  color: var(--text-primary);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -435,7 +437,7 @@
 /* Numéro de section (« 1. », « 2. »…) en tête de titre et de sommaire. */
 .market-site .rv-legal-num {
   font-weight: 700;
-  color: var(--terra);
+  color: var(--accent-text);
 }
 
 /* Corps des sections : rythme régulier (gap) plutôt que marges empilées. */
@@ -447,12 +449,13 @@
 .market-site .rv-legal-body h2 {
   font-size: 20px;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--text-primary);
 }
 .market-site .rv-legal-body p {
   font-size: 15px;
   line-height: 1.7;
   margin-bottom: 12px;
+  color: var(--text-primary);
 }
 .market-site .rv-legal-body ul {
   display: grid;
@@ -465,6 +468,7 @@
   gap: 10px;
   font-size: 15px;
   line-height: 1.7;
+  color: var(--text-primary);
 }
 
 /* Pied du gabarit : filet + invitation à contacter. */
@@ -473,10 +477,11 @@
   border-top: 1px solid var(--line);
   padding-top: 24px;
   font-size: 13px;
+  color: var(--text-secondary);
 }
 .market-site .rv-legal-foot a {
   font-weight: 600;
-  color: var(--terra);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -502,6 +507,7 @@
 .market-site .empty h1 {
   font-size: clamp(26px, 3vw, 36px);
   margin-bottom: 10px;
+  color: var(--text-primary);
 }
 
 /* ---------------------------------------------------------------------
@@ -545,25 +551,12 @@
    spécificité (et l'ordre du fichier — chargé en dernier — tranche).
    D'où les variantes explicites `:root[data-theme="dark"]` ci-dessous.
 
-   VALEURS CALCULÉES (WCAG 2.1 relative-luminance, script jetable) :
-     · encre #171513 sur verre ivoire (page blanche) ..... 17.24:1  (AA)
-     · encre #171513 sur verre ivoire (section ivoire) ... 16.47:1  (AA)
-     · encre #171513 sur verre de champ « photo » ........ 6.28:1   (AA)
-     · bordure rgba(23,21,19,.48) sur blanc / ivoire ..... 3.24 / 3.17:1  (1.4.11)
-     · placeholder rgba(23,21,19,.62) sur verre ivoire ... 4.99:1   (AA)
-     · anneau focus rgba(23,21,19,.80) sur verre ......... 9.40:1   (1.4.11)
-   La bordure retenue est PLUS SOUTENUE que le `.14` d'origine : sur les
-   pages ivoire/blanches, le fond du champ est identique au fond de page
-   → la bordure EST la seule frontière du champ, elle doit donc passer
-   1.4.11 (≥ 3:1). `.14` ne donnait que 1.34:1 (échec).
+   JETONS — source unique : `src/styles/tokens.css` (thèmes public).
+   `--field-glass-blur` et `--field-glass-gb` (repli sans blur) sont
+   fournis par `index.css` sur `:root` et hérités.
+   VALEURS CALCULÉES (WCAG 2.1 relative-luminance) — voir tokens.css :
+   contraste texte/bordure/focus ≥ AA / 1.4.11 dans les deux thèmes.
    --------------------------------------------------------------------- */
-
-/* Jetons — DÉCLARÉS AILLEURS, source unique : `src/index.css` (`:root`
-   et `:root[data-theme="dark"]`), pour que l'ADMIN les hérite aussi.
-   On n'en fait jamais de copie ici. Noms : `--field-glass-bg`,
-   `--field-glass-gb`, `--field-glass-blur`, `--field-glass-border`,
-   `--field-glass-border-strong`, `--field-glass-placeholder`,
-   `--field-glass-focus`. */
 
 /* Application — TOUS les champs du site public (clair). On n'utilise que
    `background-color` (jamais le raccourci `background`) pour ne PAS
@@ -578,7 +571,7 @@
   -webkit-backdrop-filter:var(--field-glass-blur);
   backdrop-filter:var(--field-glass-blur);
   border:1px solid var(--field-glass-border);
-  color:var(--ink);
+  color:var(--text-primary);
 }
 /* Thème sombre — mêmes sélecteurs avec la spécificité (0,3,0) requise
    pour surpasser les surcharges `:root[data-theme="dark"] … .inp`. */
@@ -590,7 +583,7 @@
 :root[data-theme="dark"] .market-site select.inp{
   background-color:var(--field-glass-bg);
   border-color:var(--field-glass-border);
-  color:var(--ink);
+  color:var(--text-primary);
 }
 
 /* Search de l'accueil en en-tête transparent (au-dessus de la photo) :
@@ -602,12 +595,12 @@
   -webkit-backdrop-filter:var(--field-glass-blur);
   backdrop-filter:var(--field-glass-blur);
   border-color:var(--field-glass-border);
-  color:var(--ink);
+  color:var(--text-primary);
 }
 .market-site.home header.site:not(.solid) .search input::placeholder{
   color:var(--field-glass-placeholder);
 }
-.market-site.home header.site:not(.solid) .search .i{color:var(--ink)}
+.market-site.home header.site:not(.solid) .search .i{color:var(--text-primary)}
 
 /* Repli opaque : si le navigateur ne sait pas flouter, le verre translucide
    deviendrait un aplat invisible → on garantit une surface pleine lisible. */
@@ -665,14 +658,14 @@
 .market-site .sel.bad,
 .market-site .auth .inp.bad,
 .market-site .inp[aria-invalid="true"]{
-  border-color:#A02C0A;
-  box-shadow:0 0 0 3px rgba(160,44,10,.16);
+  border-color:var(--danger);
+  box-shadow:0 0 0 3px var(--danger-soft);
 }
 :root[data-theme="dark"] .market-site .inp.bad,
 :root[data-theme="dark"] .market-site .sel.bad,
 :root[data-theme="dark"] .market-site .auth .inp.bad{
-  border-color:#FF9C82;
-  box-shadow:0 0 0 3px rgba(255,120,90,.22);
+  border-color:var(--danger);
+  box-shadow:0 0 0 3px var(--danger-soft);
 }
 
 /* Désactivé — le verre s'éteint sans disparaître. */
@@ -682,3 +675,177 @@
 .market-site textarea.inp:disabled{
   opacity:.55;cursor:not-allowed;
 }
+
+/* =====================================================================
+   13. BOUTON UNIQUE `.btn` — 4 variantes + micro-interactions (§6)
+   ---------------------------------------------------------------------
+   Remplace `ui/Button.tsx` (Tailwind) par des classes CSS pures.
+   Variantes : primary | secondary | outline | ghost
+   États : hover (translateY(-1px)), press (scale(.98)),
+           focus-visible (ring --focus), disabled
+   Respecte `prefers-reduced-motion` (désactive translate/scale).
+   --------------------------------------------------------------------- */
+
+/* Base commune */
+.market-site .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+  border-radius: var(--r-md);
+}
+
+/* Tailles */
+.market-site .btn-sm { padding: var(--s-2) var(--s-4); font-size: var(--fs-body-s); min-height: 36px; }
+.market-site .btn-md { padding: var(--s-3) var(--s-6); font-size: var(--fs-body); min-height: 44px; }
+.market-site .btn-lg { padding: var(--s-4) var(--s-8); font-size: var(--fs-price-lg); min-height: 52px; }
+
+/* Cible tactile 44×44 sur mobile */
+@media (max-width: 767.98px) {
+  .market-site .btn { min-height: 44px; }
+}
+
+/* Variantes */
+.market-site .btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-cta);
+}
+.market-site .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.market-site .btn-primary:active { transform: scale(0.98); }
+
+.market-site .btn-secondary {
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  border: 1px solid var(--line);
+}
+.market-site .btn-secondary:hover { background: var(--surface-hover); transform: translateY(-1px); }
+.market-site .btn-secondary:active { transform: scale(0.98); }
+
+.market-site .btn-outline {
+  background: transparent;
+  color: var(--accent-text);
+  border: 1.5px solid var(--accent-ui);
+}
+.market-site .btn-outline:hover { background: var(--accent-soft); color: var(--accent-text); transform: translateY(-1px); }
+.market-site .btn-outline:active { transform: scale(0.98); }
+
+.market-site .btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+}
+.market-site .btn-ghost:hover { background: var(--surface-sunken); transform: translateY(-1px); }
+.market-site .btn-ghost:active { transform: scale(0.98); }
+
+/* États communs */
+.market-site .btn:disabled,
+.market-site .btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+.market-site .btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Micro-interactions : désactivées si prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .market-site .btn:hover,
+  .market-site .btn:active {
+    transform: none !important;
+  }
+}
+
+/* Block variant */
+.market-site .btn-block { width: 100%; }
+
+/* =====================================================================
+   14. SPINNER UNIQUE `.spinner` — CSS animation (§6)
+   ---------------------------------------------------------------------
+   Remplace Font Awesome spinner dans `ui/Loading.tsx` et `ui/Button.tsx`.
+   Respecte `prefers-reduced-motion`.
+   --------------------------------------------------------------------- */
+.market-site .spinner {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .market-site .spinner { animation: none; border-right-color: currentColor; }
+}
+
+/* Spinner tailles */
+.market-site .spinner-sm { width: 1em; height: 1em; border-width: 1.5px; }
+.market-site .spinner-lg { width: 2em; height: 2em; border-width: 3px; }
+
+/* =====================================================================
+   15. CIBLES TACTILES 44×44 — utilitaires (§8)
+   ---------------------------------------------------------------------
+   Appliqué aux : .card .fav, .qty button, .link-arrow, .auth .check, .drop, etc.
+   --------------------------------------------------------------------- */
+.market-site .touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Favoris dans les cartes */
+.market-site .card .fav {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Boutons quantité panier */
+.market-site .qty button {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Checkbox authentification */
+.market-site .auth .check {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* Zone de drop photos */
+.market-site .drop {
+  min-height: 120px;
+}
+
+/* =====================================================================
+   16. TYPOGRAPHIE — Hiérarchie Manrope / DM Serif Display (§5)
+   ---------------------------------------------------------------------
+   Déjà dans tokens.css, mais on s'assure de l'application cohérente.
+   --------------------------------------------------------------------- */
+.market-site { font-family: var(--font-sans); }
+.market-site h1, .market-site h2, .market-site h3 { font-family: var(--font-display); }
+.market-site .price, .market-site .btn { font-family: var(--font-sans); }

@@ -164,9 +164,8 @@
    fait chuter le texte sous AA. L'ivoire translucide garde l'esprit verre
    et reste lisible PARTOUT.
 
-   Déclaré sur `:root` (et non sous `.market-site`) pour que l'ADMIN
-   (`.market-admin`, hors `.market-site`) hérite des mêmes jetons : une
-   seule source à changer demain. La variante sombre est aussi ici.
+   Déclaré sur `:root` pour que l'ADMIN (`.market-admin`, hors `.market-site`)
+   hérite des mêmes jetons. La variante sombre est aussi globale.
    Valeurs calculées (WCAG 2.1) — voir rapport.
    ============================================================ */
 :root {
@@ -178,10 +177,10 @@
   --field-glass-placeholder: rgba(23, 21, 19, 0.62);/* 4.99:1 sur verre ivoire — AA */
   --field-glass-focus: rgba(23, 21, 19, 0.80);      /* anneau focus ≥ 3:1 — 1.4.11 */
 }
-:root[data-theme="dark"] .market-site {
+:root[data-theme="dark"] {
   --field-glass-bg: rgba(247, 243, 237, 0.15);      /* ivoire 15 % sur surface sombre */
   --field-glass-gb: rgba(33, 29, 27, 0.94);
-  --field-glass-border: rgba(247, 243, 237, 0.38);  /* 3.34:1 vs #11100F — 1.4.11 */
+  --field-glass-border: rgba(247, 243, 237, 0.38);  /* 3.34:1 vs surface — 1.4.11 */
   --field-glass-border-strong: rgba(247, 243, 237, 0.55);
   --field-glass-placeholder: rgba(247, 243, 237, 0.70);
   --field-glass-focus: rgba(217, 138, 159, 0.95);
@@ -303,11 +302,12 @@
 :root { --rv-accent: #6B1728; }
 :root[data-theme="dark"] { --rv-accent: #A83A52; }
 
-/* Fond du document en mode sombre (rebond de scroll / overscroll mobile).
+/* Fond du document (rebond de scroll / overscroll mobile).
    Le shell public `.market-site` ET le shell admin `.market-admin` couvrent
    tous deux `min-h-screen` : cette couleur n'est visible que sur l'overscroll,
-   jamais derrière le contenu. */
-:root[data-theme="dark"] { background-color: #11100F; }
+   jamais derrière le contenu. `--doc-surface` est défini dans styles/tokens.css
+   (aligné sur la surface du thème) — repli sur l'ivoire si absent. */
+:root { background-color: var(--doc-surface, #FBF9F5); }
 
 .rv-heart { width: 104px; height: 98px; display: block; overflow: visible; }
 .rv-heart .hp {
@@ -368,7 +368,13 @@
   .rv-heart .shine { animation: none; opacity: 0; }
   .rv-splash__cap { animation: none; }
   .rv-splash { transition: none; }
-  .mascotte-nod { animation: none; }
+.mascotte-nod { animation: none; }
+}
+
+/* Shell public : fond et hauteur minimale (tokens.css fournit --surface-base). */
+.market-site {
+  background: var(--surface-base);
+  min-height: 100vh;
 }
 
 /* ============================================================

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
+import { Ico } from '../brand/Ico'
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
 
@@ -34,6 +35,7 @@ interface ModalProps {
  * · `body` scroll verrouillé ;
  * · **sous 768 px → feuille basse** (DA §5.8) : `rounded-t-lg` + poignée +
  *   `animate-sheet-up`, `max-h-[88vh]`, débordement interne maîtrisé.
+ * · Utilise les jetons de design system (pas de Tailwind pour le public).
  */
 export function Modal({ open, title, onClose, children, size = 'md', dismissable = true }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -104,7 +106,7 @@ export function Modal({ open, title, onClose, children, size = 'md', dismissable
               aria-label="Fermer"
               className="-mt-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-ink/5 hover:text-ink"
             >
-              <i className="fas fa-xmark" aria-hidden="true" />
+              <Ico name="x" cls="sm" aria-hidden="true" />
             </button>
           )}
         </div>

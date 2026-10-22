@@ -1,136 +1,14 @@
 /* =====================================================================
    REVENDS — DESIGN SYSTEM · DEUX THÈMES (LIGHT + DARK)
    ---------------------------------------------------------------------
-   Chargé EN DERNIER (voir index.html), après styles.css + glass.css +
-   editorial.css.
-
-   Principe : DESIGN TOKENS SÉMANTIQUES.
-   Tous les composants existants s'appuient déjà sur des jetons
-   (--ink, --ivory, --terra, --line, --paper, --beige…). On redéfinit
-   CES MÊMES JETONS à partir de tokens sémantiques, une seule fois par
-   thème : le passage clair/sombre ne réécrit aucun composant.
-
-     ☀ LIGHT  « WHITE & BURGUNDY »   blanc #FFFFFF · bordeaux #6B1728
-     ☾ DARK   « BURGUNDY NIGHT »    warm charcoal · brown · burgundy · ivory
+   Migré sur les jetons de `styles/tokens.css` (source unique de vérité).
+   Ce fichier ne définit PLUS de palette : il ne conserve que les
+   surcharges de composants et les traits d'identité (loader « cœur
+   couture », bouton de thème, transition de thème, reduced-motion).
 
    Le sélecteur de thème vit sur <html data-theme="light|dark">.
-   Persistance : localStorage "rv:theme" (voir app.js + no-flash head).
-   Login (glassmorphism) : INTACT — aucune règle .auth ici.
+   La palette clair/sombre est portée par tokens.css (§3.11/§3.12).
    ===================================================================== */
-
-/* =====================================================================
-   PARTIE 1 — TOKENS SÉMANTIQUES · LIGHT « WHITE & BURGUNDY »
-   ===================================================================== */
-:root,
-:root[data-theme="light"]{
-  color-scheme:light;
-
-  /* primitives sémantiques — LIGHT strict : BLANC + BORDEAUX uniquement.
-     Aucune couleur de surface supplémentaire (ni beige, ni crème, ni gris coloré) :
-     tout est #FFFFFF, seules des bordures NEUTRES séparent les blocs. */
-  --color-bg-primary:#FFFFFF;
-  --color-bg-secondary:#FFFFFF;
-  --color-surface:#FFFFFF;
-  --color-surface-soft:#FFFFFF;
-  --color-surface-elevated:#FFFFFF;
-  --color-surface-hover:#FFFFFF;
-  --color-text-primary:#171514;
-  --color-text-secondary:#6E6E6E;
-  --color-text-tertiary:#9A9A9A;
-  --color-border:#ECECEC;
-  --color-border-strong:#DEDEDE;
-  --color-accent:#6B1728;
-  --color-accent-hover:#52111F;
-  --color-button-primary:#6B1728;
-  --color-button-primary-hover:#52111F;
-  --color-accent-soft:#FFFFFF;
-  --color-on-accent:#FFFFFF;
-  --color-overlay:rgba(23,21,20,.35);
-  --color-shadow:rgba(23,21,20,.08);
-  --color-champagne:#CFCFCF;
-
-  /* --- map des jetons historiques (utilisés par styles.css) --- */
-  --white:#FFFFFF;          /* blanc littéral (texte sur accent/foncé) */
-  --ivory:#FFFFFF;
-  --ivory-2:#FFFFFF;
-  --ink:var(--color-text-primary);
-  --muted:var(--color-text-secondary);
-  --muted-2:var(--color-text-tertiary);
-  --terra:var(--color-accent);
-  --terra-dark:var(--color-accent-hover);
-  --brown:#171514;
-  --brown-2:#171514;
-  --champ:#CFCFCF;
-  --line:var(--color-border);
-  --line-2:#EDEDED;
-
-  /* jetons introduits par editorial.css */
-  --paper:var(--color-bg-primary);
-  --paper-2:var(--color-bg-secondary);
-  --beige:var(--color-surface-soft);
-  --bordeaux:var(--color-accent);
-  --bordeaux-dark:var(--color-accent-hover);
-  --charbon:var(--color-text-primary);
-  --gris:var(--color-text-secondary);
-  --champagne:var(--color-border-strong);
-
-  color-scheme:light;
-}
-
-/* =====================================================================
-   PARTIE 2 — TOKENS SÉMANTIQUES · DARK « BURGUNDY NIGHT »
-   ===================================================================== */
-:root[data-theme="dark"]{
-  --color-bg-primary:#11100F;
-  --color-bg-secondary:#161413;
-  --color-surface:#191716;
-  --color-surface-soft:#211D1B;
-  --color-surface-elevated:#211D1B;
-  --color-surface-hover:#282321;
-
-  --color-text-primary:#F7F3ED;
-  --color-text-secondary:#AAA19A;
-  --color-text-tertiary:#766F69;
-
-  --color-border:#292522;
-  --color-border-strong:#352F2C;
-
-  --color-accent:#8F2940;
-  --color-accent-hover:#A83A52;
-  --color-button-primary:#8F2940;
-  --color-button-primary-hover:#A83A52;
-  --color-accent-soft:#211D1B;
-
-  --color-overlay:rgba(0,0,0,.60);
-  --color-shadow:rgba(0,0,0,.55);
-
-  /* --- remap des jetons legacy pour le sombre ----
-     --white reste blanc pur (texte sur accents) ; tout le reste bascule. */
-  --white:#FFFFFF;
-  --ivory:#F7F3ED;
-  --ivory-2:#211D1B;
-  --ink:#F7F3ED;
-  --muted:#AAA19A;
-  --muted-2:#766F69;
-  --terra:#8F2940;
-  --terra-dark:#A83A52;
-  --brown:#F7F3ED;
-  --brown-2:#11100F;
-  --champ:#D8C5AB;          /* beige premium : accent chaud, identique */
-  --line:#292522;
-  --line-2:#292522;
-
-  --paper:#11100F;
-  --paper-2:#161413;
-  --beige:#211D1B;
-  --bordeaux:#8F2940;
-  --bordeaux-dark:#A83A52;
-  --charbon:#F7F3ED;
-  --gris:#AAA19A;
-  --champagne:#352F2C;
-
-  color-scheme:dark;
-}
 
 /* =====================================================================
    PARTIE 3 — TRANSITION DE THÈME (douce, 250–400 ms, jamais un flash)
@@ -144,26 +22,26 @@
 }
 
 /* =====================================================================
-   PARTIE 4 — LIGHT : alignements sur la spec (blanc dominant)
+   PARTIE 4 — LIGHT : alignements sur la spec (surface dominante)
    ===================================================================== */
-header.site{border-bottom:1px solid var(--color-border)}
-body.home header.site.solid{border-bottom-color:var(--color-border)}
-.search input{background:var(--color-bg-secondary);border-color:var(--color-border-strong)}
-.search input:focus{border-color:var(--color-accent)}
-.tag-nav b,.top-strip b{color:var(--color-accent)}
+header.site{border-bottom:1px solid var(--line)}
+body.home header.site.solid{border-bottom-color:var(--line)}
+.search input{background:var(--surface-sunken);border-color:var(--line-strong)}
+.search input:focus{border-color:var(--accent)}
+.tag-nav b,.top-strip b{color:var(--accent-text)}
 
-/* Cartes produit — LIGHT : blanches, bordure fine, image #FAF8F5 (spec) */
-.card{background:var(--color-surface);border-color:var(--color-border);
-  box-shadow:0 1px 2px rgba(23,21,20,.03)}
-.card:hover{background:var(--color-surface-hover)}
-.card .im{background:var(--color-bg-secondary);box-shadow:0 0 0 1px var(--color-border)}
-.card .price{color:var(--color-text-primary)}
-.card .by{color:var(--color-text-tertiary)}
+/* Cartes produit — LIGHT : surface élevée, bordure fine */
+.card{background:var(--surface-raised);border-color:var(--line);
+  box-shadow:var(--shadow-xs)}
+.card:hover{background:var(--surface-hover)}
+.card .im{background:var(--surface-sunken);box-shadow:0 0 0 1px var(--line)}
+.card .price{color:var(--text-primary)}
+.card .by{color:var(--text-tertiary)}
 
 /* =====================================================================
    PARTIE 4b — CARTES PRODUIT · structure & proportions (partagé)
-   Référence : 2 colonnes mobiles · photo dominante · carte blanche
-   compacte · cœur outline dans un cercle blanc.
+   Référence : 2 colonnes mobiles · photo dominante · carte compacte
+   · cœur outline dans un cercle blanc.
    ===================================================================== */
 
 /* Grille : respiration régulière (mobile 2 col.). */
@@ -175,10 +53,10 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
 .grid.three .card:first-child{grid-column:auto}
 
 /* Carte : compacte, légèrement arrondie, sans décoration. */
-.card{border-radius:14px;padding:8px 8px 14px}
+.card{border-radius:var(--r-lg);padding:8px 8px 14px}
 /* La photo occupe la majorité de la carte — cadrage UNIFORME (portrait). */
 .card .im,.grid .card .im,.grid.three .card .im,.grid.three .card:first-child .im{
-  aspect-ratio:3/4;border-radius:10px}
+  aspect-ratio:3/4;border-radius:var(--r-xs)}
 .card .body{padding:12px 2px 0}
 .card .name{font:400 16.5px/1.3 var(--serif);margin-top:6px}
 .card .cat-lbl{font:700 10px/1 var(--sans);letter-spacing:.18em}
@@ -196,16 +74,16 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
   .card .by{display:none}
 }
 
-/* Cœur favori : petit cercle blanc, cœur CONTOUR (jamais plein par défaut),
-   bordeaux + plein une fois le produit ajouté. */
-.card .fav{width:34px;height:34px;top:10px;right:10px;background:#FFFFFF;
+/* Cœur favori : cercle sur photo (voile), cœur CONTOUR (jamais plein par
+   défaut), accent + plein une fois le produit ajouté. */
+.card .fav{width:34px;height:34px;top:10px;right:10px;background:var(--surface-overlay);
   -webkit-backdrop-filter:none;backdrop-filter:none;border:0;
-  box-shadow:0 1px 3px rgba(23,21,20,.20);color:var(--color-text-primary);opacity:1}
-.card .fav:hover{background:#FFFFFF;transform:translateY(-1px);
-  box-shadow:0 3px 9px rgba(23,21,20,.24)}
+  box-shadow:var(--shadow-sm);color:var(--text-primary);opacity:1}
+.card .fav:hover{background:var(--surface-overlay);transform:translateY(-1px);
+  box-shadow:var(--shadow-md)}
 .card .fav .i{width:16px;height:16px}
-.card .fav[aria-pressed="true"]{color:var(--color-accent)}
-.card .fav[aria-pressed="true"] .i{fill:var(--color-accent)}
+.card .fav[aria-pressed="true"]{color:var(--accent-text)}
+.card .fav[aria-pressed="true"] .i{fill:var(--accent-text)}
 
 /* =====================================================================
    PARTIE 5 — DARK : surcharges ciblées (bandes inversées & surfaces)
@@ -213,83 +91,83 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
 
 /* --- Fond & navbar --- */
 :root[data-theme="dark"] body,
-:root[data-theme="dark"] body.home{background-color:var(--color-bg-primary)}
+:root[data-theme="dark"] body.home{background-color:var(--surface-base)}
 :root[data-theme="dark"] header.site{
-  background:var(--color-bg-primary);border-bottom:1px solid var(--color-border)}
+  background:var(--surface-base);border-bottom:1px solid var(--line)}
 :root[data-theme="dark"] body.home header.site.solid{
-  background:var(--color-bg-primary);border-bottom-color:var(--color-border)}
+  background:var(--surface-base);border-bottom-color:var(--line)}
 :root[data-theme="dark"] .top-strip{
-  background:var(--color-bg-secondary);color:var(--color-text-secondary);
-  border-bottom:1px solid var(--color-border)}
+  background:var(--surface-sunken);color:var(--text-secondary);
+  border-bottom:1px solid var(--line)}
 :root[data-theme="dark"] .search input{
-  background:var(--color-surface);border-color:var(--color-border);
-  color:var(--color-text-primary)}
-:root[data-theme="dark"] .search input::placeholder{color:var(--color-text-tertiary)}
+  background:var(--surface-raised);border-color:var(--line-strong);
+  color:var(--text-primary)}
+:root[data-theme="dark"] .search input::placeholder{color:var(--text-tertiary)}
 :root[data-theme="dark"] .search input:focus{
-  border-color:var(--color-accent-hover);box-shadow:0 0 0 3px rgba(168,58,82,.22)}
-:root[data-theme="dark"] .search .i{color:var(--color-text-tertiary)}
+  border-color:var(--accent-ui);box-shadow:0 0 0 3px var(--accent-soft)}
+:root[data-theme="dark"] .search .i{color:var(--text-tertiary)}
 :root[data-theme="dark"] .ic:hover,
-:root[data-theme="dark"] .burger:hover{background:var(--color-surface)}
-:root[data-theme="dark"] nav.cats a{color:var(--color-text-primary)}
-:root[data-theme="dark"] nav.cats a::after{background:var(--color-accent-hover)}
+:root[data-theme="dark"] .burger:hover{background:var(--surface-hover)}
+:root[data-theme="dark"] nav.cats a{color:var(--text-primary)}
+:root[data-theme="dark"] nav.cats a::after{background:var(--accent-ui)}
 
 /* --- Boutons (default + light reverse) --- */
 :root[data-theme="dark"] .btn{
-  --bg:var(--color-button-primary);--bd:var(--color-button-primary);--fg:#F7F3ED}
+  --bg:var(--accent);--bd:var(--accent);--fg:var(--on-accent)}
 :root[data-theme="dark"] .btn:hover{
-  --bg:var(--color-button-primary-hover);--bd:var(--color-button-primary-hover)}
-:root[data-theme="dark"] .btn.terra{--bg:var(--color-accent);--bd:var(--color-accent);--fg:#F7F3ED}
-:root[data-theme="dark"] .btn.terra:hover{--bg:var(--color-accent-hover);--bd:var(--color-accent-hover)}
+  --bg:var(--accent-hover);--bd:var(--accent-hover)}
+:root[data-theme="dark"] .btn.terra{--bg:var(--accent);--bd:var(--accent);--fg:var(--on-accent)}
+:root[data-theme="dark"] .btn.terra:hover{--bg:var(--accent-hover);--bd:var(--accent-hover)}
 :root[data-theme="dark"] .btn.ghost{
-  --bg:transparent;--fg:var(--color-text-primary);--bd:var(--color-border-strong)}
+  --bg:transparent;--fg:var(--text-primary);--bd:var(--line-strong)}
 :root[data-theme="dark"] .btn.ghost:hover{
-  --bg:var(--color-accent);--bd:var(--color-accent);--fg:#F7F3ED}
+  --bg:var(--accent);--bd:var(--accent);--fg:var(--on-accent)}
 :root[data-theme="dark"] .btn.light{
-  --bg:var(--color-surface-soft);--fg:var(--color-text-primary);--bd:var(--color-border-strong)}
+  --bg:var(--surface-raised);--fg:var(--text-primary);--bd:var(--line-strong)}
 :root[data-theme="dark"] .btn.light:hover{
-  --bg:var(--color-surface-hover);--bd:var(--color-border-strong)}
-:root[data-theme="dark"] .skip{background:var(--color-accent);color:#F7F3ED}
+  --bg:var(--surface-hover);--bd:var(--line-strong)}
+:root[data-theme="dark"] .skip{background:var(--accent);color:var(--on-accent)}
 
 /* --- Cartes produit --- */
 :root[data-theme="dark"] .card{
-  background:var(--color-surface);border-color:var(--color-border);
-  box-shadow:0 1px 0 rgba(0,0,0,.25)}
+  background:var(--surface-raised);border-color:var(--line);
+  box-shadow:var(--shadow-xs)}
 :root[data-theme="dark"] .card:hover{
-  background:var(--color-surface-hover);box-shadow:0 18px 40px -32px rgba(0,0,0,.7)}
-:root[data-theme="dark"] .card .im{background:var(--color-surface-soft)}
+  background:var(--surface-hover);box-shadow:var(--shadow-md)}
+:root[data-theme="dark"] .card .im{background:var(--surface-sunken)}
 :root[data-theme="dark"] .card .fav{
-  background:#FFFFFF;color:#171514;border-color:transparent;
-  box-shadow:0 1px 3px rgba(0,0,0,.5)}
-:root[data-theme="dark"] .card .fav:hover{background:#FFFFFF;
-  box-shadow:0 3px 9px rgba(0,0,0,.55)}
-:root[data-theme="dark"] .card .fav[aria-pressed="true"]{color:var(--color-accent-hover)}
-:root[data-theme="dark"] .card .fav[aria-pressed="true"] .i{fill:var(--color-accent-hover)}
+  background:var(--surface-overlay);color:var(--text-primary);border-color:transparent;
+  box-shadow:var(--shadow-sm)}
+:root[data-theme="dark"] .card .fav:hover{background:var(--surface-overlay);
+  box-shadow:var(--shadow-md)}
+:root[data-theme="dark"] .card .fav[aria-pressed="true"]{color:var(--accent-text)}
+:root[data-theme="dark"] .card .fav[aria-pressed="true"] .i{fill:var(--accent-text)}
 :root[data-theme="dark"] .card .cond-flag{
-  background:var(--color-surface-soft);color:var(--champ)}
-:root[data-theme="dark"] .card .flag{background:var(--color-accent);color:#F7F3ED}
-:root[data-theme="dark"] .card .by{color:var(--color-text-tertiary)}
-:root[data-theme="dark"] .card .price{color:var(--color-text-primary)}
-:root[data-theme="dark"] .cat{background:var(--color-surface-soft)}
+  background:var(--surface-raised);color:var(--text-primary)}
+:root[data-theme="dark"] .card .flag{background:var(--accent);color:var(--on-accent)}
+:root[data-theme="dark"] .card .by{color:var(--text-tertiary)}
+:root[data-theme="dark"] .card .price{color:var(--text-primary)}
+:root[data-theme="dark"] .cat{background:var(--surface-raised)}
 
 /* --- Bandes inversées --- */
 :root[data-theme="dark"] .editorial{
-  background:var(--color-surface);color:var(--color-text-primary);
-  border-block:1px solid var(--color-border)}
-:root[data-theme="dark"] .editorial .pic{background:var(--color-surface-elevated)}
-:root[data-theme="dark"] .editorial p{color:var(--color-text-secondary)}
-:root[data-theme="dark"] .commission{background:var(--color-surface-elevated);color:var(--color-text-primary)}
-:root[data-theme="dark"] .commission b{color:var(--champ)}
-:root[data-theme="dark"] .commission .net{color:var(--color-text-primary)}
-:root[data-theme="dark"] .mmenu{background:var(--color-bg-primary);color:var(--color-text-primary)}
+  background:var(--surface-raised);color:var(--text-primary);
+  border-block:1px solid var(--line)}
+:root[data-theme="dark"] .editorial .pic{background:var(--surface-overlay)}
+:root[data-theme="dark"] .editorial p{color:var(--text-secondary)}
+:root[data-theme="dark"] .commission{background:var(--surface-overlay);color:var(--text-primary)}
+:root[data-theme="dark"] .commission b{color:var(--champagne)}
+:root[data-theme="dark"] .commission .net{color:var(--text-primary)}
+:root[data-theme="dark"] .mmenu{background:var(--surface-base);color:var(--text-primary)}
 :root[data-theme="dark"] .mmenu .mhead,
 :root[data-theme="dark"] .mmenu .mgrid a,
 :root[data-theme="dark"] .mmenu .mlinks a,
-:root[data-theme="dark"] .mmenu .mlinks .mlogout{border-color:var(--color-border-subtle,var(--color-border))}
-:root[data-theme="dark"] .mmenu .mgrid a{color:var(--color-text-primary)}
-:root[data-theme="dark"] .mmenu .mlinks a{color:var(--color-text-secondary)}
-:root[data-theme="dark"] .mmenu .mclose{border-color:var(--color-border-strong);color:var(--color-text-primary)}
-:root[data-theme="dark"] .toast{background:var(--color-text-primary);color:var(--color-bg-primary)}
-:root[data-theme="dark"] .toast .i{color:var(--color-accent)}
+:root[data-theme="dark"] .mmenu .mlinks .mlogout{border-color:var(--line)}
+:root[data-theme="dark"] .mmenu .mgrid a{color:var(--text-primary)}
+:root[data-theme="dark"] .mmenu .mlinks a{color:var(--text-secondary)}
+:root[data-theme="dark"] .mmenu .mclose{border-color:var(--line-strong);color:var(--text-primary)}
+:root[data-theme="dark"] .toast{background:var(--text-primary);color:var(--surface-base)}
+:root[data-theme="dark"] .toast .i{color:var(--accent-ui)}
 
 /* --- Filtres / champs --- */
 :root[data-theme="dark"] .sel,
@@ -298,107 +176,107 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
 :root[data-theme="dark"] .chip,
 :root[data-theme="dark"] .cbtn,
 :root[data-theme="dark"] .qty{
-  background:var(--color-surface);border-color:var(--color-border);color:var(--color-text-primary)}
+  background:var(--surface-raised);border-color:var(--line-strong);color:var(--text-primary)}
 :root[data-theme="dark"] .sel:focus,
 :root[data-theme="dark"] .inp:focus{
-  border-color:var(--color-accent-hover);box-shadow:0 0 0 3px rgba(168,58,82,.22)}
+  border-color:var(--accent-ui);box-shadow:0 0 0 3px var(--accent-soft)}
 :root[data-theme="dark"] .opt:hover,
 :root[data-theme="dark"] .chip:hover,
-:root[data-theme="dark"] .cbtn:hover{border-color:var(--color-border-strong)}
+:root[data-theme="dark"] .cbtn:hover{border-color:var(--accent-ui)}
 :root[data-theme="dark"] .opt.on,
 :root[data-theme="dark"] .chip.on,
 :root[data-theme="dark"] .cbtn.primary,
 :root[data-theme="dark"] .cbtn.facet.on{
-  background:var(--color-accent);color:#F7F3ED;border-color:var(--color-accent)}
-:root[data-theme="dark"] .fgroup{border-top-color:var(--color-border)}
-:root[data-theme="dark"] .fgroup>h3{color:var(--color-text-tertiary)}
-:root[data-theme="dark"] .sel option{background:var(--color-surface);color:var(--color-text-primary)}
+  background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+:root[data-theme="dark"] .fgroup{border-top-color:var(--line)}
+:root[data-theme="dark"] .fgroup>h3{color:var(--text-tertiary)}
+:root[data-theme="dark"] .sel option{background:var(--surface-raised);color:var(--text-primary)}
 
 /* --- Fiche produit --- */
 :root[data-theme="dark"] .gallery .main,
 :root[data-theme="dark"] .thumbs button,
-:root[data-theme="dark"] .line .t{background:var(--color-surface-soft)}
-:root[data-theme="dark"] .thumbs button[aria-current="true"]{border-color:var(--color-accent-hover)}
-:root[data-theme="dark"] .buy .tag{background:var(--color-surface-soft);color:var(--champ);border-color:var(--color-border-strong)}
-:root[data-theme="dark"] .buy h1{color:var(--color-text-primary)}
-:root[data-theme="dark"] .buy-price .price{color:var(--color-text-primary)}
-:root[data-theme="dark"] .buy-price .save{background:rgba(168,58,82,.14);color:var(--color-accent-hover)}
-:root[data-theme="dark"] .buy .desc{color:var(--color-text-secondary)}
-:root[data-theme="dark"] .spec dt{color:var(--color-text-tertiary)}
-:root[data-theme="dark"] .spec dd{color:var(--color-text-primary)}
-:root[data-theme="dark"] .confbox{background:var(--color-surface);border-color:var(--color-border)}
-:root[data-theme="dark"] .confbox .row{color:var(--color-text-secondary)}
-:root[data-theme="dark"] .confbox b{color:var(--color-text-primary)}
-:root[data-theme="dark"] .note{border-left-color:var(--color-accent);color:var(--color-text-secondary)}
-:root[data-theme="dark"] .seller{border-top-color:var(--color-border)}
-:root[data-theme="dark"] .seller .who-name{color:var(--color-text-primary)}
+:root[data-theme="dark"] .line .t{background:var(--surface-sunken)}
+:root[data-theme="dark"] .thumbs button[aria-current="true"]{border-color:var(--accent-ui)}
+:root[data-theme="dark"] .buy .tag{background:var(--surface-raised);color:var(--accent-text);border-color:var(--line)}
+:root[data-theme="dark"] .buy h1{color:var(--text-primary)}
+:root[data-theme="dark"] .buy-price .price{color:var(--text-primary)}
+:root[data-theme="dark"] .buy-price .save{background:var(--accent-soft);color:var(--accent-text)}
+:root[data-theme="dark"] .buy .desc{color:var(--text-secondary)}
+:root[data-theme="dark"] .spec dt{color:var(--text-tertiary)}
+:root[data-theme="dark"] .spec dd{color:var(--text-primary)}
+:root[data-theme="dark"] .confbox{background:var(--surface-raised);border-color:var(--line)}
+:root[data-theme="dark"] .confbox .row{color:var(--text-secondary)}
+:root[data-theme="dark"] .confbox b{color:var(--text-primary)}
+:root[data-theme="dark"] .note{border-left-color:var(--accent-ui);color:var(--text-secondary)}
+:root[data-theme="dark"] .seller{border-top-color:var(--line)}
+:root[data-theme="dark"] .seller .who-name{color:var(--text-primary)}
 :root[data-theme="dark"] .seller .av,
-:root[data-theme="dark"] .acct .who .av{color:var(--champ)}
-:root[data-theme="dark"] .vbadge{border-color:var(--champ);color:var(--champ)}
-:root[data-theme="dark"] .seller .facts{color:var(--color-text-secondary)}
-:root[data-theme="dark"] .seller .facts b{color:var(--color-accent-hover)}
+:root[data-theme="dark"] .acct .who .av{color:var(--on-accent)}
+:root[data-theme="dark"] .vbadge{border-color:var(--accent-ui);color:var(--accent-text)}
+:root[data-theme="dark"] .seller .facts{color:var(--text-secondary)}
+:root[data-theme="dark"] .seller .facts b{color:var(--accent-text)}
 
 /* --- Panier / commande --- */
 :root[data-theme="dark"] .box,
-:root[data-theme="dark"] .stat{background:var(--color-surface);border-color:var(--color-border)}
-:root[data-theme="dark"] .acct .who{background:var(--color-surface);border-color:var(--color-border)}
-:root[data-theme="dark"] .acct nav a{color:var(--color-text-secondary)}
-:root[data-theme="dark"] .acct nav a:hover{background:var(--color-surface);color:var(--color-text-primary)}
-:root[data-theme="dark"] .acct nav a.on{background:var(--color-accent);color:#F7F3ED}
-:root[data-theme="dark"] .line{border-bottom-color:var(--color-border)}
-:root[data-theme="dark"] .sum .r.total{border-top-color:var(--color-border)}
-:root[data-theme="dark"] .qty button:hover{background:var(--color-surface-hover);color:var(--color-accent-hover)}
-:root[data-theme="dark"] .linkbtn:hover{color:var(--color-accent-hover)}
+:root[data-theme="dark"] .stat{background:var(--surface-raised);border-color:var(--line)}
+:root[data-theme="dark"] .acct .who{background:var(--surface-raised);border-color:var(--line)}
+:root[data-theme="dark"] .acct nav a{color:var(--text-secondary)}
+:root[data-theme="dark"] .acct nav a:hover{background:var(--surface-hover);color:var(--text-primary)}
+:root[data-theme="dark"] .acct nav a.on{background:var(--accent);color:var(--on-accent)}
+:root[data-theme="dark"] .line{border-bottom-color:var(--line)}
+:root[data-theme="dark"] .sum .r.total{border-top-color:var(--line)}
+:root[data-theme="dark"] .qty button:hover{background:var(--surface-hover);color:var(--accent-text)}
+:root[data-theme="dark"] .linkbtn:hover{color:var(--accent-text)}
 
 /* --- Publier --- */
-:root[data-theme="dark"] .steps{border-bottom-color:var(--color-border)}
-:root[data-theme="dark"] .steps .s i{border-color:var(--color-border-strong)}
-:root[data-theme="dark"] .steps .s.done{color:var(--color-text-secondary)}
-:root[data-theme="dark"] .steps .s.done i{background:var(--color-surface-hover);color:var(--color-text-primary);border-color:var(--color-border-strong)}
-:root[data-theme="dark"] .steps .s.cur i{background:var(--color-accent);color:#F7F3ED;border-color:var(--color-accent)}
-:root[data-theme="dark"] .drop{background:var(--color-surface);border-color:var(--color-border-strong)}
-:root[data-theme="dark"] .drop:hover{background:var(--color-surface-soft);border-color:var(--color-accent-hover)}
+:root[data-theme="dark"] .steps{border-bottom-color:var(--line)}
+:root[data-theme="dark"] .steps .s i{border-color:var(--line-strong)}
+:root[data-theme="dark"] .steps .s.done{color:var(--text-secondary)}
+:root[data-theme="dark"] .steps .s.done i{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+:root[data-theme="dark"] .steps .s.cur i{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+:root[data-theme="dark"] .drop{background:var(--surface-raised);border-color:var(--line-strong)}
+:root[data-theme="dark"] .drop:hover{background:var(--surface-hover);border-color:var(--accent-ui)}
 :root[data-theme="dark"] .drop .i,
-:root[data-theme="dark"] .drop label{color:var(--color-accent-hover)}
-:root[data-theme="dark"] .pv img{border-color:var(--color-border)}
-:root[data-theme="dark"] .preview-card .im{background:var(--color-surface-soft)}
+:root[data-theme="dark"] .drop label{color:var(--accent-text)}
+:root[data-theme="dark"] .pv img{border-color:var(--line)}
+:root[data-theme="dark"] .preview-card .im{background:var(--surface-sunken)}
 
 /* --- Empty & skeleton --- */
-:root[data-theme="dark"] .empty{background:var(--color-bg-secondary);border-color:var(--color-border)}
-:root[data-theme="dark"] .empty .i{color:var(--champ)}
+:root[data-theme="dark"] .empty{background:var(--surface-sunken);border-color:var(--line)}
+:root[data-theme="dark"] .empty .i{color:var(--champagne)}
 
 /* --- Pied de page --- */
 :root[data-theme="dark"] footer.site{
-  background:var(--color-bg-secondary);color:var(--color-text-secondary);
-  border-top:1px solid var(--color-border)}
-:root[data-theme="dark"] footer .top{border-bottom-color:var(--color-border)}
-:root[data-theme="dark"] footer .logo{color:var(--color-text-primary)}
-:root[data-theme="dark"] footer .tagline{color:var(--champ)}
-:root[data-theme="dark"] footer .col h4{color:var(--color-text-primary)}
-:root[data-theme="dark"] footer .col a{color:var(--color-text-secondary)}
-:root[data-theme="dark"] footer .col a:hover{color:var(--color-text-primary)}
+  background:var(--surface-sunken);color:var(--text-secondary);
+  border-top:1px solid var(--line)}
+:root[data-theme="dark"] footer .top{border-bottom-color:var(--line)}
+:root[data-theme="dark"] footer .logo{color:var(--text-primary)}
+:root[data-theme="dark"] footer .tagline{color:var(--accent-text)}
+:root[data-theme="dark"] footer .col h4{color:var(--text-primary)}
+:root[data-theme="dark"] footer .col a{color:var(--text-secondary)}
+:root[data-theme="dark"] footer .col a:hover{color:var(--text-primary)}
 :root[data-theme="dark"] footer .bottom .socials a{
-  border-color:var(--color-border-strong);color:var(--color-text-secondary)}
+  border-color:var(--line-strong);color:var(--text-secondary)}
 :root[data-theme="dark"] footer .bottom .socials a:hover{
-  background:var(--color-accent);color:#F7F3ED;border-color:var(--color-accent)}
+  background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 
 /* --- Motifs « couture » : lisibles sur fond sombre --- */
 :root[data-theme="dark"] .eyebrow::before,
 :root[data-theme="dark"] .buy h1::after{
-  background:repeating-linear-gradient(90deg,var(--champ) 0 4px,transparent 4px 7px)}
-:root[data-theme="dark"] .empty .i{color:var(--champ)}
+  background:repeating-linear-gradient(90deg,var(--champagne) 0 4px,transparent 4px 7px)}
+:root[data-theme="dark"] .empty .i{color:var(--champagne)}
 
 /* --- Mobile : panneaux --- */
 @media (max-width:760px){
   :root[data-theme="dark"] .chipbar,
   :root[data-theme="dark"] .filters,
   :root[data-theme="dark"] .fx-foot,
-  :root[data-theme="dark"] .sheet{background:var(--color-surface);border-color:var(--color-border)}
-  :root[data-theme="dark"] .fx-head{border-bottom-color:var(--color-border)}
-  :root[data-theme="dark"] .fx-head .grab{background:var(--color-border-strong)}
-  :root[data-theme="dark"] .sopt{border-bottom-color:var(--color-border);color:var(--color-text-primary)}
-  :root[data-theme="dark"] .sopt.on{color:var(--color-accent-hover)}
-  :root[data-theme="dark"] .cbtn{background:var(--color-surface);border-color:var(--color-border)}
+  :root[data-theme="dark"] .sheet{background:var(--surface-raised);border-color:var(--line)}
+  :root[data-theme="dark"] .fx-head{border-bottom-color:var(--line)}
+  :root[data-theme="dark"] .fx-head .grab{background:var(--line-strong)}
+  :root[data-theme="dark"] .sopt{border-bottom-color:var(--line);color:var(--text-primary)}
+  :root[data-theme="dark"] .sopt.on{color:var(--accent-text)}
+  :root[data-theme="dark"] .cbtn{background:var(--surface-raised);border-color:var(--line-strong)}
 }
 
 /* =====================================================================
@@ -409,19 +287,19 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
    ===================================================================== */
 .auth .inp,
 :root[data-theme="dark"] .auth .inp{
-  background:#FFFFFF;border-color:rgba(23,21,19,.14);color:var(--ink)}
-:root[data-theme="dark"] .auth .inp:hover{border-color:rgba(107,23,40,.45)}
+  background:var(--field-on-photo-bg);border-color:var(--field-on-photo-border);color:var(--field-on-photo-text)}
+:root[data-theme="dark"] .auth .inp:hover{border-color:var(--field-on-photo-border-strong)}
 :root[data-theme="dark"] .auth .inp:focus{
-  border-color:var(--bordeaux);box-shadow:0 0 0 4px rgba(107,23,40,.15)}
+  border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .auth .ctl .fi,
-:root[data-theme="dark"] .auth .ctl .fi{color:var(--bordeaux)}
+:root[data-theme="dark"] .auth .ctl .fi{color:var(--accent-text)}
 .auth .ctl label,
-:root[data-theme="dark"] .auth .ctl label{color:rgba(23,21,19,.55)}
+:root[data-theme="dark"] .auth .ctl label{color:var(--field-on-photo-placeholder)}
 .auth .ctl .inp:focus+label,
 .auth .ctl .inp:not(:placeholder-shown)+label,
 :root[data-theme="dark"] .auth .ctl .inp:focus+label,
-:root[data-theme="dark"] .auth .ctl .inp:not(:placeholder-shown)+label{color:var(--bordeaux)}
-:root[data-theme="dark"] .auth .toggle{color:rgba(23,21,19,.45)}
+:root[data-theme="dark"] .auth .ctl .inp:not(:placeholder-shown)+label{color:var(--accent-text)}
+:root[data-theme="dark"] .auth .toggle{color:var(--field-on-photo-placeholder)}
 
 /* =====================================================================
    PARTIE 6 — BOUTON DE THÈME (☼ / ☾)
@@ -433,32 +311,32 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
 .mmenu .mlinks .themebtn{
   display:flex;align-items:center;gap:13px;width:100%;padding:14px 0;text-align:left;
   font:600 15px/1 var(--sans);color:inherit;
-  border-bottom:1px solid rgba(247,243,236,.09);cursor:pointer}
-:root[data-theme="dark"] .mmenu .mlinks .themebtn{border-color:var(--color-border)}
-.mmenu .mlinks .themebtn .i{color:var(--terra);flex:none}
+  border-bottom:1px solid var(--line);cursor:pointer}
+:root[data-theme="dark"] .mmenu .mlinks .themebtn{border-color:var(--line)}
+.mmenu .mlinks .themebtn .i{color:var(--accent-text);flex:none}
 
 /* Menu mobile : CTA & icônes d'univers (toujours sur fond sombre) */
-:root[data-theme="dark"] .mmenu .mcta{background:var(--color-accent);box-shadow:0 14px 34px -16px rgba(0,0,0,.65)}
-:root[data-theme="dark"] .mmenu .mgrid a .i{color:var(--color-accent-hover)}
-:root[data-theme="dark"] .mmenu .mlink-all{color:var(--color-accent-hover)}
+:root[data-theme="dark"] .mmenu .mcta{background:var(--accent);box-shadow:var(--shadow-lg)}
+:root[data-theme="dark"] .mmenu .mgrid a .i{color:var(--accent-text)}
+:root[data-theme="dark"] .mmenu .mlink-all{color:var(--accent-text)}
 
 /* =====================================================================
    PARTIE 6b — Micro-annotation éditoriale (identité REVENDS)
    ===================================================================== */
 .micro-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;
   font:700 10.5px/1 var(--sans);letter-spacing:.28em;text-transform:uppercase;
-  color:var(--color-text-tertiary)}
-.micro-eyebrow::before{content:"";width:22px;height:1px;background:var(--color-accent)}
-:root[data-theme="dark"] .micro-eyebrow::before{background:var(--color-accent-hover)}
+  color:var(--text-tertiary)}
+.micro-eyebrow::before{content:"";width:22px;height:1px;background:var(--accent-ui)}
+:root[data-theme="dark"] .micro-eyebrow::before{background:var(--accent-ui)}
 
 /* =====================================================================
    PARTIE 8 — LOADER SIGNATURE : « LE CŒUR COUTURE »
    Un cœur qui se coud (surpiqûres) puis se remplit et bat. Utilisé
    pour le splash d'ouverture (grand format) et les micro-chargements
-   (mini-cœur pulsatnt sur les boutons).
+   (mini-cœur pulsant sur les boutons).
    ===================================================================== */
-:root{ --rv-accent: var(--color-accent); }
-:root[data-theme="dark"]{ --rv-accent: #A83A52; }
+:root{ --rv-accent: var(--accent-ui); }
+:root[data-theme="dark"]{ --rv-accent: var(--accent-ui); }
 
 /* Cœur couture — grand format */
 .rv-heart{ width:104px; height:98px; display:block; overflow:visible; }
@@ -467,7 +345,7 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
   stroke:var(--rv-accent); stroke-width:3.4;
   stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:6 6;
   transform-box:fill-box; transform-origin:center;
-  filter:drop-shadow(0 12px 20px rgba(107,23,40,.28));
+  filter:drop-shadow(0 12px 20px var(--shadow-cta));
   animation:rvHeart 3.1s cubic-bezier(.5,.05,.3,1) infinite;
 }
 .rv-heart .shine{
@@ -490,14 +368,14 @@ body.home header.site.solid{border-bottom-color:var(--color-border)}
 .rv-splash{
   position:fixed; inset:0; z-index:9999;
   display:grid; place-items:center;
-  background:var(--color-bg-primary);
+  background:var(--surface-base);
   transition:opacity .5s var(--ease);
 }
 .rv-splash.is-out{ opacity:0; pointer-events:none; }
 .rv-splash__box{ display:flex; flex-direction:column; align-items:center; gap:22px; }
 .rv-splash__cap{
   font:700 11px/1 var(--sans); letter-spacing:.5em; text-indent:.5em;
-  text-transform:uppercase; color:var(--color-text-secondary);
+  text-transform:uppercase; color:var(--text-secondary);
   animation:rvCap var(--t-slow) var(--ease) both;
 }
 @keyframes rvCap{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }

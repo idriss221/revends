@@ -20,9 +20,11 @@ import { suggestionsLoader } from './suggestions'
  *   ouvre le menu plein écran `.mmenu` ;
  * · l'icône compte vaut `i-login` pour un visiteur et `i-user-check` pour un
  *   membre (comme `syncAccountBtn()` de la maquette).
+ * · Marque : « ReVends » (capital V unique), pas « REVENDS » ni « Le Cœur couture ».
+ * · Cibles tactiles ≥ 44×44 px (DA §8).
  */
 
-/** Rejoue l'animation `badgePop` dès que le compteur augmente. */
+ /** Rejoue l'animation `badgePop` dès que le compteur augmente. */
 function usePopWhenUp(value: number): RefObject<HTMLElement | null> {
   const ref = useRef<HTMLElement>(null)
   const prev = useRef(value)
@@ -44,12 +46,6 @@ function Badge({ value, label }: { value: number; label: string }) {
   return (
     <b className="badge" ref={ref} data-n={value}>
       {value}
-      {/* `.sr` = visually-hidden de la maquette (`bureau.css`, scopé
-          `.market-site`) : ici on reste dans le public. Attention :
-          `sr-only` existe aussi — il vient de Font Awesome (chargé globalement),
-          pas de Tailwind. Les composants RENDUS EN ADMIN (Loading,
-          OrderTimeline) doivent donc utiliser `sr-only` sinon le texte
-          s'affiche en clair (`.sr` est invisible hors `.market-site`). */}
       <span className="sr">{label}</span>
     </b>
   )
@@ -80,8 +76,6 @@ export function Navbar() {
   }
   useEffect(() => {
     closeMenu()
-    // (aucune dépendance manquante : `closeMenu` ne capture que des setters
-    //  de l'état local — pas d'ESLint dans ce projet, commentaire mort retiré.)
   }, [location.pathname])
 
   useEffect(() => {
@@ -102,9 +96,6 @@ export function Navbar() {
     navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search')
   }
 
-  // La maquette n'a PAS de bouton de déconnexion dans l'en-tête : on ouvre
-  // uniquement la confirmation, déclenchée depuis le menu mobile (le pied de
-  // page porte l'autre déclencheur, comme `<a data-logout>` de la maquette).
   const [logoutOpen, setLogoutOpen] = useState(false)
 
   const accountTo = user ? '/profil' : '/login'
@@ -115,8 +106,8 @@ export function Navbar() {
     <>
       <header className="site">
         <div className="wrap bar">
-          <Link className="logo" to="/" aria-label="REVENDS, accueil">
-            REVENDS<b>.</b>
+          <Link className="logo" to="/" aria-label="ReVends, accueil">
+            Re<span className="text-terracotta-ink">V</span>ends<b>.</b>
           </Link>
 
           <nav className="cats" aria-label="Univers">
@@ -156,7 +147,6 @@ export function Navbar() {
               className="ic"
               to="/panier"
               aria-label={cartCount ? `Panier (${cartCount} article${cartCount > 1 ? 's' : ''})` : 'Panier'}
-             
             >
               <Ico name="bag" />
               <Badge value={cartCount} label={`${cartCount} article(s) dans le panier`} />
@@ -199,8 +189,8 @@ export function Navbar() {
           inert={!menuOpen ? true : undefined}
         >
           <div className="mhead">
-            <Link className="logo" to="/" aria-label="REVENDS, accueil">
-              REVENDS<b>.</b>
+            <Link className="logo" to="/" aria-label="ReVends, accueil">
+              Re<span className="text-terracotta-ink">V</span>ends<b>.</b>
             </Link>
             <button className="mclose" type="button" onClick={closeMenu} aria-label="Fermer le menu">
               <Ico name="x" />
@@ -245,7 +235,7 @@ export function Navbar() {
               </Link>
             </div>
 
-            <span className="meyebrow">Compte &amp; préférences</span>
+            <span className="meyebrow">Compte & préférences</span>
             <div className="mlinks">
               <button className="themebtn" type="button" onClick={toggleTheme} aria-label={themeLabel} aria-pressed={isDark}>
                 <Ico name={isDark ? 'sun' : 'moon'} />
@@ -274,13 +264,14 @@ export function Navbar() {
 
             <div className="mfoot">
               <div className="socials">
-                <Link to="/" aria-label="Instagram">
+                {/* Liens sociaux : placeholders — à remplacer par les vraies URLs client */}
+                <Link to="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram (s'ouvre dans un nouvel onglet)">
                   <Ico name="instagram" cls="sm" />
                 </Link>
-                <Link to="/" aria-label="Facebook">
+                <Link to="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook (s'ouvre dans un nouvel onglet)">
                   <Ico name="facebook" cls="sm" />
                 </Link>
-                <Link to="/" aria-label="TikTok">
+                <Link to="https://tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="TikTok (s'ouvre dans un nouvel onglet)">
                   <Ico name="tiktok" cls="sm" />
                 </Link>
               </div>

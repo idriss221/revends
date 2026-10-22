@@ -12,11 +12,8 @@
  * blocs étaient donc transparents (pas de fond, pas de pulsation). Corrigé
  * ici ; ne pas réintroduire ces classes fantômes.
  *
- * Sémantique (I4 de la revue) : ces composants sont DA-pinés et rendus en
- * admin comme en public — c'est le DA qui prescrit Tailwind + Font Awesome
- * pour les écrans que la maquette ne couvre pas (§3.10 OrderTimeline,
- * §3.11 PageLoader/skeletons). L'interdiction Tailwind ne vaut que pour les
- * écrans couverts par `Bureau/main`.
+ * Sémantique : ces composants sont DA-pinés et rendus en admin comme en public.
+ * Ils utilisent désormais les jetons de design system (pas de Tailwind).
  */
 
 function Skeleton({ className }: { className?: string }) {
@@ -36,16 +33,16 @@ function Skeleton({ className }: { className?: string }) {
 /** Grille de skeletons « product-card » : média `aspect-[4/5]` + 2 lignes + prix. */
 export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="rv-grid three" role="status" aria-label="Chargement des articles">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="card overflow-hidden !p-0">
+        <article key={i} className="card overflow-hidden !p-0">
           <Skeleton className="aspect-[4/5] w-full rounded-none" />
           <div className="space-y-3 p-4">
             <Skeleton className="h-4 w-4/5" />
             <Skeleton className="h-5 w-1/2" />
             <Skeleton className="h-3 w-2/3" />
           </div>
-        </div>
+        </article>
       ))}
     </div>
   )
@@ -54,9 +51,9 @@ export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
 /** Tuile « catégorie » : photo `aspect-[3/4]` + 2 lignes (page `/category`). */
 export function CategorySkeleton({ count = 5 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 lg:gap-6">
+    <div className="rv-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--s-4)' }}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="overflow-hidden rounded-md bg-white shadow-sm">
+        <div key={i} className="overflow-hidden rounded-md card">
           <Skeleton className="aspect-[3/4] w-full rounded-none" />
           <div className="space-y-2 p-4">
             <Skeleton className="h-4 w-4/5" />
@@ -70,7 +67,7 @@ export function CategorySkeleton({ count = 5 }: { count?: number }) {
 
 export function StatGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-4 gap-5 max-[1200px]:grid-cols-2 max-[560px]:grid-cols-1">
+    <div className="rv-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'var(--s-5)' }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="card">
           <div className="mb-3 flex items-center justify-between">
@@ -117,7 +114,7 @@ export function TableSkeleton({ rows = 6, columns = 5 }: { rows?: number; column
 /** Squelette de fiche (2 colonnes : média + texte). */
 export function DetailSkeleton() {
   return (
-    <div role="status" aria-label="Chargement en cours" className="grid gap-8 max-[834px]:grid-cols-1 lg:grid-cols-2">
+    <div role="status" aria-label="Chargement en cours" className="rv-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--s-8)' }}>
       <Skeleton className="aspect-[4/5] w-full rounded-lg" />
       <div className="space-y-4">
         <Skeleton className="h-8 w-3/4" />
@@ -132,16 +129,24 @@ export function DetailSkeleton() {
 }
 
 /**
- * Loader de page — DA §3.11 (« `PageLoader` : spinner `text-terracotta`,
+ * Loader de page — DA §3.11 (« `PageLoader` : spinner `.spinner`,
  * `min-h-[40vh]`, `role="status"` »). La maquette `Bureau/main` n'a PAS
- * d'écran de chargement de page : c'est le DA qui fait autorité ici, d'où
- * Font Awesome + Tailwind dans la zone publique (exception assumée, I4 revue).
+ * d'écran de chargement de page : c'est le DA qui fait autorité ici.
+ * Utilise désormais le spinner CSS (pas Font Awesome).
  */
 export function PageLoader({ label = 'Chargement…' }: { label?: string }) {
   return (
     <div role="status" className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted">
-      <i className="fas fa-spinner fa-spin text-3xl text-terracotta" aria-hidden="true" />
+      <span className="spinner spinner-lg text-terracotta" aria-hidden="true" />
       <p className="text-sm">{label}</p>
     </div>
   )
+}
+
+/**
+ * Spinner inline simple — pour les boutons, etc.
+ * Utilise la classe CSS `.spinner` de `bureau-fixes.css`.
+ */
+export function Spinner({ size = 'md', className }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
+  return <span className={`spinner spinner-${size} ${className ?? ''}`} aria-hidden="true" />
 }

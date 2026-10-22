@@ -1,155 +1,132 @@
 /* =====================================================================
-   REVENDS — Direction artistique « LUXURY SECOND-HAND EDITORIAL »
+   REVENDS — COUCHE ÉDITORIALE PUBLIQUE (re-skin v2 « Maison Bordeaux »)
    ---------------------------------------------------------------------
-   Fichier chargé APRÈS styles.css ET glass.css (voir index.html).
-   Blanc pur dominant · beige luxe #F1E8DC · bordeaux signature #6B1728
-   · noir charbon #171514 · gris chaud #756F6A · champagne #D8C5AB.
+   Migré intégralement sur les jetons de `styles/tokens.css` (source unique).
+   Ne définit plus aucune couleur : consomme `--surface-*`, `--text-*`,
+   `--accent*`, `--line*`, `--champagne*`, `--on-*`, `--shadow-*`.
 
    PÉRIMÈTRE RESPECTÉ :
-   - Aucune règle sur .auth (le glassmorphism de la page de connexion
-     est intégralement conservé : flou, transparence, hiérarchie).
+   - Aucune règle sur .auth au-delà des champs sur photo (voir theme.css).
    - Aucune modification de structure / navigation / logo / logique.
 
-   POUR REVENIR À LA VERSION GLASSMORPHISM :
-     retirer la ligne
-       <link rel="stylesheet" href="assets/editorial.css">
-     dans index.html (le thème verre reprend alors la main).
+   MAPPING des anciens jetons « editorial » (voir rapport de migration) :
+     paper / white            → --surface-base
+     paper-2 / ivory          → --surface-sunken
+     beige / ivory-2          → --surface-raised
+     bordeaux / terra         → --accent (fond) · --accent-text (texte)
+     bordeaux-dark / terra-dark → --accent-hover
+     charbon / ink / brown    → --text-primary
+     gris / muted             → --text-secondary
+     muted-2                  → --text-tertiary
+     champagne / champ (lignes) → --line-strong (bordures) · --champagne (détails dorés)
+     line / line-2            → --line
+     texte sur accent         → --on-accent
+   ÉCARTS ASSUMÉS vs l'ancienne couche (le design system v2 fait foi) :
+   - Les cartes produit passent de « beige » à `--surface-raised` bordé `--line`
+     (§4.3 du design system). Le bandeau `.editorial` reste la seule respiration
+     sombre, désormais pilotée par `--surface-raised`/`--line` (thème-dépendant).
    ===================================================================== */
 
 /* ---------------------------------------------------------------
-   1. Palette — Luxury Second-Hand Editorial
+   2. Fond : surface de base, mate
    --------------------------------------------------------------- */
-:root{
-  --paper:#FFFFFF;        /* blanc pur (dominant) */
-  --paper-2:#FAF8F5;      /* blanc cassé */
-  --beige:#F1E8DC;        /* beige luxe */
-  --bordeaux:#6B1728;     /* signature */
-  --bordeaux-dark:#52111F;/* hover / actif */
-  --charbon:#171514;      /* texte principal */
-  --gris:#756F6A;         /* texte secondaire */
-  --champagne:#D8C5AB;    /* bordures / détails */
-
-  /* remap des jetons du design system (styles.css) */
-  --white:#FFFFFF;
-  --ivory:#FAF8F5;
-  --ivory-2:#F1E8DC;
-  --ink:#171514;
-  --muted:#756F6A;
-  --muted-2:#9C948C;
-  --terra:#6B1728;
-  --terra-dark:#52111F;
-  --brown:#171514;
-  --brown-2:#171514;
-  --champ:#D8C5AB;
-  --line:#E6DDCE;
-  --line-2:#EFE8DC;
-
-  /* formes & profondeur : élégantes, jamais massives */
-  --r:10px;
-  --r-lg:14px;
-  --sh-sm:0 4px 14px -10px rgba(23,21,20,.30);
-  --sh:0 18px 40px -26px rgba(23,21,20,.32);
-}
+body{background:var(--surface-base);background-image:none}
+body.home{background-color:var(--surface-base)}
 
 /* ---------------------------------------------------------------
-   2. Fond : blanc dominant, mat
+   3. En-tête : surface de base, fine séparation, zéro verre
    --------------------------------------------------------------- */
-body{background:var(--paper);background-image:none}
-body.home{background-color:var(--paper)}
-
-/* ---------------------------------------------------------------
-   3. En-tête : blanche, fine séparation, zéro verre
-   --------------------------------------------------------------- */
-.top-strip{background:var(--paper);color:var(--gris);border-bottom:1px solid var(--champagne);
+.top-strip{background:var(--surface-base);color:var(--text-secondary);border-bottom:1px solid var(--line);
   -webkit-backdrop-filter:none;backdrop-filter:none;letter-spacing:.2em;font-weight:600}
-.top-strip b{color:var(--bordeaux)}
+.top-strip b{color:var(--accent-text)}
 
-header.site{background:var(--paper);-webkit-backdrop-filter:none;backdrop-filter:none;
-  border-bottom:1px solid var(--champagne)}
-body.home header.site.solid{background:var(--paper);-webkit-backdrop-filter:none;backdrop-filter:none;
-  border-bottom-color:var(--champagne)}
+header.site{background:var(--surface-base);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border-bottom:1px solid var(--line)}
+body.home header.site.solid{background:var(--surface-base);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border-bottom-color:var(--line)}
 
 .bar .logo{letter-spacing:.2em}
-nav.cats a::after{background:var(--bordeaux)}
+nav.cats a::after{background:var(--accent)}
 
-.search input{border:1px solid var(--champagne);border-radius:10px;background:var(--paper)}
-.search input:focus{border-color:var(--bordeaux);box-shadow:0 0 0 3px rgba(107,23,40,.10)}
-.search .i{color:var(--gris)}
-.ic:hover,.burger:hover{background:var(--beige)}
+.search input{border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--surface-raised);
+  color:var(--text-primary)}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search .i{color:var(--text-secondary)}
+.ic:hover,.burger:hover{background:var(--surface-hover)}
 
 /* ---------------------------------------------------------------
-   4. Boutons : bordeaux, formes élégantes, hover sobre
+   4. Boutons : accent, formes élégantes, hover sobre
    --------------------------------------------------------------- */
-.btn{border-radius:10px;letter-spacing:.13em;transition:background var(--t) var(--ease),
+.btn{border-radius:var(--r-sm);letter-spacing:.13em;transition:background var(--t) var(--ease),
   color var(--t) var(--ease),border-color var(--t) var(--ease),transform var(--t) var(--ease)}
 .btn:hover{transform:translateY(-2px)}
 .btn:active{transform:translateY(0)}
-.btn.terra{--bg:var(--bordeaux);--bd:var(--bordeaux);--fg:var(--white)}
-.btn.terra:hover{--bg:var(--bordeaux-dark);--bd:var(--bordeaux-dark)}
-.btn.ghost{--bd:var(--champagne);--fg:var(--ink);--bg:transparent}
-.btn.ghost:hover{--bg:var(--bordeaux);--bd:var(--bordeaux);--fg:var(--white)}
-.link-arrow{border-bottom-color:var(--bordeaux);color:var(--ink)}
-.link-arrow:hover{color:var(--bordeaux);border-color:var(--bordeaux)}
+.btn.terra{--bg:var(--accent);--bd:var(--accent);--fg:var(--on-accent)}
+.btn.terra:hover{--bg:var(--accent-hover);--bd:var(--accent-hover)}
+.btn.ghost{--bd:var(--line-strong);--fg:var(--text-primary);--bg:transparent}
+.btn.ghost:hover{--bg:var(--accent);--bd:var(--accent);--fg:var(--on-accent)}
+.link-arrow{border-bottom-color:var(--accent);color:var(--text-primary)}
+.link-arrow:hover{color:var(--accent-text);border-color:var(--accent)}
 
 /* ---------------------------------------------------------------
    5. Structure, titres, détails « étiquette de mode »
    --------------------------------------------------------------- */
 .section{padding-block:clamp(56px,8.5vw,120px)}
 .section.tight{padding-block:clamp(32px,5vw,60px)}
-.section.ivory{background:var(--paper-2)}
+.section.ivory{background:var(--surface-sunken)}
 
 /* motif 1 : couture pointillée sous l'eyebrow */
-.eyebrow{color:var(--bordeaux);letter-spacing:.24em}
+.eyebrow{color:var(--accent-text);letter-spacing:.24em}
 .eyebrow::before{width:28px;height:1px;background:repeating-linear-gradient(90deg,var(--champagne) 0 4px,transparent 4px 7px)}
 
 .head h2,.head h1{letter-spacing:-.01em}
-.crumb a:hover{color:var(--bordeaux)}
+.crumb a:hover{color:var(--accent-text)}
 
 /* ---------------------------------------------------------------
    6. Pont éditorial sous le Hero + bandeau de confiance
    --------------------------------------------------------------- */
-.mh-bridge{background:var(--paper-2);border-bottom:1px solid var(--champagne)}
-.mh-bridge .br-line em{color:var(--bordeaux)}
+.mh-bridge{background:var(--surface-sunken);border-bottom:1px solid var(--line)}
+.mh-bridge .br-line em{color:var(--accent-text)}
 
-.trust{background:var(--paper);border-block:1px solid var(--champagne);
+.trust{background:var(--surface-base);border-block:1px solid var(--line);
   -webkit-backdrop-filter:none;backdrop-filter:none}
-.trust .it{border-right-color:var(--champagne)}
-.trust .i{color:var(--bordeaux)}
+.trust .it{border-right-color:var(--line)}
+.trust .i{color:var(--accent-text)}
 
 /* ---------------------------------------------------------------
-   7. Catégories : cadres fins champagne, radius modéré
+   7. Catégories : cadres fins, radius modéré
    --------------------------------------------------------------- */
 .catgrid{gap:clamp(12px,1.5vw,20px)}
 .cat{border-radius:var(--r-lg)}
 
 /* anneau fin partagé par toutes les photos encadrées */
 .cat,.card .im,.gallery .main,.editorial .pic,.preview-card .im,.line .t,.thumbs button{
-  box-shadow:0 0 0 1px var(--champagne)
+  box-shadow:0 0 0 1px var(--line)
 }
 
 /* ---------------------------------------------------------------
-   8. Grille produits + cartes beige subtiles
+   8. Grille produits + cartes sur surface élevée
    --------------------------------------------------------------- */
 .grid{gap:clamp(30px,3.6vw,56px) clamp(16px,2vw,28px)}
 
-.card{background:var(--beige);border:1px solid var(--champagne);border-radius:var(--r-lg);
+.card{background:var(--surface-raised);border:1px solid var(--line);border-radius:var(--r-lg);
   padding:10px 10px 18px;
-  box-shadow:0 1px 2px rgba(23,21,20,.03);
+  box-shadow:var(--shadow-xs);
   -webkit-backdrop-filter:none;backdrop-filter:none;
   transition:transform var(--t) var(--ease),box-shadow var(--t) var(--ease),background var(--t) var(--ease)}
-.card:hover{transform:translateY(-3px);background:#F5EDE2;box-shadow:0 22px 42px -30px rgba(23,21,20,.42)}
-.card .im{background:var(--beige);border-radius:10px}
-.card .fav{background:rgba(255,255,255,.92);border-color:transparent;box-shadow:0 2px 8px -4px rgba(23,21,20,.35);
+.card:hover{transform:translateY(-3px);background:var(--surface-hover);box-shadow:var(--shadow-md)}
+.card .im{background:var(--surface-sunken);border-radius:var(--r-xs)}
+.card .fav{background:var(--surface-overlay);border-color:transparent;box-shadow:var(--shadow-sm);
   -webkit-backdrop-filter:none;backdrop-filter:none}
-.card .fav:hover{background:var(--paper);transform:translateY(-1px)}
-.card .fav[aria-pressed="true"]{color:var(--bordeaux)}
-.card .flag{background:var(--bordeaux);border-radius:8px}
-.card .cond-flag{background:rgba(255,255,255,.94);color:var(--ink);border-radius:8px}
-.card .peek{background:rgba(23,21,20,.78);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:8px}
+.card .fav:hover{background:var(--surface-raised);transform:translateY(-1px)}
+.card .fav[aria-pressed="true"]{color:var(--accent-text)}
+.card .flag{background:var(--accent);border-radius:var(--r-xs);color:var(--on-accent)}
+.card .cond-flag{background:var(--surface-overlay);color:var(--text-primary);border-radius:var(--r-xs)}
+.card .peek{background:var(--scrim);-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:var(--r-xs)}
 .card .body{padding:16px 4px 2px}
-.card .cat-lbl{color:var(--bordeaux);letter-spacing:.16em}
-.card .price{color:var(--ink);font-weight:700}
-.card .by{color:var(--muted-2)}
+.card .cat-lbl{color:var(--accent-text);letter-spacing:.16em}
+.card .price{color:var(--text-primary);font-weight:700}
+.card .by{color:var(--text-tertiary)}
 
 /* variations éditoriales : retirées (spec — toutes les cartes ont la même
    largeur et le même cadrage photo). Voir theme.css PARTIE 4b. */
@@ -157,153 +134,153 @@ nav.cats a::after{background:var(--bordeaux)}
 /* ---------------------------------------------------------------
    9. Bandeau éditorial (unique respiration sombre)
    --------------------------------------------------------------- */
-.editorial{background:var(--charbon);color:var(--ivory);
+.editorial{background:var(--text-primary);color:var(--surface-base);
   -webkit-backdrop-filter:none;backdrop-filter:none;border-block:0}
-.editorial .pic{background:var(--charbon)}
+.editorial .pic{background:var(--text-primary)}
 .editorial h2 em,.editorial .eyebrow{color:var(--champagne)}
-.editorial p{color:rgba(250,248,245,.78)}
+.editorial p{color:var(--text-secondary)}
 
 /* ---------------------------------------------------------------
    9b. État vide
    --------------------------------------------------------------- */
-.empty{background:var(--paper-2);border:1px solid var(--champagne);border-radius:var(--r-lg)}
+.empty{background:var(--surface-sunken);border:1px solid var(--line);border-radius:var(--r-lg)}
 .empty .i{color:var(--champagne)}
 
 /* ---------------------------------------------------------------
-   10. Filtres & champs : blanc/beige, bordure fine, focus bordeaux
+   10. Filtres & champs : surface, bordure fine, focus accent
    --------------------------------------------------------------- */
-.fgroup{border-top:1px solid var(--champagne)}
-.fgroup>h3{color:var(--gris)}
+.fgroup{border-top:1px solid var(--line)}
+.fgroup>h3{color:var(--text-secondary)}
 
-.sel,.inp{background:var(--paper);border:1px solid var(--champagne);border-radius:10px;color:var(--ink)}
-.sel:focus,.inp:focus{border-color:var(--bordeaux);box-shadow:0 0 0 3px rgba(107,23,40,.10)}
-option{color:var(--ink)}
+.sel,.inp{background:var(--surface-raised);border:1px solid var(--line-strong);border-radius:var(--r-sm);color:var(--text-primary)}
+.sel:focus,.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+option{color:var(--text-primary)}
 
-.opt,.chip,.cbtn{background:var(--paper);border:1px solid var(--champagne);border-radius:10px;color:var(--ink)}
-.opt:hover,.chip:hover,.cbtn:hover{border-color:var(--bordeaux)}
+.opt,.chip,.cbtn{background:var(--surface-raised);border:1px solid var(--line-strong);border-radius:var(--r-sm);color:var(--text-primary)}
+.opt:hover,.chip:hover,.cbtn:hover{border-color:var(--accent)}
 .opt.on,.opt[aria-pressed="true"],.chip.on,.cbtn.primary,.cbtn.facet.on{
-  background:var(--bordeaux);color:var(--white);border-color:var(--bordeaux)}
+  background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .cbtn.facet .i{opacity:.9}
-.cbadge,.fx-n{background:var(--bordeaux);color:var(--white)}
-input[type=range]{accent-color:var(--bordeaux)}
-#fMaxVal{color:var(--bordeaux)}
+.cbadge,.fx-n{background:var(--accent);color:var(--on-accent)}
+input[type=range]{accent-color:var(--accent)}
+#fMaxVal{color:var(--accent-text)}
 
 /* ---------------------------------------------------------------
    11. Fiche produit : grande photo, infos aérées
    --------------------------------------------------------------- */
-.gallery .main{background:var(--beige);border-radius:var(--r-lg)}
-.thumbs button{background:var(--beige);border-radius:8px}
-.thumbs button[aria-current="true"]{border-color:var(--bordeaux)}
+.gallery .main{background:var(--surface-sunken);border-radius:var(--r-lg)}
+.thumbs button{background:var(--surface-sunken);border-radius:var(--r-xs)}
+.thumbs button[aria-current="true"]{border-color:var(--accent-ui)}
 
-.buy .cat-lbl{color:var(--bordeaux)}
-.buy .tag{background:var(--paper);color:var(--bordeaux);border:1px solid var(--champagne);
-  border-radius:6px;letter-spacing:.16em;padding:5px 10px}
+.buy .cat-lbl{color:var(--accent-text)}
+.buy .tag{background:var(--surface-raised);color:var(--accent-text);border:1px solid var(--line);
+  border-radius:var(--r-xs);letter-spacing:.16em;padding:5px 10px}
 .buy h1{font-size:clamp(30px,3.6vw,46px);padding-bottom:18px;position:relative}
 /* motif 2 : couture sous le titre produit (étiquette) */
 .buy h1::after{content:"";position:absolute;left:0;bottom:0;width:60px;height:1px;
   background:repeating-linear-gradient(90deg,var(--champagne) 0 5px,transparent 5px 9px)}
 
-.buy-price .price{color:var(--ink)}
-.buy-price .price s{color:var(--muted-2)}
-.buy-price .save{background:rgba(107,23,40,.09);color:var(--bordeaux)}
-.buy .desc{color:var(--charbon);line-height:1.7;max-width:52ch}
+.buy-price .price{color:var(--text-primary)}
+.buy-price .price s{color:var(--text-tertiary)}
+.buy-price .save{background:var(--accent-soft);color:var(--accent-text)}
+.buy .desc{color:var(--text-primary);line-height:1.7;max-width:52ch}
 
-.spec dt{color:var(--gris);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase}
-.spec dd{color:var(--charbon)}
+.spec dt{color:var(--text-secondary);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase}
+.spec dd{color:var(--text-primary)}
 
-.confbox{background:var(--paper-2);border:1px solid var(--champagne);border-radius:var(--r-lg);
+.confbox{background:var(--surface-sunken);border:1px solid var(--line);border-radius:var(--r-lg);
   -webkit-backdrop-filter:none;backdrop-filter:none}
-.confbox .row{color:var(--charbon)}
-.confbox .i{color:var(--bordeaux)}
+.confbox .row{color:var(--text-primary)}
+.confbox .i{color:var(--accent-text)}
 
-.note{background:transparent;border:0;border-left:2px solid var(--bordeaux);border-radius:0;
-  padding:6px 0 6px 15px;color:var(--gris)}
-.note.info{border-left-color:var(--charbon)}
+.note{background:transparent;border:0;border-left:2px solid var(--accent);border-radius:0;
+  padding:6px 0 6px 15px;color:var(--text-secondary)}
+.note.info{border-left-color:var(--text-primary)}
 
 /* Bloc vendeur (humain, sobre) */
-.seller{background:transparent;border:0;border-top:1px solid var(--champagne);border-radius:0;
+.seller{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;
   padding:22px 0 6px;-webkit-backdrop-filter:none;backdrop-filter:none}
-.seller .av{background:var(--bordeaux);color:var(--champagne)}
-.seller .who-name{display:inline-flex;align-items:center;gap:8px;font:700 15.5px/1.3 var(--sans);color:var(--ink)}
+.seller .av{background:var(--accent);color:var(--on-accent)}
+.seller .who-name{display:inline-flex;align-items:center;gap:8px;font:700 15.5px/1.3 var(--sans);color:var(--text-primary)}
 .vbadge{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:50%;
-  border:1px solid var(--bordeaux);color:var(--bordeaux)}
+  border:1px solid var(--accent);color:var(--accent-text)}
 .vbadge .i{width:11px;height:11px;stroke-width:2.4}
-.seller .meta-line{font-size:12.5px;color:var(--muted);margin-top:3px}
+.seller .meta-line{font-size:12.5px;color:var(--text-secondary);margin-top:3px}
 .seller .facts{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px;
-  font:600 12px/1 var(--sans);color:var(--gris)}
-.seller .facts b{color:var(--bordeaux)}
+  font:600 12px/1 var(--sans);color:var(--text-secondary)}
+.seller .facts b{color:var(--accent-text)}
 
 /* ---------------------------------------------------------------
    12. Panier / commande
    --------------------------------------------------------------- */
-.box{background:var(--paper-2);border:1px solid var(--champagne);border-radius:var(--r-lg);
+.box{background:var(--surface-sunken);border:1px solid var(--line);border-radius:var(--r-lg);
   -webkit-backdrop-filter:none;backdrop-filter:none}
-.sum .r.total{border-top:1px solid var(--champagne)}
-.line{border-bottom:1px solid var(--champagne)}
-.line .t{background:var(--beige);border-radius:8px}
-.line .nm a:hover{color:var(--bordeaux)}
-.qty{border:1px solid var(--champagne);border-radius:10px;background:var(--paper)}
-.qty button:hover{background:var(--beige);color:var(--bordeaux)}
-.linkbtn:hover{color:var(--bordeaux)}
+.sum .r.total{border-top:1px solid var(--line)}
+.line{border-bottom:1px solid var(--line)}
+.line .t{background:var(--surface-sunken);border-radius:var(--r-xs)}
+.line .nm a:hover{color:var(--accent-text)}
+.qty{border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--surface-raised)}
+.qty button:hover{background:var(--surface-hover);color:var(--accent-text)}
+.linkbtn:hover{color:var(--accent-text)}
 
 /* ---------------------------------------------------------------
    13. Publier une annonce
    --------------------------------------------------------------- */
-.steps{border-bottom:1px solid var(--champagne)}
-.steps .s i{border-color:var(--champagne)}
-.steps .s.cur i{background:var(--bordeaux);border-color:var(--bordeaux)}
-.steps .s.done i{background:var(--ink);border-color:var(--ink)}
-.steps .s.done{color:var(--charbon)}
+.steps{border-bottom:1px solid var(--line)}
+.steps .s i{border-color:var(--line-strong)}
+.steps .s.cur i{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.steps .s.done i{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.steps .s.done{color:var(--text-primary)}
 
-.drop{border:1.5px dashed var(--champagne);background:var(--paper-2);border-radius:var(--r-lg)}
-.drop:hover{border-color:var(--bordeaux);background:var(--beige)}
-.drop .i,.drop label{color:var(--bordeaux)}
+.drop{border:1.5px dashed var(--line-strong);background:var(--surface-sunken);border-radius:var(--r-lg)}
+.drop:hover{border-color:var(--accent);background:var(--surface-hover)}
+.drop .i,.drop label{color:var(--accent-text)}
 
 .preview-card .body{background:transparent;border:0;box-shadow:none;
   -webkit-backdrop-filter:none;backdrop-filter:none}
-.preview-card .im{background:var(--beige)}
+.preview-card .im{background:var(--surface-sunken)}
 
-.commission{background:var(--ink);color:var(--ivory);border-radius:var(--r-lg);
+.commission{background:var(--text-primary);color:var(--surface-base);border-radius:var(--r-lg);
   -webkit-backdrop-filter:none;backdrop-filter:none}
 .commission b{color:var(--champagne)}
 
 /* ---------------------------------------------------------------
    14. Compte
    --------------------------------------------------------------- */
-.acct .who{background:var(--beige);border:1px solid var(--champagne);border-radius:var(--r-lg);
+.acct .who{background:var(--surface-raised);border:1px solid var(--line);border-radius:var(--r-lg);
   -webkit-backdrop-filter:none;backdrop-filter:none}
-.acct .who .av{background:var(--bordeaux);color:var(--champagne)}
-.acct nav a{border-radius:10px;color:var(--gris)}
-.acct nav a:hover{background:var(--beige);color:var(--ink)}
-.acct nav a.on{background:var(--bordeaux);color:var(--white)}
+.acct .who .av{background:var(--accent);color:var(--on-accent)}
+.acct nav a{border-radius:var(--r-sm);color:var(--text-secondary)}
+.acct nav a:hover{background:var(--surface-hover);color:var(--text-primary)}
+.acct nav a.on{background:var(--accent);color:var(--on-accent)}
 
-.stat{background:var(--beige);border:1px solid var(--champagne);border-radius:var(--r-lg);
+.stat{background:var(--surface-raised);border:1px solid var(--line);border-radius:var(--r-lg);
   -webkit-backdrop-filter:none;backdrop-filter:none}
 .stat .n{font-family:var(--serif)}
 
 /* ---------------------------------------------------------------
-   15. Pied de page clair (le blanc domine)
+   15. Pied de page (surface dominante)
    --------------------------------------------------------------- */
-footer.site{background:var(--paper-2);color:var(--gris);border-top:1px solid var(--champagne);
+footer.site{background:var(--surface-sunken);color:var(--text-secondary);border-top:1px solid var(--line);
   -webkit-backdrop-filter:none;backdrop-filter:none}
-footer .top{border-bottom:1px solid var(--champagne)}
-footer .logo{color:var(--ink)}
-footer .tagline{color:var(--bordeaux)}
-footer .col h4{color:var(--ink)}
-footer .col a{color:var(--gris)}
-footer .col a:hover{color:var(--ink)}
-footer .bottom .socials a{border-color:var(--champagne);background:transparent;color:var(--gris)}
-footer .bottom .socials a:hover{background:var(--bordeaux);color:var(--white);border-color:var(--bordeaux)}
+footer .top{border-bottom:1px solid var(--line)}
+footer .logo{color:var(--text-primary)}
+footer .tagline{color:var(--accent-text)}
+footer .col h4{color:var(--text-primary)}
+footer .col a{color:var(--text-secondary)}
+footer .col a:hover{color:var(--text-primary)}
+footer .bottom .socials a{border-color:var(--line-strong);background:transparent;color:var(--text-secondary)}
+footer .bottom .socials a:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 
 /* ---------------------------------------------------------------
-   15b. Menu mobile (panneau encre, accents bordeaux)
+   15b. Menu mobile (panneau encre, accents)
    --------------------------------------------------------------- */
-.mmenu{background:var(--ink);-webkit-backdrop-filter:none;backdrop-filter:none}
+.mmenu{background:var(--text-primary);-webkit-backdrop-filter:none;backdrop-filter:none}
 
 /* ---------------------------------------------------------------
    15c. Toast
    --------------------------------------------------------------- */
-.toast{background:var(--ink);-webkit-backdrop-filter:none;backdrop-filter:none}
+.toast{background:var(--text-primary);-webkit-backdrop-filter:none;backdrop-filter:none;color:var(--surface-base)}
 .toast .i{color:var(--champagne)}
 
 /* ---------------------------------------------------------------
@@ -314,16 +291,16 @@ footer .bottom .socials a:hover{background:var(--bordeaux);color:var(--white);bo
 }
 @media (max-width:760px){
   .grid,.grid.three{grid-template-columns:repeat(2,1fr)}
-  .chipbar{background:var(--paper-2);border-bottom:1px solid var(--champagne);
+  .chipbar{background:var(--surface-sunken);border-bottom:1px solid var(--line);
     -webkit-backdrop-filter:none;backdrop-filter:none}
-  .filters{background:var(--paper-2);border-top:1px solid var(--champagne);
+  .filters{background:var(--surface-sunken);border-top:1px solid var(--line);
     -webkit-backdrop-filter:none;backdrop-filter:none}
-  .fx-head{border-bottom:1px solid var(--champagne)}
-  .fx-head .grab{background:var(--champagne)}
+  .fx-head{border-bottom:1px solid var(--line)}
+  .fx-head .grab{background:var(--line-strong)}
   .fx-head h3{font-family:var(--serif)}
-  .fx-foot{background:var(--paper-2);border-top:1px solid var(--champagne)}
-  .sheet{background:var(--paper-2);border-top:1px solid var(--champagne)}
-  .sopt.on{color:var(--bordeaux)}
-  .cbtn{background:var(--paper);border-color:var(--champagne)}
-  .cbtn.primary,.cbtn.facet.on{background:var(--bordeaux);color:var(--white);border-color:var(--bordeaux)}
+  .fx-foot{background:var(--surface-sunken);border-top:1px solid var(--line)}
+  .sheet{background:var(--surface-sunken);border-top:1px solid var(--line)}
+  .sopt.on{color:var(--accent-text)}
+  .cbtn{background:var(--surface-raised);border-color:var(--line-strong)}
+  .cbtn.primary,.cbtn.facet.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 }

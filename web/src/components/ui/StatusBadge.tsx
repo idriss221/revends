@@ -8,14 +8,15 @@ import type { StatusBadgeKind } from '../../lib/constants'
  * · `dot` (pastille 8 px) : l'information ne repose JAMAIS sur la couleur
  *   seule (WCAG 1.4.1). `dot` est forcé dans l'admin, laissé `false` sur le
  *   front public pour ne rien changer aux écrans déjà livrés.
+ * · Utilise les jetons de design system pour les couleurs, inline styles pour le layout.
  */
-const KINDS: Record<StatusBadgeKind, string> = {
-  pending: 'bg-champagne-soft text-chocolate',
-  approved: 'bg-positive-soft text-positive',
-  sold: 'bg-ink text-on-dark',
-  rejected: 'bg-danger-soft text-danger',
-  reserved: 'bg-terracotta-soft text-terracotta-ink',
-  neutral: 'bg-ivory text-muted',
+const KINDS: Record<StatusBadgeKind, { bg: string; color: string }> = {
+  pending: { bg: 'var(--champagne-soft)', color: 'var(--champagne)' },
+  approved: { bg: 'var(--positive-soft)', color: 'var(--positive)' },
+  sold: { bg: 'var(--ink)', color: 'var(--on-dark)' },
+  rejected: { bg: 'var(--danger-soft)', color: 'var(--danger)' },
+  reserved: { bg: 'var(--terracotta-soft)', color: 'var(--terracotta-ink)' },
+  neutral: { bg: 'var(--ivory)', color: 'var(--muted)' },
 }
 
 export function StatusBadge({
@@ -30,11 +31,13 @@ export function StatusBadge({
   dot?: boolean
   className?: string
 }) {
+  const { bg, color } = KINDS[kind]
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-[12px] font-bold ${KINDS[kind]} ${className ?? ''}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-[12px] font-bold ${className ?? ''}`}
+      style={{ backgroundColor: bg, color } as React.CSSProperties}
     >
-      {dot && <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-current" />}
+      {dot && <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'currentColor', flexShrink: 0 }} />}
       {label}
     </span>
   )

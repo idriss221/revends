@@ -1,4 +1,5 @@
 import { buttonClasses } from './Button'
+import { Ico } from '../brand/Ico'
 
 interface PaginationProps {
   page: number
@@ -13,6 +14,7 @@ interface PaginationProps {
  * Pagination en pied de carte (DA §3.10) : `border-t border-line pt-5`, compteur
  * `{total} {noun} · page {p}/{n}`, boutons `outline sm` désactivés aux bornes,
  * `aria-label` contextuel sur les deux boutons.
+ * Utilise Ico au lieu de Font Awesome.
  */
 export function Pagination({ page, totalPages, total, noun, onChange }: PaginationProps) {
   if (totalPages <= 1) return null
@@ -29,7 +31,7 @@ export function Pagination({ page, totalPages, total, noun, onChange }: Paginati
           onClick={() => onChange(page - 1)}
           aria-label="Page précédente"
         >
-          <i className="fas fa-chevron-left" aria-hidden="true" /> Précédent
+          <Ico name="arrow-left" cls="sm" aria-hidden="true" /> Précédent
         </button>
         <button
           type="button"
@@ -38,7 +40,7 @@ export function Pagination({ page, totalPages, total, noun, onChange }: Paginati
           onClick={() => onChange(page + 1)}
           aria-label="Page suivante"
         >
-          Suivant <i className="fas fa-chevron-right" aria-hidden="true" />
+          Suivant <Ico name="arrow-right" cls="sm" aria-hidden="true" />
         </button>
       </div>
     </div>

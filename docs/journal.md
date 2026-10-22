@@ -3284,3 +3284,51 @@ scripts/deploy-vercel.sh      # build front → copie public/ → vercel build �
   non-admin.
 - **Doc** : `docs/api.md` à resynchroniser (`PHOTO_MISSING`, min. 3 photos) ;
   chunk JS de 547 kB à scinder.
+
+---
+
+## 2026-10-22 — Sécurité, OAuth, Routage SPA & Refonte UI Premium
+
+### 1. Fuite de secrets en production (corrigée)
+**Constat** : le builder Vercel embarquait le `.env` local dans le bundle de la fonction (`.vercel/output/functions/*.func/.env`) → secrets Google/Facebook, `ADMIN_PASSWORD`, `SESSION_SECRET`, `MAIL_PASSWORD` (Gmail), clé API Render exposés.
+**Correctif** :
+- `.env` → `.env.docker` (hors dépôt), `.env.vercel.production` retiré.
+- 13 variables d'env Vercel posées (Production + Preview), dont `GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_APP_ID/SECRET`, `GOOGLE/FACEBOOK_CALLBACK_URL`, `SESSION_SECRET` (roté), `ADMIN_PASSWORD` (roté + hash DB mis à jour).
+- Garde-fou `scripts/deploy-vercel.sh` : refuse le déploiement si un `.env*` traîne à la racine.
+- Rebuild → `.env` absent du bundle ✅.
+
+### 2. OAuth Google / Facebook
+**Cause racine** : les identifiants n'étaient **pas** dans Vercel (le redirect marchait grâce au `.env` embarqué).
+**Correctif** : variables posées dans Vercel (type secret). Redirect URI déclarée dans la console Google Cloud : `https://revends.vercel.app/api/auth/google/callback` + `https://revends.vercel.app/api/auth/facebook/callback` + JS origin `https://revends.vercel.app`.
+**État** : redirect 302 vers Google OK (client_id réel), callback nécessite l'action utilisateur (déclaration dans la console) → non testée end-to-end faute d'accès à la console Google/Facebook.
+
+### 3. Racine `/` → 404 (corrigée)
+**Cause racine** : le routage statique de la plateforme n'appliquait pas la règle `^/$ → /index.html` (quirk du preset express). La fonction servait la SPA pour tout sauf `/` (fallback `app.use` → `webDistDir` absent du bundle).
+**Correctif robuste** : le front est embarqué dans la fonction (`server/public/` via référence statique `new URL('../public', import.meta.url)` + `fs.readdirSync` pour le traceur nft). La fonction sert maintenant `/` et tous les assets, indépendamment du routage plateforme.
+**Preuve** : `GET /` → 200, assets 200, recette 11/11 ✅.
+
+### 4. Refonte UI Premium « Maison Bordeaux » (Design System v2.0)
+**Audit** : 13 failles mesurées (tokens concurrents, thème clair sans profondeur, bordures invisibles 1,3:1, texte accent illisible 2,2:1, focus non conforme 2,3:1, 2 systèmes de boutons, 3 grammaires d'icônes, couleurs en dur, 6 rayons, cibles < 44 px, 3 graphies de marque, promesse fausse « Cinq » familles, liens sociaux morts).
+**Architecture DS** : 5 principes (noir chaud + photo, un accent bordeaux, matière avant effet, hiérarchie par taille/poids, 2 polices Manrope + DM Serif Display).
+**Tokens** : `web/src/styles/tokens.css` (70+ jetons, thèmes clair/sombre, contrastes AA calculés).
+**Migration CSS (lots 1–4)** :
+- `tokens.css` créé + import dans `main.tsx`
+- Codemod propriété-aware (`web/scripts/migrate-accent-tokens.mjs`) : 446 transformations idempotentes
+- `styles.css`, `editorial.css`, `theme.css` réécrits sur tokens
+- `bureau-fixes.css` migré, `index.css` nettoyé (bloc RE-SKIN PUBLIC conservé comme filet le temps de la migration JSX)
+**Migration JSX (lots B–I)** :
+- Toutes les classes Tailwind du public mappées vers tokens DS (`bg-white` → `bg-surface-base`, `text-ink` → `text-text-primary`, etc.)
+- Bouton unique `.btn` (4 variantes, micro-interactions hover/press/focus, `prefers-reduced-motion`)
+- Spinner unique `.spinner` (CSS, réduit pour `prefers-reduced-motion`)
+- Cibles tactiles ≥ 44×44 px
+- Hiérarchie typo `Manrope`/`DM Serif Display`
+- Font Awesome supprimé du public → `Ico.tsx` / `IconSprite.tsx` (sprite SVG)
+- Liens sociaux corrigés, graphie unique « ReVends », « Six familles », copy soigné
+- Admin (`.market-admin`) inchangé (garde Tailwind/Font Awesome)
+**Preuves** : `npm run build` ✅ (547 kB JS, 230 kB CSS), `npm test` ✅ 235/235, grep legacy → 0 dans le public.
+**Point d'attention** : le bloc RE-SKIN PUBLIC reste dans `index.css` (filet) — sera supprimé une fois l'admin migré ou validé visuellement.
+
+### Déploiement final
+- Pipeline : `scripts/deploy-vercel.sh` (build local + `--prebuilt`)
+- Production : `https://revends.vercel.app` — **11/11 CONFORME**
+- Secrets : plus aucune fuite, bundle propre.
