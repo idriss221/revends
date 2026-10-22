@@ -5,6 +5,31 @@ import { logger } from '../utils/logger.js';
 let client: RedisClientType | null = null;
 let connecting: Promise<void> | null = null;
 
+/**
+ * Nombre maximal de tentatives de connexion avant abandon.
+ *
+ * SANS cette borne, `node-redis` réessaie indéfiniment : sur un déploiement
+ * serverless, `connectRedis()` ne résout jamais → le boot de la fonction
+ * reste bloqué → TOUTES les requêtes expirent (le site paraît hors ligne)
+ * alors que la base PostgreSQL est parfaitement disponible.
+ * On abandonne donc vite pour basculer sur le repli `connect-pg-simple`.
+ */
+const MAX_RECONNECT_ATTEMPTS = 3;
+
+/** Rejette une promesse si elle ne se résout pas dans le délai imparti. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} : délai dépassé (${ms} ms)`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  }) as Promise<T>;
+}
+
 function makeKey(key: string): string {
   return `${config.redis.prefix}cache:${key}`;
 }
@@ -30,14 +55,38 @@ export async function connectRedis(): Promise<void> {
       password: config.redis.password.length > 0 ? config.redis.password : undefined,
       socket: {
         connectTimeout: config.redis.connectTimeoutMs,
+        // Abandon après quelques tentatives : le boot serverless ne doit pas
+        // rester bloqué quand Redis est injoignable (cf. MAX_RECONNECT_ATTEMPTS).
+        reconnectStrategy: (retries: number) => {
+          if (retries >= MAX_RECONNECT_ATTEMPTS) {
+            return new Error(
+              `Redis injoignable après ${MAX_RECONNECT_ATTEMPTS} tentatives (${config.redis.url})`,
+            );
+          }
+          return Math.min(200 * (retries + 1), 1000);
+        },
       },
     });
     c.on('error', (err) => {
       logger.error('client Redis en erreur', { errorMessage: err.message });
     });
-    await c.connect();
-    client = c;
-    connecting = null;
+    try {
+      // Plafond global : une tentative peut rester bloquée (DNS qui ne
+      // répond pas, timeout réseau) bien au-delà du `connectTimeout`.
+      await withTimeout(
+        c.connect(),
+        config.redis.connectTimeoutMs * (MAX_RECONNECT_ATTEMPTS + 1) + 1000,
+        'connexion Redis',
+      );
+      client = c;
+    } catch (err) {
+      // On libère le client (le retry en arrière-plan est déjà borné) et on
+      // propage l'erreur : l'appelant bascule sur le repli PostgreSQL.
+      c.destroy();
+      throw err;
+    } finally {
+      connecting = null;
+    }
   })();
   await connecting;
 }

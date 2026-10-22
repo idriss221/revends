@@ -1,0 +1,41 @@
+{
+  "name": "revends",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ReVends — API Express + SPA React déployés sur Vercel (serveurless). Racine Vercel : ce package.json existe pour que Vercel puisse construire la fonction `api/` et le front `web/` depuis la racine du dépôt.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "npm run build --prefix web",
+    "deploy": "vercel deploy --prod",
+    "typecheck": "npm run typecheck --prefix server",
+    "vercel:dev": "vercel dev"
+  },
+  "dependencies": {
+    "@vercel/blob": "2.8.2",
+    "bcryptjs": "3.0.3",
+    "connect-pg-simple": "10.0.0",
+    "connect-redis": "10.0.0",
+    "express": "5.2.1",
+    "express-session": "1.19.0",
+    "helmet": "8.3.0",
+    "multer": "2.4.0",
+    "node-cron": "4.6.0",
+    "nodemailer": "10.0.12",
+    "passport": "0.7.0",
+    "passport-facebook": "3.0.0",
+    "passport-google-oauth20": "2.0.0",
+    "pg": "8.23.0",
+    "redis": "6.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/express-session": "1.19.0",
+    "@types/multer": "2.2.0",
+    "@types/node": "22.20.4",
+    "@types/pg": "8.23.1"
+  }
+}

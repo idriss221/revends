@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import multer from 'multer';
 import { mkdir } from 'node:fs/promises';
 import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
 
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 Mo (RG-MEDIA-1)
 export const MIN_PHOTOS = 3;
@@ -39,7 +40,17 @@ export function photoPublicPath(absPath: string): string {
 }
 
 // S'assure que le dossier d'upload existe (créé à l'import).
-await mkdir(config.uploadDir, { recursive: true });
+// ⚠️ Ce `await` est au niveau module : une erreur ici EMPORTE l'import du
+// module et donc toute la fonction serverless. Or le dossier d'upload peut
+// être non inscriptible (système de fichiers en lecture seule sur Vercel, ou
+// `UPLOAD_DIR` mal configuré). On journalise et on continue : l'échec
+// d'écriture réel sera remonté par le service, au bon endroit.
+await mkdir(config.uploadDir, { recursive: true }).catch((err: unknown) => {
+  logger.warn('dossier d\'upload indisponible', {
+    uploadDir: config.uploadDir,
+    errorMessage: (err as Error).message,
+  });
+});
 
 /**
  * Middleware multer 2.x — mémoire puis écriture contrôlée côté service.

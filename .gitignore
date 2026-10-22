@@ -52,3 +52,8 @@ server/nginx/certs/*.pem
 # ---- Sauvegardes locales (dumps BDD, arbres périmés) -----------------
 # Contient des données et parfois des .env d'anciennes versions.
 .backup/
+.vercel
+.env*
+
+# Build Vercel (preset Express : le statique est copié dans public/)
+public/

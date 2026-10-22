@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import helmet from 'helmet';
+import * as helmetModule from 'helmet';
 import { pool } from './db/pool.js';
 import { config } from './config.js';
 import { buildSessionStore } from './session/store.js';
@@ -24,6 +24,19 @@ import { adminRouter } from './routes/admin.routes.js';
 import { cartRouter } from './routes/cart.routes.js';
 import { favoritesRouter } from './routes/favorites.routes.js';
 import { listPublicCategories } from './services/categories.service.js';
+
+/**
+ * `helmet` est publié en CommonJS avec un `export default` (déclarations
+ * `.d.cts`). Selon le mode de compilation du fichier hôte — ESM strict
+ * (serveur Node, `module: NodeNext`) ou interop CommonJS (bundleur de la
+ * plateforme Vercel) — le type du `default` est vu tantôt comme la fonction,
+ * tantôt comme l'espace de noms du module. On normalise donc le type ici, et
+ * on s'appuie sur le fait que `helmet.default === helmet` à l'exécution
+ * (vérifié) : le comportement est identique dans les deux modes.
+ */
+type HelmetFactory = (options?: Record<string, unknown>) => express.RequestHandler;
+const helmet = ((helmetModule as unknown as { default?: HelmetFactory }).default ??
+  (helmetModule as unknown as HelmetFactory)) as HelmetFactory;
 
 export function createApp(): express.Express {
   const app = express();
