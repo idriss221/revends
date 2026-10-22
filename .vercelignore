@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────
+# .vercelignore — filtre d'envoi à Vercel.
+# ATTENTION : depuis la CLI v65, le contenu de .gitignore n'est PLUS
+# appliqué à l'upload. Sans ce fichier, `public/` (artefact de build)
+# et `.env` (mots de passe Docker locaux) seraient téléversés.
+# ─────────────────────────────────────────────────────────────
+
+# Artefacts de build (régénérés par le buildCommand sur la machine Vercel)
+public/
+web/dist/
+server/dist/
+coverage/
+
+# Secrets & configuration locale (ne JAMAIS téléverser)
+.env
+.env.*
+!.env.example
+
+# Dépendances (réinstallées par l'installCommand)
+node_modules/
+
+# VCS &/outillage
+.git/
+.gitattributes
+.github/
+.vercel/
+
+# Divers
+*.log
+npm-debug.log*
+.DS_Store
