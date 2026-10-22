@@ -59,6 +59,10 @@ echo "   server/public/ : $(find "$ROOT/server/public" -type f | wc -l) fichiers
 echo "▸ 3/4 — build Vercel local (routes + bundle de la fonction)…"
 rm -rf "$ROOT/.vercel/output"
 vercel build --prod --yes
+# Copier le build Vite COMPLET (index.html + assets) vers la sortie statique
+# Cela garantit que l'HTML référence les bons hashes d'assets.
+cp -R "$ROOT/web/dist/." "$ROOT/.vercel/output/static/"
+echo "   static/ : $(find "$ROOT/.vercel/output/static" -type f | wc -l) fichiers (HTML + assets JS/CSS)"
 node -e "
 const c = require('$ROOT/.vercel/output/config.json');
 console.log('   routes :');
