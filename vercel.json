@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "express",
-  "installCommand": "npm ci --include=dev --no-audit --no-fund && cd web && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 PUPPETEER_SKIP_DOWNLOAD=1 npm ci --include=dev --no-audit --no-fund",
-  "buildCommand": "npm run build --prefix web && rm -rf public && mkdir -p public && cp -R web/dist/. public/",
+  "installCommand": "npm ci --include=dev --no-audit --no-fund",
+  "buildCommand": "npm run build --prefix web",
   "rewrites": [
     {
       "source": "/((?!api/).*)",

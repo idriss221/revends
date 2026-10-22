@@ -5,8 +5,8 @@
 # et `.env` (mots de passe Docker locaux) seraient téléversés.
 # ─────────────────────────────────────────────────────────────
 
-# Artefacts de build (régénérés par le buildCommand sur la machine Vercel)
-public/
+# Artefacts de build
+# ATTENTION : public/ est VOLONTAIREMENT téléversé (sortie statique du preset express)
 web/dist/
 server/dist/
 coverage/
