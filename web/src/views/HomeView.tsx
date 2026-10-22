@@ -6,9 +6,9 @@ import { SiteHead, text } from '../components/site/SiteBits'
 import { SiteCardGrid } from '../components/site/SiteCard'
 import { SiteImage, artKindFor } from '../components/site/SiteImage'
 import { api } from '../lib/api'
-import { EDITORIAL_PHOTO, HERO_PHOTO, categoryPhoto } from '../lib/catalogPhotos'
+import { HERO_PHOTO, categoryPhoto } from '../lib/catalogPhotos'
 
-// Bannière bas de page — version locale (téléchargée depuis Pinterest)
+// Bannière bas de page (remplace l'éditorial) — version locale
 const BOTTOM_BANNER_PHOTO = '/categories/bottom-banner.jpg?v=2026-10-22'
 import type { Category, ProductCardItem } from '../lib/types'
 
@@ -235,51 +235,19 @@ export function HomeView() {
         </section>
       )}
 
-      <section className="editorial">
-        <div className="wrap">
-          <div className="pic rv">
-            <SiteImage
-              src={EDITORIAL_PHOTO}
-              alt="Vestes suspendues sur un portant dans une boutique de seconde main"
-              w={900}
-              sizes="(max-width:1080px) 100vw, 46vw"
-              kind="coat"
-              col="#6B5A48"
-              bg="#E6D6BD"
-            />
-          </div>
-          <div className="rv">
-            <span className="eyebrow">Notre regard</span>
-            <h2>
-              Ce qui dort dans un placard <em>attend quelqu'un.</em>
-            </h2>
-            <p>
-              Un manteau qui a déjà tenu chaud, une lampe qui éclaire encore, un téléphone qui fonctionne très bien :
-              chaque pièce a une histoire, et la suite vous appartient. Acheter d'occasion, c'est choisir la qualité
-              sans le neuf — et offrir une seconde vie à ce que d'autres ont aimé.
-            </p>
-            <Link className="btn light" to="/search">
-              Faire une trouvaille <Ico name="arrow-right" cls="sm" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
       <BudgetSection items={budget} />
 
-      {/* Bannière bas de page — demande PO */}
+      {/* Bannière bas de page (remplace l'éditorial) — demande PO */}
       <section className="bottom-banner" aria-labelledby="bottom-banner-title">
-        <div className="wrap">
-          <SiteImage
-            src={BOTTOM_BANNER_PHOTO}
-            alt="Découvrez notre sélection coups de cœur"
-            w={1600}
-            sizes="100vw"
-            kind="coat"
-            col="#4A2F25"
-            bg="#E6D6BD"
-          />
-        </div>
+        <SiteImage
+          src={BOTTOM_BANNER_PHOTO}
+          alt="Découvrez notre sélection coups de cœur"
+          w={1600}
+          sizes="100vw"
+          kind="coat"
+          col="#4A2F25"
+          bg="#E6D6BD"
+        />
       </section>
     </>
   )

@@ -375,6 +375,12 @@
 .market-site {
   background: var(--surface-base);
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.market-site > main {
+  flex: 1;
 }
 
 /* ============================================================
