@@ -203,23 +203,9 @@ export function HomeView() {
             <Link className="btn btn-primary btn-lg" to="/search">
               Explorer la boutique <Ico name="arrow-right" cls="sm" />
             </Link>
-            <Link className="btn btn-outline btn-lg" to="/sell">
-              Vendre un article
-            </Link>
           </div>
           <Link className="mh-scroll rv" style={{ ['--d' as string]: '4' }} to="/search">
             Faire défiler <span className="arr" aria-hidden="true">↓</span>
-          </Link>
-        </div>
-      </section>
-
-      <section className="mh-bridge" aria-hidden="true">
-        <div className="wrap br-in">
-          <p className="br-line rv">
-            La seconde vie, <em>sans compromis.</em>
-          </p>
-          <Link className="link-arrow rv" to="/search">
-            Parcourir la sélection <Ico name="arrow-right" cls="sm" />
           </Link>
         </div>
       </section>
@@ -244,11 +230,11 @@ export function HomeView() {
         </section>
       )}
 
-      {/* Section de confiance / rassurance */}
+      {/* Section de confiance / rassurance — Pourquoi ReVends ? */}
       <section className="section trust-section" aria-labelledby="trust-title">
         <div className="wrap">
           <div className="trust-content rv" style={{ ['--d' as string]: '0' }}>
-            <span className="eyebrow">Notre engagement</span>
+            <span className="eyebrow">Pourquoi ReVends ?</span>
             <h2 id="trust-title" className="rv">La seconde vie, <em>en toute confiance.</em></h2>
             <ul className="trust-list" role="list">
               <li className="trust-item rv">
@@ -264,10 +250,26 @@ export function HomeView() {
                 <span className="trust-text"><strong>Livraison suivie</strong> — suivi en temps réel, remise contre signature.</span>
               </li>
               <li className="trust-item rv">
-                <span className="trust-icon" aria-hidden="true"><Ico name="star" cls="md" /></span>
+                <span className="trust-icon" aria-hidden="true"><Ico name="leaf" cls="md" /></span>
                 <span className="trust-text"><strong>Éco-responsable</strong> — donner une seconde vie, c'est consommer mieux.</span>
               </li>
             </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Section Vendeur — Vendez simplement */}
+      <section className="section seller-section" aria-labelledby="seller-title">
+        <div className="wrap">
+          <div className="seller-content rv" style={{ ['--d' as string]: '0' }}>
+            <span className="eyebrow">Vendre sur ReVends</span>
+            <h2 id="seller-title" className="rv">Ce que vous ne portez plus peut devenir le coup de cœur de quelqu'un.</h2>
+            <p className="seller-text">
+              Ce qui dort dans vos placards mérite une seconde vie. Vendez simplement, sans frais cachés, et laissez vos objets trouver un nouveau propriétaire.
+            </p>
+            <Link className="btn btn-primary btn-lg" to="/sell">
+              Vendre un article <Ico name="arrow-right" cls="sm" />
+            </Link>
           </div>
         </div>
       </section>
