@@ -34,7 +34,7 @@
  * Le `?v=` force le rechargement (coût nul : même fichier). Toute future
  * rotation de photo doit avancer cette version.
  */
-export const PHOTO_VERSION = '2026-10-23'
+export const PHOTO_VERSION = '2026-10-24'
 
 /** Chemin versionné d'une photo de la maquette (`hero` → `/categories/hero.jpg?v=…`). */
 const photo = (name: string): string => `/categories/${name}.jpg?v=${PHOTO_VERSION}`

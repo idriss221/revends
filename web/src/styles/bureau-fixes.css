@@ -849,3 +849,22 @@
 .market-site { font-family: var(--font-sans); }
 .market-site h1, .market-site h2, .market-site h3 { font-family: var(--font-display); }
 .market-site .price, .market-site .btn { font-family: var(--font-sans); }
+
+/* =====================================================================
+   17. STICKY FOOTER — Layout flexbox pour footer collé en bas
+   ---------------------------------------------------------------------
+   Le footer reste collé en bas de page même quand le contenu est court.
+   --------------------------------------------------------------------- */
+.market-site {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.market-site > main {
+  flex: 1;
+}
+
+footer.site {
+  flex-shrink: 0;
+}

@@ -33,6 +33,20 @@
          Le client (apiClient.ts) lit ce meta tag en fallback. -->
     <meta name="csrf-token" content="" />
     <title>ReVends - Donnez une seconde vie aux belles choses</title>
+    <!-- Sticky Footer — Layout flexbox pour footer collé en bas (évite purge Tailwind) -->
+    <style>
+      .market-site {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .market-site > main {
+        flex: 1;
+      }
+      footer.site {
+        flex-shrink: 0;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
