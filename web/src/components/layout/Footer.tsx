@@ -42,13 +42,13 @@ export function Footer() {
             <p className="tagline">Les belles choses méritent une nouvelle histoire.</p>
           </div>
 
-          <Col title="Découvrir">
+          <Col title="Explorer">
             <Link to="/search">Tout le catalogue</Link>
             <Link to="/category/mode">Mode</Link>
             <Link to="/category/mode-chaussures">Chaussures</Link>
             <Link to="/category/mode-sacs">Sacs</Link>
             <Link to="/category/electronique">Tech</Link>
-            <Link to="/category/maison">Maison & déco</Link>
+            <Link to="/category/maison">Maison</Link>
             <Link to="/category/loisirs">Loisirs</Link>
           </Col>
 

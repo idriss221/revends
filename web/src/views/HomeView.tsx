@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Ico } from '../components/brand/Ico'
@@ -41,13 +41,13 @@ import type { Category, ProductCardItem } from '../lib/types'
      (qui naviguait vers la boutique).
    ========================================================================== */
 
-/** `catTile()` (240-246) — tuile de catégorie réelle.
+/** `catTile()` — tuile de catégorie avec design éditorial premium.
  *
  *  Composition « bento » : la 1re catégorie est la tuile signature (2×2),
  *  les suivantes remplissent la droite en carrés — le rectangle est
- *  entièrement rempli (l'ancienne grille 6 colonnes laissait un vide).
- *  Le sous-titre annonce le nombre de sous-catégories : une information
- *  utile plutôt qu'un simple label décoratif. */
+ *  entièrement rempli. Le sous-titre annonce le nombre de sous-catégories.
+ *  Interactions subtiles : légère élévation au survol, zoom léger de l'image.
+ */
 function CatTile({ c, index }: { c: Category; index: number }) {
   const big = index === 0
   const kids = c.children?.length ?? 0
@@ -56,16 +56,20 @@ function CatTile({ c, index }: { c: Category; index: number }) {
       className={`cat${big ? ' big' : ''} rv`}
       style={{ ['--d' as string]: String(index) }}
       to={`/category/${c.slug}`}
+      aria-label={`Explorer la catégorie ${text(c.name)}`}
     >
-      <SiteImage
-        src={categoryPhoto(c.name, c.slug)}
-        alt={text(c.name)}
-        w={big ? 900 : 600}
-        sizes={big ? '(max-width:760px) 100vw, 50vw' : '(max-width:760px) 46vw, 25vw'}
-        kind={artKindFor(c.name)}
-        col="#4A2F25"
-        bg="#E6D6BD"
-      />
+      <div className="cat-media">
+        <SiteImage
+          src={categoryPhoto(c.name, c.slug)}
+          alt={text(c.name)}
+          w={big ? 900 : 600}
+          sizes={big ? '(max-width:760px) 100vw, 50vw' : '(max-width:760px) 46vw, 25vw'}
+          kind={artKindFor(c.name)}
+          col="#4A2F25"
+          bg="#E6D6BD"
+        />
+        <div className="cat-overlay" />
+      </div>
       <span className="lbl">
         {kids > 0 && (
           <span className="sub">
@@ -81,7 +85,7 @@ function CatTile({ c, index }: { c: Category; index: number }) {
   )
 }
 
-/** `wireHero()` (1476-1494) — parallaxe verticale douce du `.mh-media`. */
+/** `wireHero()` — parallaxe verticale douce du `.mh-media`. */
 function useHeroParallax(ref: React.RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const root = ref.current
@@ -94,7 +98,7 @@ function useHeroParallax(ref: React.RefObject<HTMLElement | null>): void {
     const apply = () => {
       raf = 0
       const y = Math.min(window.scrollY, root.offsetHeight + 200)
-      media.style.transform = `translate3d(0,${(y * 0.16).toFixed(1)}px,0)`
+      media.style.transform = `translate3d(0,${(y * 0.12).toFixed(1)}px,0)`
     }
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(apply)
@@ -106,6 +110,19 @@ function useHeroParallax(ref: React.RefObject<HTMLElement | null>): void {
       if (raf) cancelAnimationFrame(raf)
     }
   }, [ref])
+}
+
+/** Hero entrance animation */
+function useHeroEntrance(): { opacity: number; transform: string } {
+  const [isVisible, setIsVisible] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
+  return {
+    opacity: isVisible ? 1 : 0,
+    transform: isVisible ? 'translateY(0)' : 'translateY(20px)'
+  }
 }
 
 function BudgetSection({ items }: { items: ProductCardItem[] }) {
@@ -127,6 +144,7 @@ function BudgetSection({ items }: { items: ProductCardItem[] }) {
 export function HomeView() {
   const heroRef = useRef<HTMLElement>(null)
   useHeroParallax(heroRef)
+  const { opacity, transform } = useHeroEntrance()
 
   const categories = useQuery({ queryKey: ['categories'], queryFn: () => api.categories() })
   const newestQ = useQuery({
@@ -149,9 +167,15 @@ export function HomeView() {
   const newIds = new Set(newest.map((p) => p.id))
   const budget = (budgetQ.data?.items ?? []).filter((p) => !newIds.has(p.id)).slice(0, 8)
 
+  const heroStyle: React.CSSProperties = {
+    opacity,
+    transform,
+    transition: 'opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)'
+  }
+
   return (
     <>
-      <section className="masthead" id="hero" ref={heroRef}>
+      <section className="masthead" id="hero" ref={heroRef} style={heroStyle}>
         <div className="mh-media">
           <SiteImage
             className="mh-img"
@@ -167,20 +191,19 @@ export function HomeView() {
         </div>
         <div className="mh-in wrap">
           <span className="eyebrow rv" style={{ ['--d' as string]: '0' }}>
-            Seconde vie · Nouveau propriétaire
+            SECONDE VIE · NOUVEAU PROPRIÉTAIRE
           </span>
           <h1 className="rv" style={{ ['--d' as string]: '1' }}>
             Donnez une <em>seconde vie</em> à ce qui vous ressemble.
           </h1>
           <p className="lead rv" style={{ ['--d' as string]: '2' }}>
-            Des pièces uniques, choisies avec soin, qui méritent une nouvelle histoire. Achetez mieux, revendez
-            simplement et trouvez ce qui vous ressemble vraiment.
+            Des pièces choisies avec soin, qui méritent une nouvelle histoire.
           </p>
           <div className="acts rv" style={{ ['--d' as string]: '3' }}>
-            <Link className="btn terra" to="/search">
+            <Link className="btn btn-primary btn-lg" to="/search">
               Explorer la boutique <Ico name="arrow-right" cls="sm" />
             </Link>
-            <Link className="btn ghost-light" to="/sell">
+            <Link className="btn btn-outline btn-lg" to="/sell">
               Vendre un article
             </Link>
           </div>
@@ -190,7 +213,7 @@ export function HomeView() {
         </div>
       </section>
 
-      <section className="mh-bridge">
+      <section className="mh-bridge" aria-hidden="true">
         <div className="wrap br-in">
           <p className="br-line rv">
             La seconde vie, <em>sans compromis.</em>
@@ -202,15 +225,17 @@ export function HomeView() {
       </section>
 
       {cats.length > 0 && (
-        <section className="section">
+        <section className="section categories-section" aria-labelledby="categories-title">
           <div className="wrap">
-            <SiteHead
-              eyebrow="Explorer par univers"
-              title="Cinq familles, mille trouvailles"
-              sub="Chaque univers rassemble des pièces déjà aimées, prêtes pour une nouvelle histoire."
-              link={{ label: 'Tout voir', to: '/search' }}
-            />
-            <div className="catgrid">
+            <div id="categories-title" className="rv" style={{ ['--d' as string]: '0' }}>
+              <SiteHead
+                eyebrow="Explorer par univers"
+                title="Six univers, mille trouvailles"
+                sub="Chaque univers rassemble des pièces déjà aimées, prêtes pour une nouvelle histoire."
+                link={{ label: 'Tout voir', to: '/search' }}
+              />
+            </div>
+            <div className="catgrid" role="list">
               {cats.map((c, i) => (
                 <CatTile key={c.id} c={c} index={i} />
               ))}
@@ -219,7 +244,35 @@ export function HomeView() {
         </section>
       )}
 
-      {newest.length > 0 && (
+      {/* Section de confiance / rassurance */}
+      <section className="section trust-section" aria-labelledby="trust-title">
+        <div className="wrap">
+          <div className="trust-content rv" style={{ ['--d' as string]: '0' }}>
+            <span className="eyebrow">Notre engagement</span>
+            <h2 id="trust-title" className="rv">La seconde vie, <em>en toute confiance.</em></h2>
+            <ul className="trust-list" role="list">
+              <li className="trust-item rv">
+                <span className="trust-icon" aria-hidden="true"><Ico name="shield" cls="md" /></span>
+                <span className="trust-text"><strong>Articles vérifiés</strong> — chaque pièce est inspectée avant mise en ligne.</span>
+              </li>
+              <li className="trust-item rv">
+                <span className="trust-icon" aria-hidden="true"><Ico name="lock" cls="md" /></span>
+                <span className="trust-text"><strong>Paiements sécurisés</strong> — transactions protégées, paiement après réception.</span>
+              </li>
+              <li className="trust-item rv">
+                <span className="trust-icon" aria-hidden="true"><Ico name="truck" cls="md" /></span>
+                <span className="trust-text"><strong>Livraison suivie</strong> — suivi en temps réel, remise contre signature.</span>
+              </li>
+              <li className="trust-item rv">
+                <span className="trust-icon" aria-hidden="true"><Ico name="star" cls="md" /></span>
+                <span className="trust-text"><strong>Éco-responsable</strong> — donner une seconde vie, c'est consommer mieux.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+{newest.length > 0 && (
         <section className="section" style={{ paddingTop: 0 }}>
           <div className="wrap">
             <SiteHead
@@ -233,7 +286,7 @@ export function HomeView() {
       )}
 
       {/* Bloc éditorial — texte conservé, image remplacée par la bannière demandée */}
-      <section className="editorial">
+      <section className="editorial" aria-labelledby="editorial-title">
         <div className="wrap">
           <div className="pic rv">
             <SiteImage
@@ -247,7 +300,7 @@ export function HomeView() {
             />
           </div>
           <div className="rv">
-            <span className="eyebrow">Notre regard</span>
+            <span className="eyebrow" id="editorial-title">Notre regard</span>
             <h2>
               Ce qui dort dans un placard <em>attend quelqu'un.</em>
             </h2>
@@ -256,7 +309,7 @@ export function HomeView() {
               chaque pièce a une histoire, et la suite vous appartient. Acheter d'occasion, c'est choisir la qualité
               sans le neuf — et offrir une seconde vie à ce que d'autres ont aimé.
             </p>
-            <Link className="btn light" to="/search">
+            <Link className="btn btn-light" to="/search">
               Faire une trouvaille <Ico name="arrow-right" cls="sm" />
             </Link>
           </div>

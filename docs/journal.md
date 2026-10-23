@@ -3352,3 +3352,45 @@ scripts/deploy-vercel.sh      # build front → copie public/ → vercel build �
 **Solution** : Téléchargement des 6 images Pinterest → `web/public/categories/` (mode.jpg, maison.jpg, electronique.jpg, electromenager.jpg, loisirs.jpg, bottom-banner.jpg). Mise à jour de `catalogPhotos.ts` et `HomeView.tsx` pour utiliser les chemins locaux (`/categories/...jpg?v=2026-10-22`). CSP restauré à sa config par défaut.
 
 **Preuve** : 6/6 images accessibles en HTTP 200 ✅, recette 5/5 ✅.
+
+---
+
+## 2026-10-23 — Migration complète du design system (tokens CSS)
+
+### Objectif
+Remplacer tous les tokens legacy (`--terra`, `--bordeaux`, `--champagne`, etc.) par le nouveau design system « Maison Bordeaux » (v2.0) dans les fichiers CSS du site public (`web/src/bureau/vendor/`).
+
+### Résumé des changements
+| Token legacy | Remplacement | Contexte |
+|---|---|---|
+| `--terra`, `--bordeaux`, `--terra-dark` (couleur texte) | `--accent-text` | Lisibilité AA sur fond sombre |
+| `--terra`, `--bordeaux`, `--terra-dark` (fond) | `--accent` | CTA, badges, état actif |
+| `--champagne-soft`, `--champagne` (fond) | `--accent-soft` | Badges, pastilles |
+| `--champagne` (bordure) | `--line` | Filets décoratifs |
+| `--champagne-soft` (bordure) | `--accent-soft` | Pastilles |
+| `--champagne`, `--line`, `--line-2` (bordure champs) | `--line-strong` | Contraste ≥ 3:1 WCAG 1.4.11 |
+| `#FFFFFF` (fond `.card .fav`) | `--surface-overlay` | Accessibilité |
+| `--terra`, `--bordeaux` (focus) | `--focus` | Anneau focus 12:1 |
+| Nouvelles surfaces | `--surface-base`, `--surface-raised`, `--surface-overlay`, `--surface-hover`, `--surface-sunken` | Hiérarchie visuelle |
+| Nouvelles typographies | `--text-primary`, `--text-secondary`, `--text-tertiary`, `--fs-*` | Hiérarchie typo Manrope / DM Serif Display |
+
+### Fichiers modifiés
+- `web/src/bureau/vendor/styles.css` (principal)
+- `web/src/bureau/vendor/editorial.css`
+- `web/src/bureau/vendor/theme.css`
+
+### Validation
+- **Tests** : 235/235 ✅ (vitest)
+- **Codemod** : Idempotent, relançable sans effet de bord
+- **Contrastes** : Tous ≥ WCAG AA (texte ≥ 4.5:1, UI ≥ 3:1)
+- **Tokens legacy** : `--terra`, `--bordeaux` (texte/bordure) → éliminés
+- **Nouveaux tokens** : `--accent`, `--accent-text`, `--accent-ui`, `--accent-soft`, `--line`, `--line-strong`, `--surface-*`, `--text-*`, `--focus`, `--champagne` (métal) conservés
+
+### Script de migration
+`web/scripts/migrate-accent-tokens.mjs` — Idempotent, `--check` pour dry-run, applique les transformations propriété par propriété selon la table §3.12 du design system.
+
+### Prochaines étapes
+- Supprimer le bloc RE-SKIN PUBLIC de `web/src/index.css` (filet de sécurité, plus nécessaire)
+- Migrer l'admin (`.market-admin`) vers le même design system (optionnel)
+- Code-split du bundle JS (547 kB → chunks)
+- Photos → Vercel Blob (phase 2)

@@ -205,9 +205,17 @@ export function createApp(): express.Express {
 
   // SPA (build front dist) si présent — sinon 404 JSON
   if (fs.existsSync(config.webDistDir) && fs.existsSync(path.join(config.webDistDir, 'index.html'))) {
+    // HTML du SPA : pas de cache navigateur (force revalidation)
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method === 'GET' && req.accepts('html')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      }
+      next();
+    });
     app.use(express.static(config.webDistDir));
     app.use((req: Request, res: Response, next: NextFunction) => {
       if (req.method === 'GET') {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
         res.sendFile(path.join(config.webDistDir, 'index.html'));
         return;
       }
