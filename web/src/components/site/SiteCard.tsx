@@ -66,7 +66,7 @@ export function SiteCard({ product, index = 0 }: { product: ProductCardItem; ind
         >
           {heartIcon(fav)}
         </button>
-        <ZoomButton src={url} alt={alt} />
+        {url ? <ZoomButton src={url} alt={alt} /> : null}
       </div>
       <div className="body">
         <span className="cat-lbl">{catLabel(product.category)}</span>

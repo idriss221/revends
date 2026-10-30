@@ -60,3 +60,7 @@ public/
 
 # Front embarqué dans le bundle de la fonction (artefact de build)
 server/public/
+.aider*
+
+# Photos produits — générées par le seed démo, non versionnées
+web/public/catalog/

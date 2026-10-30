@@ -181,7 +181,7 @@ export function createApp(): express.Express {
   // Photos publiques : /uploads/products/<uuid>.<ext> (dotfiles ignorés, §9.6)
   app.use(
     '/uploads',
-    express.static(path.resolve(config.uploadDir, '..'), {
+    express.static(config.uploadDir, {
       dotfiles: 'ignore',
       index: false,
       fallthrough: true,

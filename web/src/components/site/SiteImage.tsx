@@ -17,7 +17,7 @@ export type ArtKind = 'coat' | 'shoe' | 'bag' | 'phone' | 'lamp' | 'cam'
  * Illustration SVG de secours — `art()` de la référence, copie littérale.
  * Jamais de rectangle gris ni d'image cassée.
  */
-export function art(kind: ArtKind, col = '#4A2F25', bg = '#EFE6D6') {
+export function art(kind: ArtKind, col = '#4A2F25', bg = '#EFE6D6', label = 'Illustration') {
   const g = `art-${kind}`
   const shapes: Record<ArtKind, string> = {
     coat:
@@ -56,7 +56,7 @@ export function art(kind: ArtKind, col = '#4A2F25', bg = '#EFE6D6') {
       height="100%"
       preserveAspectRatio="xMidYMid slice"
       role="img"
-      aria-label="Illustration"
+      aria-label={label}
       style={{ display: 'block' }}
     >
       <defs>
@@ -99,7 +99,11 @@ export interface SiteImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>
   /** URL (relative API, `/categories/…` ou absolue) — résolue par `resolveImageUrl`. */
   src: string
   alt: string
-  /** largeur de base du jeu de sources (×0.6 / ×1.5, comme la référence) */
+  /**
+   * @deprecated Conservés pour ne pas casser les appelants : il n'existe pas de
+   * variantes redimensionnées côté stockage, donc ni `srcset` ni `sizes` ne
+   * peuvent être émis honnêtement (voir le commentaire dans le composant).
+   */
   w?: number
   sizes?: string
   /** gabarit d'illustration de secours si le fichier charge en erreur */
@@ -117,8 +121,8 @@ export interface SiteImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>
 export function SiteImage({
   src,
   alt,
-  w = 800,
-  sizes = '(max-width:760px) 50vw, 24vw',
+  w: _w = 800,
+  sizes: _sizes = '(max-width:760px) 50vw, 24vw',
   kind = 'coat',
   col = '#4A2F25',
   bg = '#EFE6D6',
@@ -127,20 +131,35 @@ export function SiteImage({
   ...rest
 }: SiteImageProps) {
   const [failed, setFailed] = useState(false)
-  if (failed) return <span className={className} style={{ display: 'block' }}>{art(kind, col, bg)}</span>
+
+  /* Aucune source (photo supprimée/absente) : on ne rend JAMAIS `<img src="">`
+     — le navigateur y voit l'URL de la page, déclenche une requête inutile
+     puis affiche l'icône cassée le temps du `onError`. On affiche directement
+     l'état « sans photo » dessiné (illustration au trait, jamais une fausse
+     photo produit), avec le nom réel de l'article en libellé accessible. */
+  const hasSrc = Boolean(src && src.trim())
+  if (failed || !hasSrc) {
+    return (
+      <span className={className} style={{ display: 'block' }}>
+        {art(kind, col, bg, alt || 'Photo indisponible')}
+      </span>
+    )
+  }
 
   const href = resolveImageUrl(src)
-  const srcSet = [0.6, 1, 1.5]
-    .map((m) => `${resolveImageUrl(src)} ${Math.round(w * m)}w`)
-    .join(', ')
 
+  /* Pas de `srcset` tant qu'il n'existe pas de vraies variantes redimensionnées.
+     L'ancien code répétait **la même URL** en 480w/800w/1200w : le navigateur
+     croyait disposer de trois largeurs intrinsèques, en déduisait une densité
+     absurde et, pour les petites images (photos uploadées 1×1 des fixtures),
+     finissait avec `naturalWidth = 0` — l'image n'était plus rendue alors que
+     le fichier répondait 200. Un `srcset` doit décrire des fichiers distincts,
+     sinon il dégrade l'affichage. */
   return (
     <img
       {...rest}
       className={className}
       src={href}
-      srcSet={srcSet}
-      sizes={sizes}
       alt={alt}
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"

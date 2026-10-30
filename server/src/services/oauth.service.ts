@@ -4,6 +4,7 @@ import { query } from '../db/pool.js';
 import { pool } from '../db/pool.js';
 import { findByEmail } from '../repositories/users.repository.js';
 import { sendMail } from '../mail/mailer.js';
+import { runInBackground } from '../utils/background.js';
 import type { UserRow } from '../utils/serializers.js';
 
 const BCRYPT_COST = 10;
@@ -114,6 +115,6 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<User
   // E1 — email de bienvenue, comme pour l'inscription classique
   // (`users.service.ts`). Un compte OAuth est une inscription : l'utilisateur
   // doit recevoir le même accueil. Best-effort : `sendMail` ne lève jamais.
-  void sendMail(created.id, created.email, 'welcome', { linkPath: '/' });
+  runInBackground(sendMail(created.id, created.email, 'welcome', { linkPath: '/' }));
   return created;
 }

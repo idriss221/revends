@@ -81,16 +81,19 @@ export function Button({
       {loading && (
         <span className={isPublicVariant ? 'spinner spinner-sm' : 'fas fa-spinner fa-spin'} aria-hidden="true" />
       )}
-      {icon && !loading && (
-        isPublicVariant
-          ? <Ico name={icon} cls="sm" aria-hidden="true" />
-          : <i className={`fas ${icon}`} aria-hidden="true" />
+      {/* Les noms `fa-…` viennent de l'admin (Font Awesome), les autres du
+          sprite public (`Ico`, `#i-…`). Avant, seul le variant décidait :
+          `Button variant="outline" icon="fa-rotate-left"` cherchait donc
+          `#i-fa-rotate-left`, inexistant → icône vide. Le préfixe est la
+          seule information fiable, indépendante du shell. */}
+      {icon && !loading && (icon.startsWith('fa-')
+        ? <i className={`fas ${icon}`} aria-hidden="true" />
+        : <Ico name={icon} cls="sm" aria-hidden="true" />
       )}
       {children}
-      {iconRight && !loading && (
-        isPublicVariant
-          ? <Ico name={iconRight} cls="sm" aria-hidden="true" />
-          : <i className={`fas ${iconRight}`} aria-hidden="true" />
+      {iconRight && !loading && (iconRight.startsWith('fa-')
+        ? <i className={`fas ${iconRight}`} aria-hidden="true" />
+        : <Ico name={iconRight} cls="sm" aria-hidden="true" />
       )}
     </button>
   )

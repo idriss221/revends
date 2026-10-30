@@ -18,8 +18,11 @@ interface ZoomPayload {
 
 const EVENT = 'rv:zoom'
 
-/** Ouvre la visionneuse — équivalent de `openZoom(el)` de la référence. */
+/** Ouvre la visionneuse — équivalent de `openZoom(el)` de la référence.
+ *  Sans source, on n'ouvre RIEN : une visionneuse vide afficherait l'icône
+ *  d'image cassée (produit dont la photo a été supprimée). */
 export function openZoom(src: string, alt: string): void {
+  if (!src || !src.trim()) return
   window.dispatchEvent(new CustomEvent<ZoomPayload>(EVENT, { detail: { src, alt } }))
 }
 

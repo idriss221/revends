@@ -3394,3 +3394,79 @@ Remplacer tous les tokens legacy (`--terra`, `--bordeaux`, `--champagne`, etc.) 
 - Migrer l'admin (`.market-admin`) vers le même design system (optionnel)
 - Code-split du bundle JS (547 kB → chunks)
 - Photos → Vercel Blob (phase 2)
+
+## 2026-10-29/30 — Recette de mise en production : causes racines, charge, concurrence, failover
+
+### Objectif
+Prouver la mise en production par des tests **réellement exécutés** (aucun skip converti en PASS),
+après correction des causes racines : images, bouton panier post-approbation, e-mails, mot de passe
+oubliqué, overflow admin.
+
+### Corrections de cause racine
+| Symptôme | Cause réelle | Correctif |
+|---|---|---|
+| 44 images cassées en prod | JPG `web/public/catalog/*.jpg` supprimés du disque alors que **git les suit** (7,0 Mo) | `git checkout -- web/public/catalog` (restauration, pas de re-téléchargement) |
+| Images cassées aléatoires | `SiteImage` émettait un `srcset` vers des variantes **inexistantes** du stockage → 404 | `srcset`/`sizes` supprimés ; props `w`/`sizes` `@deprecated` |
+| Overflow admin (672 px dans 302 px) | `Pagination` non wrappable + styles `.btn`/`.i` absents sous `.market-admin` (SVG 300×150) | `flex-wrap` + `flex-1` < 400 px + CSS scopé `.market-admin` |
+| Icônes admin cassées | `Button` choisissait l'icône selon le `variant` | choix selon le préfixe `fa-` vs sprite `Ico` |
+| Bascule 502 lente au failover | `location /api/` **sans `proxy_connect_timeout`** → défaut 60 s sur une IP morte | `proxy_connect_timeout 2s` + `proxy_next_upstream` (tries 2, timeout 5 s) |
+
+### Preuves exécutées
+- **Serveur** : 496/496 tests, 28 suites, 0 échec, 0 skip. **Web** : 235/235 (Vitest).
+- **E2E Playwright (build de prod)** : voir le bilan du run final ci-dessous.
+- **Images** : 1 438 fichiers uploadés, 0 magic-byte invalide ; 1 066 images vues, **0 cassée**.
+- **Responsive** : 19 routes × 13 largeurs = **247 mesures, 0 débordement, 0 image cassée**.
+- **Thèmes** : 3/3 (public clair, public sombre, invariant admin hors thème par design).
+- **Web Vitals** (3 runs, médiane) : mobile LCP 1 116–1 852 ms, CLS 0–0,15, TBT 408–787 ms ;
+  desktop LCP 452–1 288 ms, TBT 12–54 ms. Réserve : CLS 0,15 sur 2 pages (> 0,10).
+- **Charge progressive** (10→1000 conn., 15 s/niveau) : 166/186/175/173/183/182/188 rps, **0 erreur
+  jusqu'à 500**, 65 erreurs (timeouts client 30 s) à 1000. Distribution NGINX écart max 4 req.
+- **Cause racine du plafond** : `docker-compose.yml` plafonne API **et** PostgreSQL à `cpus: '0.5'`.
+  Cgroup sur 10 s à 100 conn. : PostgreSQL throttlé **107/112 périodes** (9,49 s). `EXPLAIN ANALYZE`
+  du catalogue = 0,28 ms → le code n'est pas le goulot.
+- **Spike** 50→100→250→500 : 0 erreur, P95 1 285→9 490 ms (dégradation gracieuse).
+- **Endurance** 300 s @ 50 : **51 768 req, 100 % de 200**, 0 fuite mémoire (deltas ≤ 6 Mo),
+  connexions PG stables 31–33.
+- **Concurrence** (3 instances, PostgreSQL partagé) : A 1×201+9×409 / 1 compte ; B 1×201+7×409 /
+  1 commande ; C 1×201+4×409 / 1 commande ; D 12×201 / 12 commandes, **0 deadlock**.
+- **Failover réel** : après correctif, **0 requête perdue** sur les 5 phases, détection ≤ 2,0 s,
+  api1 seule absorbe 90/90 (P95 41 ms), retour à 3 instances avec distribution parfaite.
+- **Rate limiting multi-instances** : 2 processus, Redis partagé → 10×200 puis **5×429** en
+  alternance a/b ; bucket `auth` indépendant (3×401 puis 3×429) ; `Retry-After: 60` ; code `RATE_LIMITED`.
+- **Sécurité** : 0 secret dans les fichiers suivis ; CSP/HSTS/nosniff/X-Frame-Options ; CORS liste
+  blanche ; CSRF double soumission ; `connect.sid` `HttpOnly; SameSite=Lax` ; upload MIME réel ;
+  pas d'`eval`/`innerHTML` dynamique. Finding mineur : `X-CSRF-Token` absent d'`Allow-Headers`.
+- **E-mails** : 2 e-mails réellement reçus (inscription + reset) sur boîte mail.tm via SMTP SendGrid ;
+  lien réel rejoué → reset 200 → ancien mdp 401 → nouveau 200 → rejeu du jeton 410.
+
+### NON APPLICABLE / NON TESTÉ (assumé)
+- Paiement en ligne : **NON APPLICABLE**, aucun PSP dans le code (règlement manuel admin).
+- Sharding : **NON APPLICABLE**, PostgreSQL instance unique.
+- 15 des 17 e-mails : couverts par tests, **non reçus** sur boîte réelle.
+- Statut de livraison SendGrid via API : **BLOCKED** (Email Activity non activée).
+
+### Actions utilisateur
+1. **Rotation de la clé API SendGrid** (`mail_config.txt` en clair, gitignoré mais utilisée en prod).
+2. Relever `cpus` (API ≥ 1, PostgreSQL ≥ 2) avant d'annoncer une capacité > ~180 req/s.
+3. Ajouter `X-CSRF-Token` à `Access-Control-Allow-Headers` si un client cross-origin est prévu.
+4. Submission Search Console (manuel).
+
+### Bilan final (run de clôture)
+- **E2E standard** : 75 PASS, 0 FAIL, 2 SKIP (conditionnels, `photos-demo`). Les 2 skips ont été
+  **rejoués** avec `E2E_DEMO_CATALOG=1 E2E_BASE_URL=http://127.0.0.1:8080` → **2 PASS**. Total
+  distinct : **77/77 exécutés, 0 FAIL, 0 non-exécuté**. Session admin re-prouvée par suppression de
+  `e2e/.session.json` puis relance (22 PASS, session reconstruite par le global setup).
+- **Preuve du plafond de provisionnement** (10 s/palier, quotas réversibles) :
+  0,5 CPU partout → 133 req/s, P95 3 231 ms ; PostgreSQL à 2 CPU **seul** → 243 req/s, P95 1 668 ms ;
+  API ×3 + PG à 2 CPU → **723 req/s** (c=100) et **815 req/s (c=1000, 0 erreur)**, P95 4 496 ms.
+  Quotas restaurés à 0,5 (vérifié `NanoCpus=500000000`, health 200).
+- **Rapport complet** : `docs/rapport-final-recette.md` (statuts PASS/FAIL/BLOCKED/NON APPLICABLE,
+  preuves, verdict).
+- **Verdict** : 🟢 **GO AVEC RÉSERVES** — aucune validation critique en échec ; réserves = rotation de
+  la clé SendGrid, relèvement des quotas CPU, CLS 0,15 sur 2 pages, en-tête CORS mineur, 15 e-mails non
+  reçus sur boîte réelle, Search Console manuelle.
+2026-10-30 08:52:14
+=== NOUVELLES IMAGES CYCLE COMPLET ===
+run: mvuqgiqd-oq90pcmh — produit #844
+Images cassées: 0 sur 13 étapes
+Verdict: GO PRODUCTION

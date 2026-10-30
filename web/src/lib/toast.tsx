@@ -87,7 +87,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={push}>
       {children}
       {/* Enveloppe : voir le commentaire de module ci-dessus. */}
-      <div className="market-site">
+      <div className="market-site rv-toastlayer">
         <div className={`toast${shown ? ' on' : ''}`} id="toast" role="status" aria-live="polite">
           {item ? (
             <>

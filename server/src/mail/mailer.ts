@@ -23,6 +23,37 @@ import { renderTemplate, type MailEvent, type TemplateVars } from './templates.j
 /** Mode de transport effectif, journalisé à chaque envoi (CA-V5-013). */
 export type MailTransportKind = 'smtp' | 'json' | 'console' | 'disabled';
 
+/**
+ * Bornes de temps du transport SMTP (millisecondes).
+ *
+ * Sans elles, Nodemailer applique des valeurs très hautes (jusqu'à 10 min sur
+ * `socketTimeout`) : un SMTP lent bloquerait le worker d'une instance API
+ * pendant tout ce temps. Une notification transactionnelle n'a aucune raison
+ * de durer plus de quelques secondes.
+ */
+const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
+const SMTP_GREETING_TIMEOUT_MS = 10_000;
+const SMTP_SOCKET_TIMEOUT_MS = 20_000;
+
+/**
+ * Nombre de tentatives totales (1 envoi + 1 reprise) et délai avant reprise.
+ * On ne rejoue QUE les erreurs de transport (le message n'a pas été remis) :
+ * rejouer une erreur applicative 5xx de SendGrid risquerait un doublon.
+ */
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 250;
+
+/** Erreurs de transport considérées comme rejouables (le message n'est pas parti). */
+const RETRYABLE_CODES = new Set([
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'ESOCKET',
+  'EDNS',
+  'EPROTOCOL',
+  'EAI_AGAIN',
+]);
+
 export interface SentMail {
   event: MailEvent;
   to: string;
@@ -107,6 +138,10 @@ function getTransporter(): { transporter: Transporter; kind: MailTransportKind }
       // Nodemailer automatiquement sur le port submission (587).
       secure: config.mail.secure,
       auth: { user: config.mail.user, pass: config.mail.password },
+      // Bornes explicites : jamais de worker bloqué sur un SMTP muet.
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
     });
     return { transporter, kind: transportKind };
   }
@@ -141,27 +176,58 @@ export async function sendMail(userId: number, to: string | null, event: MailEve
   const content = renderTemplate(event, vars);
   const { transporter: t, kind } = getTransporter();
 
-  try {
-    await t.sendMail({
-      from: config.mail.from,
-      to,
-      subject: content.subject,
-      text: content.text,
-      html: content.html,
-    });
-    // CA-V5-013 : type d'événement, id destinataire, sujet, transporteur.
-    // JAMAIS le corps complet, JAMAIS le mot de passe SMTP, JAMAIS l'adresse
-    // e-mail du destinataire (donnée personnelle — RG-V5-07).
-    logger.info('email envoyé', { event, userId, subject: content.subject, transport: kind });
-    pushSent({ event, to, subject: content.subject, transport: kind, ok: true });
-    return true;
-  } catch (err) {
-    // P8 : on journalise, on n'Avale PAS l'action métier.
-    const reason = err instanceof Error ? err.message : String(err);
-    logger.error("échec d'envoi d'email", { event, userId, transport: kind, errorMessage: reason });
-    pushSent({ event, to, subject: content.subject, transport: kind, ok: false });
-    return false;
+  let lastReason = '';
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const startedAt = Date.now();
+    try {
+      await t.sendMail({
+        from: config.mail.from,
+        to,
+        subject: content.subject,
+        text: content.text,
+        html: content.html,
+      });
+      // CA-V5-013 : type d'événement, id destinataire, sujet, transporteur.
+      // JAMAIS le corps complet, JAMAIS le mot de passe SMTP, JAMAIS l'adresse
+      // e-mail du destinataire (donnée personnelle — RG-V5-07).
+      logger.info('email envoyé', {
+        event,
+        userId,
+        subject: content.subject,
+        transport: kind,
+        attempt,
+        durationMs: Date.now() - startedAt,
+      });
+      pushSent({ event, to, subject: content.subject, transport: kind, ok: true });
+      return true;
+    } catch (err) {
+      lastReason = err instanceof Error ? err.message : String(err);
+      const code = (err as { code?: string } | null)?.code ?? '';
+      const retryable = kind === 'smtp' && RETRYABLE_CODES.has(code) && attempt < MAX_ATTEMPTS;
+      logger.warn("tentative d'envoi d'email échouée", {
+        event,
+        userId,
+        transport: kind,
+        attempt,
+        code: code || undefined,
+        retryable,
+        durationMs: Date.now() - startedAt,
+      });
+      if (!retryable) break;
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    }
   }
+
+  // P8 : on journalise, on n'Avale PAS l'action métier.
+  logger.error("échec d'envoi d'email", {
+    event,
+    userId,
+    transport: kind,
+    attempts: MAX_ATTEMPTS,
+    errorMessage: lastReason,
+  });
+  pushSent({ event, to, subject: content.subject, transport: kind, ok: false });
+  return false;
 }
 
 function subjectOf(event: MailEvent): string {

@@ -18,15 +18,20 @@ interface PaginationProps {
  */
 export function Pagination({ page, totalPages, total, noun, onChange }: PaginationProps) {
   if (totalPages <= 1) return null
+  // `flex-wrap` : à 320–390 px, compteur + 2 boutons labellisés dépassent la
+  // largeur utile (672 px de contenu mesurés dans 302 px). Sans retour à la
+  // ligne, ce débordement remontait jusqu'à `document.documentElement`
+  // (scroll horizontal de 326 px sur /admin/historique). Les boutons passent
+  // donc sous le compteur, et se partagent la largeur restante sous 400 px.
   return (
-    <div className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-5">
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
       <p className="text-sm text-muted">
         {total} {noun} · page {page}/{totalPages}
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 max-[400px]:w-full">
         <button
           type="button"
-          className={buttonClasses('outline', 'sm')}
+          className={`${buttonClasses('outline', 'sm')} max-[400px]:flex-1`}
           disabled={page <= 1}
           onClick={() => onChange(page - 1)}
           aria-label="Page précédente"
@@ -35,7 +40,7 @@ export function Pagination({ page, totalPages, total, noun, onChange }: Paginati
         </button>
         <button
           type="button"
-          className={buttonClasses('outline', 'sm')}
+          className={`${buttonClasses('outline', 'sm')} max-[400px]:flex-1`}
           disabled={page >= totalPages}
           onClick={() => onChange(page + 1)}
           aria-label="Page suivante"

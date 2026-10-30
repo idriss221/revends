@@ -280,6 +280,84 @@
 [data-stagger="11"] { animation-delay: 550ms; }
 
 /* ============================================================
+   ADMIN — RESTAURATION DES BOUTONS ET ICÔNES
+   ------------------------------------------------------------
+   La refonte « Maison Bordeaux » a remplacé les classes Tailwind de
+   `Button.tsx` par les classes `.btn` du site public. Or `bureau.css`
+   scope TOUTES ces règles sous `.market-site` : dans `.market-admin`,
+   `.btn` et `.i` n'avaient plus **aucun** style.
+
+   Conséquences mesurées : bouton natif sans padding, et surtout un
+   `<svg class="i">` à sa taille par défaut **300 × 150 px** — la
+   pagination mesurait 672 px dans 302 px, d'où 326 px de scroll
+   horizontal sur `/admin/historique` à 390 px. Ce bloc restaure
+   exactement les valeurs Tailwind d'origine (spec-admin §2.2, §9.4),
+   sans toucher au site public.
+   ============================================================ */
+@layer components {
+  .market-admin .i {
+    width: 20px; height: 20px; flex: none; display: inline-block;
+    fill: currentColor; stroke: none; vertical-align: middle; line-height: 1;
+  }
+  .market-admin .i.xs { width: 12px; height: 12px; }
+  .market-admin .i.sm { width: 16px; height: 16px; }
+  .market-admin .i.lg { width: 24px; height: 24px; }
+
+  .market-admin .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    height: 2.75rem; padding: 0 1.5rem; border: 0;
+    border-radius: var(--radius-md); background: var(--color-terracotta-strong);
+    color: #fff; font: 700 1rem/1.5 var(--font-sans); text-transform: none;
+    letter-spacing: normal; white-space: nowrap; text-decoration: none;
+    cursor: pointer; user-select: none;
+    transition: background-color 0.2s var(--ease-base), border-color 0.2s var(--ease-base),
+      color 0.2s var(--ease-base), box-shadow 0.2s var(--ease-base), transform 0.2s var(--ease-base);
+  }
+  .market-admin .btn:hover { background: var(--color-terracotta-deep); }
+  .market-admin .btn:active { transform: scale(0.98); }
+  .market-admin .btn:disabled,
+  .market-admin .btn[aria-disabled='true'],
+  .market-admin .btn[disabled] { opacity: 0.45; pointer-events: none; }
+
+  .market-admin .btn-sm { height: 2.25rem; padding: 0 1rem; font-size: 0.875rem; }
+  .market-admin .btn-lg { height: 3.25rem; padding: 0 2rem; font-size: 1.0625rem; }
+  .market-admin .btn-block { width: 100%; }
+
+  .market-admin .btn-primary { background: var(--color-terracotta-strong); color: #fff; box-shadow: var(--shadow-cta); }
+  .market-admin .btn-primary:hover { background: var(--color-terracotta-deep); }
+  .market-admin .btn-secondary { background: var(--color-chocolate); color: #fff; }
+  .market-admin .btn-secondary:hover { background: var(--color-ink); }
+  .market-admin .btn-outline {
+    background: var(--color-white); color: var(--color-ink);
+    border: 1.5px solid var(--color-line-strong);
+  }
+  .market-admin .btn-outline:hover {
+    background: var(--color-terracotta-wash); color: var(--color-terracotta-ink);
+    border-color: var(--color-terracotta-strong); transform: translateY(-1px);
+  }
+  .market-admin .btn-ghost { background: transparent; color: var(--color-ink); }
+  .market-admin .btn-ghost:hover { background: color-mix(in srgb, var(--color-ink) 5%, transparent); }
+
+  /* Spinner `.spinner` : même problème de scope que `.btn`. Sans lui, un
+     bouton admin en chargement perdait son indicateur visuel. */
+  .market-admin .spinner {
+    display: inline-block; width: 1em; height: 1em; flex: none;
+    border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; animation: admin-spin 0.7s linear infinite;
+  }
+  .market-admin .spinner-sm { border-width: 1.5px; }
+  @keyframes admin-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .market-admin .spinner { animation: none; border-right-color: currentColor; }
+  }
+
+  /* Cible tactile 44 px (DA §8) sous 768 px — comme le `max-md` d'origine. */
+  @media (max-width: 767.98px) {
+    .market-admin .btn { min-height: 44px; }
+  }
+}
+
+/* ============================================================
    THÈME — mécanique Bureau (transition douce + bouton ☼/☾)
    Source : Bureau/main/assets/theme.css (parties 3 & 6).
    ============================================================ */
@@ -371,12 +449,21 @@
 .mascotte-nod { animation: none; }
 }
 
-/* Shell public : fond et hauteur minimale (tokens.css fournit --surface-base). */
+/* Shell public : fond et hauteur minimale (tokens.css fournit --surface-base).
+   ⚠ Le calque de toasts réutilise `.market-site` pour hériter du style `.toast`,
+   mais il ne doit PAS devenir un second conteneur pleine hauteur après le
+   pied de page (sinon : 100vh de vide sous le footer). */
 .market-site {
   background: var(--surface-base);
+}
+.market-site:not(.rv-toastlayer) {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+.market-site.rv-toastlayer {
+  min-height: 0;
+  display: block;
 }
 
 .market-site > main {

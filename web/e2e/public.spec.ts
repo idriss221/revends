@@ -10,7 +10,7 @@ import { WIDTHS } from './helpers/widths'
  *
  * (d) `documentElement.scrollWidth === clientWidth` est le contrôle qui prime :
  * une page qui déborde horizontalement est un défaut bloquant sur mobile. Il
- * est mesuré sur **les 5 largeurs du DA** pour chaque route publique, sans
+ * est mesuré sur **les 13 largeurs du DA** pour chaque route publique, sans
  * données à préparer — donc stable et reproductible.
  *
  * ## Une seule coquille publique (Option A)
@@ -67,7 +67,7 @@ test.describe('DA §9.3 (d) — débordement horizontal (coquille React)', () =>
   })
   test.afterAll(async () => closeSharedPage(page))
 
-  test('les routes React tiennent aux 5 largeurs du DA', async () => {
+  test('les routes React tiennent aux 13 largeurs du DA', async () => {
     await openApp(page, REACT_ROUTES[0].path)
     for (const { width, label } of WIDTHS) {
       await page.setViewportSize({ width, height: 900 })

@@ -57,31 +57,36 @@ test.describe('Photos de la maquette — hébergement local', () => {
     expect(await hero.getAttribute('src')).toBe(`/categories/hero.jpg?v=${PHOTO_VERSION}`)
   })
 
-  test('accueil : tuiles de catégories = photos locales, toutes chargées', async ({ page }) => {
+  test('accueil : catégories TEXTUELLES (rail), aucun visuel requis', async ({ page }) => {
     await openApp(page, '/')
-    const grid = page.locator('.catgrid')
-    await expect(grid, 'section Catégories absente').toBeVisible()
-    await grid.scrollIntoViewIfNeeded()
+    const rail = page.locator('.catrail')
+    await expect(rail, 'rail de catégories absent').toBeVisible()
 
-    const tiles = page.locator('.catgrid .cat img')
-    const count = await tiles.count()
-    expect(count, 'au moins 3 tuiles de catégories attendues').toBeGreaterThanOrEqual(3)
-    for (let i = 0; i < count; i++) await loaded(tiles.nth(i), `tuile ${i + 1}/${count}`)
+    const links = page.locator('.catrail .catlink')
+    const count = await links.count()
+    expect(count, 'au moins 3 catégories attendues').toBeGreaterThanOrEqual(3)
 
-    // Aucune photo de tuile ne doit fuir vers une origine externe.
-    const srcs = await tiles.evaluateAll((els) =>
-      els.map((el) => (el as HTMLImageElement).getAttribute('src') ?? ''),
+    // Navigation légère : chaque entrée est un lien réel vers une catégorie…
+    const hrefs = await links.evaluateAll((els) => els.map((el) => el.getAttribute('href') ?? ''))
+    for (const href of hrefs) expect(href).toMatch(/^\/category\/[a-z0-9-]+$/)
+
+    // …et AUCUNE image de catégorie n'est rendue en accueil (exigence design).
+    await expect(page.locator('.catrail img, .catgrid')).toHaveCount(0)
+
+    // Le rail ne doit jamais provoquer de défilement horizontal de la page.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
-    for (const src of srcs) expect(src).toMatch(/^\/categories\/[a-z0-9-]+\.jpg\?v=\d{4}-\d{2}-\d{2}$/)
+    expect(overflow).toBe(0)
   })
 
-  test('accueil : bloc éditorial = RV.SCENE.editorial, chargé', async ({ page }) => {
+  test('accueil : bloc « Vendre » = bannière éditoriale, chargée', async ({ page }) => {
     await openApp(page, '/')
-    const pic = page.locator('.editorial .pic img')
+    const pic = page.locator('.editorial.sell-cta .pic img')
     await expect(pic).toHaveCount(1)
     await pic.scrollIntoViewIfNeeded()
-    await loaded(pic, 'bloc éditorial')
-    expect(await pic.getAttribute('src')).toBe(`/categories/editorial.jpg?v=${PHOTO_VERSION}`)
+    await loaded(pic, 'bloc « Vendre »')
+    expect(await pic.getAttribute('src')).toBe('/categories/bottom-banner.jpg?v=2026-10-22')
   })
 
   test('connexion : aside.art = RV.SCENE.auth, chargé', async ({ page }) => {

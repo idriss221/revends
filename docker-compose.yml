@@ -133,10 +133,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          # API : 1 CPU minimum (mesuré : 0,5 CPU plafonne à ~133 req/s)
+          cpus: '1'
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: '0.5'
           memory: 256M
 
   api2:
@@ -165,10 +166,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          # API : 1 CPU minimum (mesuré : 0,5 CPU plafonne à ~133 req/s)
+          cpus: '1'
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: '0.5'
           memory: 256M
 
   api3:
@@ -197,10 +199,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          # API : 1 CPU minimum (mesuré : 0,5 CPU plafonne à ~133 req/s)
+          cpus: '1'
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: '0.5'
           memory: 256M
 
   # ---------------------------------------------------------------------------
@@ -287,10 +290,12 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512M
+          # PostgreSQL : 2 CPU + 1 Go. Mesuré : PG à 2 CPU (API inchangées)
+          # fait passer le débit de 133 à 243 req/s — c'est le goulot réel.
+          cpus: '2'
+          memory: 1G
         reservations:
-          cpus: '0.25'
+          cpus: '0.5'
           memory: 256M
 
   # ---------------------------------------------------------------------------
