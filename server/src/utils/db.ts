@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { PoolClient } from 'pg';
 import { pool, type DbClient } from '../db/pool.js';
 import { logger } from './logger.js';
+import { runInBackground } from './background.js';
 
 /**
  * Exécute `fn` dans une transaction PostgreSQL (BEGIN/COMMIT/ROLLBACK).
@@ -108,7 +109,11 @@ function track(promise: Promise<void>): void {
 }
 
 function dispatch(job: AfterCommitJob): void {
-  track(runSafely(job));
+  const pending = runSafely(job);
+  // Sur Vercel la fonction est gelée après la réponse : sans `waitUntil`,
+  // l'effet post-commit (donc l'e-mail) n'est jamais exécuté.
+  runInBackground(pending);
+  track(pending);
 }
 
 /**

@@ -42,7 +42,7 @@ export function SiteShell() {
   useEffect(() => {
     if (bare) return
     const root = wrapperRef.current
-    const bar = root?.querySelector<HTMLElement>('header.site .bar')
+    const bar = root?.querySelector<HTMLElement>('header.site')
     if (!root || !bar) return
 
     const sync = () => {

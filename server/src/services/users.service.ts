@@ -5,6 +5,7 @@ import { serializeSelfUser } from '../utils/serializers.js';
 import { conflict, unauthorized } from '../utils/errors.js';
 import { countUnreadNotifications } from './notifications.service.js';
 import { sendMail } from '../mail/mailer.js';
+import { runInBackground } from '../utils/background.js';
 import { findByEmail, insertUser, type UserWithHash } from '../repositories/users.repository.js';
 
 const BCRYPT_COST = 10;
@@ -31,7 +32,7 @@ export async function registerUser(input: RegisterInput): Promise<UserRow> {
       { displayName: input.displayName, name: input.name, email: input.email, phone: input.phone },
       hashed,
     );
-    void sendMail(user.id, user.email, 'welcome', { linkPath: '/' });
+    runInBackground(sendMail(user.id, user.email, 'welcome', { linkPath: '/' }));
     return user;
   } catch (err) {
     if (isUniqueViolation(err, 'users_email_key')) {

@@ -44,7 +44,6 @@ services:
     environment:
       - NODE_ENV=development
       - INSTANCE_ID=api1-dev
-      - RATE_LIMIT_DISABLED=true
       # Dev en HTTP : pas de cookie Secure.
       - COOKIE_SECURE=false
       - RUN_MIGRATIONS=true

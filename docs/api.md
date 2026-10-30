@@ -1004,9 +1004,9 @@ Soumet un article **`multipart/form-data`** : champs texte + 1 à 4 fichiers pho
 | `defects` | text | ⬜ | ≤ 2000 (D8) |
 | `accessories` | text | ⬜ | ≤ 2000 (D8) |
 | `notes` | text | ⬜ | ≤ 2000 (D8) |
-| `photos` | fichiers | ✅ (1..4) | JPEG/PNG/WebP, ≤ 5 Mo **chacun**, MIME réel vérifié (multer + §9.6) |
+| `photos` | fichiers | ✅ (3..4) | JPEG/PNG/WebP, ≤ 5 Mo **chacun**, MIME réel vérifié (multer + §9.6) ; **obligatoire : ≥ 3 photos** — erreur `PHOTO_MISSING` (400) si < 3. Message : « Ajoutez au moins 3 photos. » |
 
-La **1re photo reçue** devient la photo principale : `position = 1`, `is_primary = true` ; les suivantes `position = 2..4` (RG-MEDIA-1, prompt). Les champs optionnels vides sont stockés `NULL`.
+La **1re photo reçue** devient la photo principale : `position = 1`, `is_primary = true` ; les suivantes `position = 2..4` (RG-MEDIA-1, prompt). Les champs optionnels vides sont stockés `NULL`. **Au moins 3 photos sont requises** — si le compte total `product_images` est < 3 après création, le serveur renvoie `400 PHOTO_MISSING` et l'article n'est pas créé.
 
 **Exemple (représentation multipart) :**
 
@@ -1099,7 +1099,7 @@ Modifie **tous les champs** du formulaire (multipart, mêmes champs que POST) d'
 | `remove_photo_ids` | text (JSON `number[]`) | ids des photos **existantes** à supprimer (ex. `"[88]"`) |
 | `photo_order` | text (JSON `number[]`) | ids des photos **existantes** dans l'ordre final voulu ; le **1er id = position 1 = photo principale** (ex. `"[89,88]"`) |
 
-Contrainte finale : **1..4 photos** après l'opération, sinon `400 PHOTO_LIMIT`/`PHOTO_MISSING`. Combinaison possible : `remove_photo_ids` + `photos` + `photo_order` (ordre = les ids listés d'abord, puis les nouvelles par ordre reçu). Les ids de photos **n'appartenant pas** à l'article → `400 PHOTO_ORDER_INVALID`.
+Contrainte finale : **après l'opération, total `product_images ≥ 3`**, sinon `400 PHOTO_MISSING` (si < 3) ou `400 PHOTO_LIMIT` (si > 4). Combinaison possible : `remove_photo_ids` + `photos` + `photo_order` (ordre = les ids listés d'abord, puis les nouvelles par ordre reçu). Les ids de photos **n'appartenant pas** à l'article → `400 PHOTO_ORDER_INVALID`.
 
 **Réponse `200`** : `OwnerProduct` mis à jour.
 

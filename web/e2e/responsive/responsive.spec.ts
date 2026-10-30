@@ -5,10 +5,10 @@ import { WIDTHS } from '../helpers/widths'
 /**
  * Audits responsive + conformité DA.
  *
- * Les 5 largeurs du DA §9.9 (1440 / 1280 / 1024 / 768 / 390) sont parcourues
+ * Les 13 largeurs (320 → 1920) sont parcourues
  * **dans** les tests via `setViewportSize`, et non en multipliant les projets
  * Playwright. Raison : `AuthContext` appelle `/api/auth/me` à chaque montage de
- * document. Une page rechargée + 5 redimensionnements prouve les 5 largeurs
+ * document. Une page rechargée + 13 redimensionnements prouve les 13 largeurs
  * pour 1 chargement — ce qu'un projet unique en 1440 ne prouvait pas (les
  * assertions « mobile » étaient systématiquement sautées).
  *
@@ -46,11 +46,30 @@ const PAGES_ADMIN = ['/admin', '/admin/articles', '/admin/commandes', '/admin/ca
 /** Éléments interactifs visibles : le périmètre des cibles tactiles. */
 const INTERACTIVE = 'a[href], button:not([disabled]), input:not([type="hidden"]), select, textarea, [role="button"]'
 
+/**
+ * Mesure du débordement horizontal + identification du **vrai** coupable.
+ *
+ * Un élément dont le `right` dépasse le viewport n'est pas forcément fautif :
+ * un tableau large à l'intérieur d'un `.table-scroll` (`overflow-x: auto`) est
+ * clippé, et ne provoque aucun scroll de page. L'ancienne heuristique le
+ * désignait pourtant en premier — elle a fait chercher un bug de tableau qui
+ * n'existait pas, alors que la pagination débordait 672 px dans 302 px.
+ *
+ * On ne retient donc que les éléments dont le débordement **échappe réellement
+ * au document** : ceux dont aucun ancêtre ne clippe en X.
+ */
 async function overflow(page: Page) {
   return page.evaluate(() => {
     const el = document.documentElement
+    const clippe = (n: HTMLElement) => {
+      for (let p = n.parentElement; p && p !== document.body; p = p.parentElement) {
+        const ox = getComputedStyle(p).overflowX
+        if (ox === 'auto' || ox === 'scroll' || ox === 'hidden' || ox === 'clip') return true
+      }
+      return false
+    }
     const guilty = [...document.querySelectorAll<HTMLElement>('body *')]
-      .filter((n) => n.getBoundingClientRect().right > el.clientWidth + 1)
+      .filter((n) => n.getBoundingClientRect().right > el.clientWidth + 1 && !clippe(n))
       .slice(0, 3)
       .map((n) => `${n.tagName.toLowerCase()}.${String(n.className).slice(0, 50)}`)
     return { scroll: Math.max(el.scrollWidth, document.body.scrollWidth), client: el.clientWidth, guilty }
@@ -65,7 +84,7 @@ test.describe('responsive — pages publiques React', () => {
   })
   test.afterAll(async () => closeSharedPage(page))
 
-  test('aucune page publique ne déborde, aux 5 largeurs du DA', async () => {
+  test('aucune page publique ne déborde, aux 13 largeurs du DA', async () => {
     await openApp(page, PAGES_PUBLIQUES[0])
     for (const { width, label } of WIDTHS) {
       await page.setViewportSize({ width, height: 900 })
@@ -137,7 +156,7 @@ test.describe('responsive — admin', () => {
   })
   test.afterAll(async () => closeSharedPage(page))
 
-  test('aucun écran admin ne déborde, aux 5 largeurs du DA', async () => {
+  test('aucun écran admin ne déborde, aux 13 largeurs du DA', async () => {
     await openApp(page, PAGES_ADMIN[0])
     for (const { width, label } of WIDTHS) {
       await page.setViewportSize({ width, height: 900 })
@@ -215,7 +234,7 @@ test.describe('cibles tactiles', () => {
   // contrôles, mêmes cibles à mesurer.
   const ROUTES = ['/', '/accueil-react']
 
-  test('WCAG 2.5.8 : ≥ 24×24 sur les contrôles visibles, aux 5 largeurs', async () => {
+  test('WCAG 2.5.8 : ≥ 24×24 sur les contrôles visibles, aux 13 largeurs', async () => {
     for (const route of ROUTES) {
       await openApp(page, route)
       for (const { width, label } of WIDTHS) {

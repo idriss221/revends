@@ -45,6 +45,65 @@ const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 const MAX_TITLE = 70 // maxlength de la maquette (l'API accepte 120)
 
+/**
+ * Compression navigateur avant envoi.
+ *
+ * POURQUOI (cause racine, pas contournement) : une fonction Vercel refuse un
+ * corps de requête > 4,5 Mo. Trois photos de téléphone de 3–4 Mo (9–16 Mo au
+ * total) étaient donc rejetées **par la plateforme** avant même d'atteindre
+ * l'API — 413 opaque, photo jamais stockée. Le serveur accepte 5 Mo **par
+ * photo** (RG-MEDIA-1) ; on garde cette règle, mais on normalize côté client :
+ * au-delà de 700 Ko, l'image est redimensionnée à 1600 px max puis ré-encodée
+ * en JPEG (qualité décroissante jusqu'à ≤ 900 Ko). 4 photos ≈ 3,6 Mo max,
+ * sous la limite Vercel, sans dégrader l'affichage (1600 px suffit largement
+ * pour une fiche produit).
+ */
+const COMPRESS_THRESHOLD = 700 * 1024
+const COMPRESS_MAX_EDGE = 1600
+const COMPRESS_TARGET = 900 * 1024
+
+async function compressForUpload(file: File): Promise<File> {
+  if (file.size <= COMPRESS_THRESHOLD) return file
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, COMPRESS_MAX_EDGE / Math.max(bitmap.width, bitmap.height))
+    const width = Math.max(1, Math.round(bitmap.width * scale))
+    const height = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    // Fond blanc : un PNG transparent converti en JPEG ne doit pas devenir noir.
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, width, height)
+    ctx.drawImage(bitmap, 0, 0, width, height)
+    bitmap.close?.()
+
+    for (const quality of [0.85, 0.75, 0.65, 0.55]) {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', quality),
+      )
+      if (blob && blob.size <= COMPRESS_TARGET) {
+        const base = file.name.replace(/\.[^.]+$/, '') || 'photo'
+        return new File([blob], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
+      }
+    }
+    // Dernier recours : le plus petit encodage obtenu.
+    const fallback = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.55),
+    )
+    if (fallback && fallback.size < file.size) {
+      const base = file.name.replace(/\.[^.]+$/, '') || 'photo'
+      return new File([fallback], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
+    }
+    return file
+  } catch {
+    // Navigateur sans createImageBitmap/canvas : on laisse le serveur décider.
+    return file
+  }
+}
+
 interface DraftPhoto {
   key: string
   url: string
@@ -108,7 +167,7 @@ export function SellView() {
 
   /* --- Photos : mécanique réelle (File + createObjectURL), habillage `.drop`. */
 
-  const addFiles = (files: FileList | File[]) => {
+  const addFiles = async (files: FileList | File[]) => {
     setApiError(null)
     const list = Array.from(files)
     const remaining = MAX_PHOTOS - photos.length
@@ -127,7 +186,10 @@ export function SellView() {
         error = 'Chaque photo doit faire au plus 5 Mo.'
         continue
       }
-      ok.push({ key: `${f.name}-${f.size}-${Date.now()}-${ok.length}`, url: URL.createObjectURL(f), file: f })
+      // Compression AVANT la preview : l'utilisateur voit exactement le fichier
+      // qui sera envoyé (aucune divergence preview ↔ stockage).
+      const ready = await compressForUpload(f)
+      ok.push({ key: `${f.name}-${f.size}-${Date.now()}-${ok.length}`, url: URL.createObjectURL(ready), file: ready })
     }
     const accepted = ok.slice(0, remaining)
     if (ok.length > remaining) error = `Maximum ${MAX_PHOTOS} photos par article.`
@@ -159,7 +221,7 @@ export function SellView() {
   const onDrop = (e: DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files)
+    if (e.dataTransfer.files?.length) void addFiles(e.dataTransfer.files)
   }
 
   /* --- Étapes (wireSell L1177-1190) : seuils alignés sur les règles réelles. */
@@ -343,7 +405,7 @@ export function SellView() {
                 hidden
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
-                  if (e.target.files) addFiles(e.target.files)
+                  if (e.target.files) void addFiles(e.target.files)
                   e.target.value = ''
                 }}
               />

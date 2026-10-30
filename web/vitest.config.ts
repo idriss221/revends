@@ -7,4 +7,5 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     restoreMocks: true,
   },
+  server: { host: '127.0.0.1' },
 })
