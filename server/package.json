@@ -20,6 +20,7 @@
     "test": "fail=0; for f in test/*.test.ts; do echo \"\\n==== $f ====\"; node --import tsx --import ./test/env.ts --test --test-concurrency=1 --test-force-exit \"$f\" || fail=1; done; echo; if [ \"$fail\" -eq 0 ]; then echo \"✅ ALL SUITES GREEN\"; else echo \"❌ SOME SUITES FAILED\"; exit 1; fi"
   },
   "dependencies": {
+    "@vercel/blob": "2.8.2",
     "bcryptjs": "^3.0.3",
     "connect-pg-simple": "^10.0.0",
     "connect-redis": "^10.0.0",

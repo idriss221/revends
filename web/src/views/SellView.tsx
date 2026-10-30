@@ -7,6 +7,7 @@ import { useToast } from '../lib/toast'
 import { TOAST_COPY } from '../lib/constants'
 import { Crumb, SiteHead, SitePage, fmt } from '../components/site/SiteBits'
 import { Ico } from '../components/brand/Ico'
+import { compressPhoto } from '../lib/compressImage'
 import type { Condition } from '../lib/types'
 
 /* ============================================================================
@@ -41,6 +42,7 @@ const COMMISSION = 0.1
 const MIN_PHOTOS = 3
 const MAX_PHOTOS = 4
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024
+const MAX_ORIGINAL_SIZE = 25 * 1024 * 1024
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 const MAX_TITLE = 70 // maxlength de la maquette (l'API accepte 120)
@@ -82,6 +84,7 @@ export function SellView() {
 
   const [values, setValues] = useState<FormValues>(EMPTY)
   const [photos, setPhotos] = useState<DraftPhoto[]>([])
+  const [processing, setProcessing] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<ErrorMap>({})
   const [apiError, setApiError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -108,7 +111,7 @@ export function SellView() {
 
   /* --- Photos : mécanique réelle (File + createObjectURL), habillage `.drop`. */
 
-  const addFiles = (files: FileList | File[]) => {
+  const addFiles = async (files: FileList | File[]) => {
     setApiError(null)
     const list = Array.from(files)
     const remaining = MAX_PHOTOS - photos.length
@@ -116,31 +119,42 @@ export function SellView() {
       setFieldErrors((e) => ({ ...e, photos: `Maximum ${MAX_PHOTOS} photos par article.` }))
       return
     }
-    const ok: DraftPhoto[] = []
     let error: string | null = null
+    const candidates: File[] = []
     for (const f of list) {
       if (!PHOTO_TYPES.includes(f.type)) {
         error = 'Formats acceptés : JPEG, PNG, WebP.'
         continue
       }
-      if (f.size > MAX_PHOTO_SIZE) {
+      if (f.size > MAX_ORIGINAL_SIZE) {
         error = 'Chaque photo doit faire au plus 5 Mo.'
         continue
       }
-      ok.push({ key: `${f.name}-${f.size}-${Date.now()}-${ok.length}`, url: URL.createObjectURL(f), file: f })
+      candidates.push(f)
     }
-    const accepted = ok.slice(0, remaining)
-    if (ok.length > remaining) error = `Maximum ${MAX_PHOTOS} photos par article.`
+    if (candidates.length > remaining) error = `Maximum ${MAX_PHOTOS} photos par article.`
+
+    setProcessing(true)
+    const ok: DraftPhoto[] = []
+    try {
+      for (const original of candidates.slice(0, remaining)) {
+        const f = await compressPhoto(original)
+        if (f.size > MAX_PHOTO_SIZE) {
+          error = 'Chaque photo doit faire au plus 5 Mo.'
+          continue
+        }
+        ok.push({ key: `${f.name}-${f.size}-${Date.now()}-${ok.length}`, url: URL.createObjectURL(f), file: f })
+      }
+    } finally {
+      setProcessing(false)
+    }
     setFieldErrors((e) => {
       const n = { ...e }
       if (error) n.photos = error
-      else if (photos.length + accepted.length >= MIN_PHOTOS) delete n.photos
-      // Sous le minimum : on conserve le message déjà affiché (ex.
-      // `photosRequired` après une suppression) ; il disparaît dès que le
-      // minimum est atteint.
+      else if (photos.length + ok.length >= MIN_PHOTOS) delete n.photos
       return n
     })
-    if (accepted.length > 0) setPhotos((p) => [...p, ...accepted])
+    if (ok.length > 0) setPhotos((p) => [...p, ...ok].slice(0, MAX_PHOTOS))
   }
 
   const removePhoto = (key: string) => {
@@ -159,13 +173,13 @@ export function SellView() {
   const onDrop = (e: DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files)
+    if (e.dataTransfer.files?.length) void addFiles(e.dataTransfer.files)
   }
 
   /* --- Étapes (wireSell L1177-1190) : seuils alignés sur les règles réelles. */
 
   /** Le bouton reste inactif tant que le minimum de photos n'est pas atteint. */
-  const canSubmit = photos.length >= MIN_PHOTOS
+  const canSubmit = photos.length >= MIN_PHOTOS && !processing
 
   const filled = [
     canSubmit,
@@ -343,7 +357,7 @@ export function SellView() {
                 hidden
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
-                  if (e.target.files) addFiles(e.target.files)
+                  if (e.target.files) void addFiles(e.target.files)
                   e.target.value = ''
                 }}
               />
