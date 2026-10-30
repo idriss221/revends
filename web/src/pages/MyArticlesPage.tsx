@@ -4,7 +4,6 @@ import { api } from '../lib/api'
 import { formatDate, formatFcfa } from '../lib/format'
 import { productStatusBadge } from '../lib/constants'
 import { resolveImageUrl } from '../lib/catalogPhotos'
-import { ResilientImg } from '../components/ui/ResilientImg'
 import { Crumb, SiteEmpty, SiteHead } from '../components/site/SiteBits'
 import { buttonClasses } from '../components/ui/Button'
 import { StatusBadge } from '../components/ui/StatusBadge'
@@ -60,7 +59,7 @@ export function MyArticlesPage() {
                       <td>
                         <div className="prod-cell">
                           {p.images[0] ? (
-                            <ResilientImg src={resolveImageUrl(p.images[0].url)} alt={p.name} className="prod-thumb" />
+                            <img src={resolveImageUrl(p.images[0].url)} alt={p.name} className="prod-thumb" />
                           ) : (
                             <div className="prod-thumb" aria-hidden="true">
                               <Ico name="image" cls="sm" />

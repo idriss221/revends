@@ -5,7 +5,6 @@ import { ErrorMessage } from '../ui/ErrorMessage'
 import { TableSkeleton } from '../ui/Loading'
 import { Pagination } from '../ui/Pagination'
 import { resolveImageUrl } from '../../lib/catalogPhotos'
-import { ResilientImg } from '../ui/ResilientImg'
 
 /**
  * Tableau admin — spec-admin §4.3 (D2). **Point d'entrée unique** des 7 pages à
@@ -229,7 +228,7 @@ export function ProductCell({
   const label = (
     <span className="flex min-w-0 flex-1 items-center gap-3">
       {image ? (
-        <ResilientImg
+        <img
           src={resolveImageUrl(image.url)}
           alt=""
           loading="lazy"

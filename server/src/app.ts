@@ -65,12 +65,6 @@ export function createApp(): express.Express {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
-      contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-          'img-src': ["'self'", 'data:', 'blob:', 'https://*.public.blob.vercel-storage.com'],
-        },
-      },
     }),
   );
 

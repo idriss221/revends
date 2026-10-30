@@ -5,7 +5,6 @@ import { StatusBadge } from '../ui/StatusBadge'
 import type { StatusBadgeKind } from '../../lib/constants'
 import { formatDate, formatFcfa } from '../../lib/format'
 import { resolveImageUrl } from '../../lib/catalogPhotos'
-import { ResilientImg } from '../ui/ResilientImg'
 import type { ProductAdmin, ProductStatus } from '../../lib/types'
 
 /**
@@ -63,7 +62,7 @@ export function AdminProductSheet({ product, onClose, statusLabel, actions }: Ad
         {/* Aperçu — en PREMIER sur mobile (l'utilisateur décide sur l'image) */}
         <div className="max-[968px]:order-1">
           {images[0] ? (
-            <ResilientImg
+            <img
               src={resolveImageUrl(images[0].url)}
               alt={product.name}
               className="h-[240px] w-full rounded-md object-cover"
@@ -82,7 +81,7 @@ export function AdminProductSheet({ product, onClose, statusLabel, actions }: Ad
               <ul className="mt-2 flex flex-wrap gap-2">
                 {images.map((img, i) => (
                   <li key={img.id}>
-                    <ResilientImg
+                    <img
                       src={resolveImageUrl(img.url)}
                       alt={`${product.name} — photo ${i + 1}`}
                       loading="lazy"

@@ -1,10 +1,10 @@
+import { unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { DbClient } from '../db/pool.js';
 import { withTransaction } from '../utils/db.js';
 import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { slugify } from '../utils/slugify.js';
-import { MAX_PHOTOS, MIN_PHOTOS, sniffImageMime } from '../middleware/upload.js';
-import { removePhoto, storePhoto } from './photo-storage.js';
+import { MAX_PHOTOS, MIN_PHOTOS, randomPhotoPath, sniffImageMime } from '../middleware/upload.js';
 import { lazyReleaseForProduct } from './expiry.service.js';
 import { insertNotification } from './notifications.service.js';
 import {
@@ -101,7 +101,10 @@ export interface MeListOptions {
 async function writePhotoFile(file: Express.Multer.File): Promise<string> {
   const mime = sniffImageMime(file.buffer);
   if (!mime) throw badRequest('PHOTO_INVALID_TYPE', 'Formats acceptés : JPEG, PNG, WebP');
-  return storePhoto(file.buffer, mime);
+  const absPath = randomPhotoPath(mime);
+  await writeFile(absPath, file.buffer);
+  const idx = absPath.indexOf('uploads/products');
+  return idx >= 0 ? absPath.slice(idx) : absPath;
 }
 
 /** Contrôle du MIME réel (§9.6) : MAGIC BYTES, pas le header déclaré. */
@@ -113,8 +116,12 @@ function assertValidPhotos(files: Express.Multer.File[]): void {
   }
 }
 
+function resolveUploadPath(publicPath: string): string {
+  return path.resolve(process.cwd(), publicPath);
+}
+
 async function cleanupWritten(written: string[]): Promise<void> {
-  for (const f of written) await removePhoto(f);
+  for (const f of written) await unlink(resolveUploadPath(f)).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -463,6 +470,6 @@ async function applyPhotoChanges(client: DbClient, productId: number, ops: Photo
   await normalizePrimaryImage(client, productId);
 
   for (const p of removedPaths) {
-    void removePhoto(p);
+    if (!p.startsWith('http')) unlink(resolveUploadPath(p)).catch(() => {});
   }
 }

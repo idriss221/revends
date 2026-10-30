@@ -4,7 +4,6 @@ import { api } from '../../lib/api'
 import { formatFcfa } from '../../lib/format'
 import { orderStatusBadge } from '../../lib/constants'
 import { resolveImageUrl } from '../../lib/catalogPhotos'
-import { ResilientImg } from '../ui/ResilientImg'
 import { StatusBadge } from '../ui/StatusBadge'
 import { SiteEmpty } from '../site/SiteBits'
 import { ErrorMessage } from '../ui/ErrorMessage'
@@ -73,7 +72,7 @@ export function SalesSection() {
                       <td>
                         <div className="prod-cell">
                           {o.product.image ? (
-                            <ResilientImg
+                            <img
                               src={resolveImageUrl(o.product.image.url)}
                               alt={o.product.name}
                               className="prod-thumb"

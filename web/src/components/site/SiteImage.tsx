@@ -127,13 +127,11 @@ export function SiteImage({
   ...rest
 }: SiteImageProps) {
   const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
   if (failed) return <span className={className} style={{ display: 'block' }}>{art(kind, col, bg)}</span>
 
-  const base = resolveImageUrl(src)
-  const href = attempt > 0 ? `${base}${base.includes('?') ? '&' : '?'}_r=${attempt}` : base
+  const href = resolveImageUrl(src)
   const srcSet = [0.6, 1, 1.5]
-    .map((m) => `${href} ${Math.round(w * m)}w`)
+    .map((m) => `${resolveImageUrl(src)} ${Math.round(w * m)}w`)
     .join(', ')
 
   return (
@@ -146,10 +144,7 @@ export function SiteImage({
       alt={alt}
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
-      onError={() => {
-        if (attempt < 2) window.setTimeout(() => setAttempt((a) => a + 1), 700 * (attempt + 1))
-        else setFailed(true)
-      }}
+      onError={() => setFailed(true)}
     />
   )
 }
