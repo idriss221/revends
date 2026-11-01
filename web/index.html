@@ -1,12 +1,28 @@
+
 <!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="google-site-verification" content="Sok2t5JNg8uIAJtdyF1O56INwX5xrdQuV7eXxcINv6w" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- Thème clair/sombre appliqué AVANT le premier rendu (anti-flash).
-         Défaut = SOMBRE (« Burgundy Night ») ; seul un choix explicite
-         "light" repasse en clair. Clé de persistance : "rv:theme". -->
+    
+    <!-- SEO Classique pour monter sur Google -->
+    <title>ReVendsen | Friperie en Ligne & Vêtements d'Occasion Pas Cher</title>
+    <meta
+      name="description"
+      content="ReVendsen — La meilleure friperie en ligne pour acheter et vendre vos vêtements et articles d'occasion. Paiement sécurisé, livraison suivie et vendeurs vérifiés !"
+    />
+    <meta name="keywords" content="ReVendsen, revends, friperie en ligne, vetements occasion, seconde main, acheter pas cher, vendre ses vetements, vinted alternative" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph (Pour être à la une sur Facebook, X/Twitter, WhatsApp) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://vercel.app" />
+    <meta property="og:title" content="ReVendsen | Friperie en Ligne & Vêtements d'Occasion" />
+    <meta property="og:description" content="Achetez et vendez vos articles de seconde main en toute confiance. Paiement 100% sécurisé et livraison rapide." />
+    <meta property="og:image" content="https://vercel.appapple-touch-icon.png" />
+
+    <!-- Thème clair/sombre appliqué AVANT le premier rendu (anti-flash) -->
     <script>
       ;(function () {
         var t = null
@@ -19,21 +35,13 @@
         if (m) m.setAttribute('content', mode === 'dark' ? '#11100F' : '#FFFFFF')
       })()
     </script>
-    <!-- Favicons REVENDS (DA §2) : SVG 32 prioritaire, ICO 16/32 en repli. -->
+    
+    <!-- Favicons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-    <!-- Couleur de la barre d'adresse par défaut (thème sombre) : mise à jour par le script ci-dessus. -->
     <meta name="theme-color" content="#11100F" />
-    <meta
-      name="description"
-      content="ReVends — achetez et vendez vos articles d'occasion en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
-    />
-    <!-- Token CSRF pour les requêtes mutantes (POST/PATCH/DELETE).
-         Rempli par le backend via cookie `csrf_token` ou header de réponse.
-         Le client (apiClient.ts) lit ce meta tag en fallback. -->
     <meta name="csrf-token" content="" />
-    <title>ReVends - Donnez une seconde vie aux belles choses</title>
   </head>
   <body>
     <div id="root"></div>
