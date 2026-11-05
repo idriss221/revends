@@ -64,13 +64,16 @@ const envSchema = z.object({
   MAIL_FROM: z.string().default(''),
   SITE_URL: z.string().default('http://localhost:5173'),
 
-  // WhatsApp Business — Cloud API officielle (Meta). Désactivé par défaut :
-  // tant que le token et le Phone Number ID ne sont pas fournis, aucun appel
-  // réseau n'est effectué (dégradation propre, l'e-mail continue).
+  // WhatsApp via Whapi (gate.whapi.cloud). Désactivé par défaut :
+  // tant que le token Whapi n'est pas fourni, aucun appel réseau n'est effectué
+  // (dégradation propre, l'e-mail continue). Les anciens réglages Meta ne sont
+  // pas requis pour ce canal.
   WHATSAPP_ENABLED: z
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  WHAPI_TOKEN: z.string().default(''),
+  WHAPI_API_URL: z.string().default('https://gate.whapi.cloud'),
   WHATSAPP_PHONE_NUMBER_ID: z.string().default(''),
   WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().default(''),
   WHATSAPP_ACCESS_TOKEN: z.string().default(''),
@@ -256,8 +259,7 @@ if (env.NODE_ENV === 'production') {
  */
 const whatsappMissing = (
   [
-    ['WHATSAPP_ACCESS_TOKEN', env.WHATSAPP_ACCESS_TOKEN],
-    ['WHATSAPP_PHONE_NUMBER_ID', env.WHATSAPP_PHONE_NUMBER_ID],
+    ['WHAPI_TOKEN', env.WHAPI_TOKEN],
   ] as const
 )
   .filter(([, value]) => value.length === 0)
@@ -350,6 +352,9 @@ export const config = {
   },
   whatsapp: {
     enabled: whatsappEnabled,
+    provider: 'whapi',
+    apiUrl: env.WHAPI_API_URL || 'https://gate.whapi.cloud',
+    token: env.WHAPI_TOKEN,
     phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,
     businessAccountId: env.WHATSAPP_BUSINESS_ACCOUNT_ID,
     accessToken: env.WHATSAPP_ACCESS_TOKEN,

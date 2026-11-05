@@ -3,22 +3,16 @@ import { logger } from '../utils/logger.js';
 import { normalizePhone } from '../utils/phone.js';
 
 /**
- * WhatsApp Business — Cloud API OFFICIELLE (Meta).
+ * WhatsApp via Whapi (gate.whapi.cloud).
  *
- * Aucune automatisation de WhatsApp Web, aucun Puppeteer/Selenium, aucune API
- * non officielle : uniquement `POST https://graph.facebook.com/<version>/
- * <phone-number-id>/messages` avec un token permanent côté serveur.
+ * Aucune API Meta / Cloud API n'est nécessaire : le numéro est connecté chez
+ * Whapi et les messages sont envoyés par son API HTTP.
  *
  * Règles de fiabilité :
  *  - le token n'est JAMAIS journalisé ni renvoyé (même tronqué) ;
  *  - un échec WhatsApp n'échoue jamais l'action métier ni l'e-mail ;
  *  - timeout court (8 s) : la fonction serverless ne reste pas suspendue ;
- *  - sans template pré-approuvé, on n'envoie qu'un message texte (valable
- *    uniquement dans la fenêtre de 24 h ouverte par l'utilisateur).
- *
- * ⚠️ Les messages BUSINESS-INITIATED (commande, paiement…) exigent un template
- * approuvé par Meta. Renseigner `WHATSAPP_TEMPLATE_NAME` + langue, avec un
- * corps composé de variables {{1}}, {{2}}, {{3}}.
+ *  - `WHATSAPP_ENABLED=false` ou token absent ⇒ canal `SKIPPED`, sans appel réseau.
  */
 
 export interface WhatsAppResult {
@@ -35,11 +29,15 @@ function maskPhone(phone: string): string {
 }
 
 export function whatsappConfigured(): boolean {
-  return config.whatsapp.enabled && Boolean(config.whatsapp.accessToken) && Boolean(config.whatsapp.phoneNumberId);
+  const wa = config.whatsapp as unknown as {
+    enabled?: boolean;
+    token?: string;
+  };
+  return Boolean(wa.enabled && wa.token);
 }
 
 interface SendOptions {
-  /** Paramètres du template ({{1}}, {{2}}…) — ignorés en mode texte. */
+  /** Paramètres historiques — Whapi envoie le message texte final. */
   templateParams?: string[];
   /** Surcharge ponctuelle du template configuré. */
   templateName?: string;
@@ -60,42 +58,26 @@ export async function sendWhatsAppMessage(rawPhone: string, body: string, opts: 
     return { ok: false, skipped: true, error: 'INVALID_PHONE' };
   }
 
-  const { accessToken, phoneNumberId, apiVersion, templateName, templateLang } = config.whatsapp;
-  const template = opts.templateName ?? templateName;
-  const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
+  const wa = config.whatsapp as unknown as {
+    apiUrl?: string;
+    token?: string;
+  };
+  const apiUrl = (wa.apiUrl || 'https://gate.whapi.cloud').replace(/\/+$/, '');
+  // Whapi attend le destinataire (format international, ex. 221770673233).
+  const to = phone.replace(/^\+/, '');
+  const url = `${apiUrl}/messages`;
 
-  // Meta attend le numéro SANS le `+` (format international).
-  const to = phone.slice(1);
-
-  const payload = template
-    ? {
-        messaging_product: 'whatsapp',
-        to,
-        type: 'template',
-        template: {
-          name: template,
-          language: { code: templateLang || 'fr' },
-          components: [
-            {
-              type: 'body',
-              parameters: (opts.templateParams ?? [body]).map((text) => ({ type: 'text', text })),
-            },
-          ],
-        },
-      }
-    : {
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { preview_url: false, body },
-      };
+  const payload = {
+    to,
+    body,
+  };
 
   const startedAt = Date.now();
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${wa.token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -103,9 +85,8 @@ export async function sendWhatsAppMessage(rawPhone: string, body: string, opts: 
     });
 
     if (!res.ok) {
-      // Le corps d'erreur Meta ne contient pas de secret ; on le tronque.
       const detail = (await res.text().catch(() => '')).slice(0, 400);
-      logger.warn('envoi WhatsApp refusé', {
+      logger.warn('envoi WhatsApp Whapi refusé', {
         phone: maskPhone(phone),
         status: res.status,
         detail,
@@ -114,15 +95,15 @@ export async function sendWhatsAppMessage(rawPhone: string, body: string, opts: 
       return { ok: false, status: res.status, error: `HTTP_${res.status}` };
     }
 
-    logger.info('message WhatsApp envoyé', {
+    logger.info('message WhatsApp Whapi envoyé', {
       phone: maskPhone(phone),
-      mode: template ? 'template' : 'text',
+      mode: 'text',
       durationMs: Date.now() - startedAt,
     });
     return { ok: true, status: res.status };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    logger.error('échec envoi WhatsApp', {
+    logger.error('échec envoi WhatsApp Whapi', {
       phone: maskPhone(phone),
       errorMessage: reason,
       durationMs: Date.now() - startedAt,
