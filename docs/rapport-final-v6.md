@@ -1,9 +1,10 @@
 # Rapport final — ReVends V6 (WhatsApp, preuve de paiement, +221, SEO)
 
-**Date** : 4 novembre 2026
+**Date** : 5 novembre 2026
 **Production** : https://revends.vercel.app
-**Déploiement** : `dpl_4fmrtSsFcbhtCMirUbRMYfZ333LR` (READY, alias production)
-**Branche** : `fix/images-vercel-blob` (HEAD `974e47e` + changements V6)
+**Déploiement** : `revends-6biamthh7` (READY, alias production) — correctifs images + e-mail
+**Branche** : `fix/v6-on-799a7ab` — version **dérivée de `799a7ab`** (déploiement valide du 31/10),
+commits `323ebb7` puis `f119b0b`
 
 ---
 
@@ -29,7 +30,11 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 - Aucune régression des routes publiques : `/`, `/shop`, `/catalogue`, `/category`, `/sell`,
   `/login`, `/mes-commandes` répondent **200**.
 - Même structure d'index que la production : script de thème **externe** `/theme-init.js`,
-  bundle hashé, CSP inchangée.
+  bundle hashé.
+- **CSP images corrigée et versionnée** : `img-src 'self' data: blob:
+  https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com`.
+  Sans ces sources, Helmet bloque les photos Vercel Blob (fichier en 200, image vide à l'écran) —
+  c'était la cause des images cassées du déploiement V6. Non-régression : `security-headers.test.ts`.
 - Les URLs déjà indexées sont conservées ; `/sell` reste accessible mais retiré du sitemap (privé).
 - Déploiement par output pré-construit (`vercel build --prebuilt --prod`), procédure validée
   `scripts/deploy-vercel.sh`.
@@ -51,6 +56,13 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
   `payment_proof_rejected_buyer`, `payment_proof_submitted_admin`.
 - Sujets ajoutés dans `mailer.ts` ; aucune adresse ne provient du corps de requête.
 - `MAIL_ENABLED=true` en production.
+- **Correctif 5/11 — cause réelle de la panne e-mail** : la production utilisait
+  `MAIL_HOST=smtp.sendgrid.net` + `MAIL_USER=apikey` (configuration héritée), donc le mot de passe
+  d'application Gmail était présenté au mauvais serveur → `535 authorization grant invalid`.
+  Corrigé en `smtp.gmail.com:587`, `MAIL_USER/MAIL_FROM=revendsen@gmail.com`, STARTTLS.
+  Preuve après redéploiement : log `email envoyé` / `transport: smtp`, sans `EAUTH`.
+- Diagnostic : un contrôle temporaire n'exposant que des empreintes SHA-256 a été déployé puis
+  **retiré** (code source identique au commit, `git diff` vide sur `app.ts`).
 
 ## 6. Workflow commande / paiement
 
@@ -133,9 +145,10 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 
 ## 14. Tests réellement exécutés
 
-- Serveur : `npm test` → **29 suites, 514/514, 0 échec, 0 skip** (`✅ ALL SUITES GREEN`).
-- Web : `npx vitest run` → **235/235, 0 échec**.
-- Nouvelles suites : `payment-proofs.test.ts` (6/6), `phone-221.test.ts` (12/12).
+- Serveur : `npm test` → **30 suites, 514/514, 0 échec, 0 skip** (`✅ ALL SUITES GREEN`).
+- Web : `npx vitest run` (depuis `web/`) → **15 fichiers, 235/235, 0 échec**.
+- Nouvelles suites : `payment-proofs.test.ts` (6/6), `phone-221.test.ts` (12/12),
+  `security-headers.test.ts` (1/1 — verrouille la CSP images).
 - Tests mis à jour pour la règle métier : vendeur non notifié avant paiement (`buy.test.ts`,
   `emails.test.ts`), téléphone normalisé (`checkout.test.ts`), budget de requêtes isolé des effets
   post-commit (`perf-v5.test.ts`), numéros de test dédiés (`helpers.ts`).
@@ -146,16 +159,21 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 
 - `scripts/deploy-vercel.sh` : garde-fou `.env*`, build web, copie `web/dist` → `public/` +
   `server/public/`, `vercel build --prod`, `vercel deploy --prebuilt --prod`.
-- Résultat : **READY**, alias `https://revends.vercel.app`.
-- Contrôles post-déploiement : `/` 200, `/api/health` 200 (`{"status":"ok"}`), `/robots.txt` 200,
-  `/sitemap.xml` 200, assets JS/CSS 200, `/theme-init.js` 200.
+- Résultat : **READY**, alias `https://revends.vercel.app` (`revends-6biamthh7`).
+- Contrôles post-déploiement : `/`, `/shop`, `/catalogue`, `/category`, `/login`, `/register`,
+  `/panier`, `/vendre`, `/api/health` → **200**.
+- Images (sonde navigateur) : `/` 5/5, `/shop` 3/3, `/catalogue` 3/3, fiche produit 5/5 —
+  **0 cassée**. Console : **0 erreur** sur `/`, `/shop`, `/catalogue`, `/login`, `/register`.
+- E-mail : `POST /api/auth/forgot-password` → 202 + log `email envoyé` (`transport: smtp`).
 - Migrations production appliquées manuellement (`RUN_MIGRATIONS=false` en prod) avec sauvegarde.
+  `013_product_image_repair.sql` **rapatriée** dans le dépôt (idempotente, dry-run prod : `UPDATE 0`).
 
 ## 16. Sécurité
 
-- Aucun secret dans le dépôt, le bundle client ou les logs : vérifié par grep sur
-  `assets/index-C8qtnJ9D.js` (`smtp.gmail`, `revendsen@gmail`, `BLOB_READ_WRITE_TOKEN`,
-  `SESSION_SECRET`, `WHATSAPP_ACCESS_TOKEN`, `postgres://` → **0 occurrence**).
+- Aucun secret dans le dépôt, le bundle client ou les logs : vérifié par grep sur le bundle déployé
+  (`assets/index-DqAeYjh7.js` : `smtp.gmail`, `revendsen@gmail`, mot de passe d'application,
+  `BLOB_READ_WRITE_TOKEN`, `SESSION_SECRET`, `WHATSAPP_ACCESS_TOKEN`, `postgres://` →
+  **0 occurrence**).
 - Toutes les valeurs sensibles par variables d'environnement (Vercel / `.env.local` non versionné).
 - Upload : magic bytes, 1 fichier, 5 Mo, nom UUID serveur, dossier dédié `payment-proofs`.
 - Non-divulgation : tiers → `404` (jamais `403`), vendeur ne voit jamais la preuve ni les coordonnées.
@@ -168,9 +186,11 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 | 1 | Token WhatsApp Meta absent | **BLOCKED** | Fournir `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, puis `WHATSAPP_ENABLED=true` |
 | 2 | Template WhatsApp business-initiated non approuvé | **BLOCKED** | Créer/approuver le template Meta et renseigner `WHATSAPP_TEMPLATE_*` |
 | 3 | `RUN_MIGRATIONS=false` en production | Assumé | Appliquer toute nouvelle migration manuellement (sauvegarde + audit) |
-| 4 | `013_product_image_repair.sql` (prod) absent du dépôt | Mineur | Rapatrier le fichier pour éviter une divergence |
+| 4 | ~~`013_product_image_repair.sql` absent du dépôt~~ | **Résolu** | Fichier rapatrié, idempotent, dry-run prod `UPDATE 0` |
 | 5 | Test WhatsApp réel de bout en bout | **BLOCKED** (secrets) | À rejouer après fourniture du token |
 | 6 | Validation Search Console | Manuel | Soumettre `https://revends.vercel.app/sitemap.xml` |
+| 7 | Confiance e-mail (`SPF`/`DKIM` Gmail) | Mineur | Envoi via Gmail : délivrabilité correcte mais sans domaine authentifié ; envisager un domaine + Brevo/Resend à terme |
+| 8 | Mot de passe d'application Gmail passé par la conversation | À traiter | Révoquer/régénérer après validation, mettre à jour `MAIL_PASSWORD`, redéployer |
 
 ---
 
@@ -192,10 +212,14 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 - [x] Typecheck et builds serveur/web OK.
 - [x] Déploiement READY + alias `revends.vercel.app`.
 - [x] `/api/health` 200, `/robots.txt` 200, `/sitemap.xml` 200.
+- [x] Images production : 16/16 chargées (accueil, shop, catalogue, fiche produit), 0 cassée.
+- [x] CSP images versionnée (`blob:` + `*.public.blob.vercel-storage.com`) + test de non-régression.
+- [x] E-mail production réellement envoyé (`email envoyé`, `transport: smtp`, sans `EAUTH`).
 - [x] Tables `payment_proofs` et `notification_deliveries` présentes en production.
 - [x] Migrations production appliquées avec sauvegarde préalable.
 - [x] Journal `docs/journal.md` mis à jour ; contrat `docs/api.md` complété (V6).
 - [ ] WhatsApp réellement envoyé — **bloqué** : token/template Meta manquants.
 
-**Verdict** : 🟢 **GO PRODUCTION** pour l'e-mail, la preuve de paiement, +221 et le SEO.
+**Verdict** : 🟢 **GO PRODUCTION** — images, e-mail, preuve de paiement, +221 et SEO vérifiés en
+production le 5 novembre 2026.
 🟡 **WHATSAPP EN ATTENTE** des secrets Meta (canal désactivé proprement, sans impact sur le reste).

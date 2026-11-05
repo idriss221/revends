@@ -3584,21 +3584,34 @@ qui s'affichent et un e-mail qui fonctionne.
   `MyOrdersPage`, `SalesSection`, `AdminTable`, `AdminProductSheet`, `SearchSuggest` : plus d'icône
   « image cassée » ni de texte alternatif brut.
 
-### Cause racine n°3 (e-mail) — bloquée côté secret
-- En production, le runtime répondait `email désactivé (MAIL_ENABLED=false)`.
-  → `MAIL_ENABLED=true` réappliqué sur l'environnement Production Vercel.
-- Le secret `MAIL_PASSWORD` stocké est **refusé par Google** :
-  `535 5.7.8 Username and Password not accepted` (`EAUTH`), testé localement avec le mot de passe
-  brut (19 caractères) **et** compacté sans espaces (16 caractères). Jetons révoqués/expirés
-  (`535 Authentication failed: The provided authorization grant is invalid, expired, or revoked`).
-- Action utilisateur requise : nouveau **mot de passe d'application** Gmail (16 caractères) pour
-  `revendsen@gmail.com`, puis mise à jour de `MAIL_PASSWORD` et redéploiement.
+### Cause racine n°3 (e-mail) — mauvais serveur SMTP, pas mauvais mot de passe
+Trois symptômes successifs, un seul vrai coupable :
+
+1. `email désactivé (MAIL_ENABLED=false)` au runtime → `MAIL_ENABLED=true` réappliqué en Production.
+2. `535 Authentication failed: The provided authorization grant is invalid, expired, or revoked`
+   à chaque envoi. Le mot de passe Gmail testé en local répondait pourtant `VERIFY_OK` sur
+   `smtp.gmail.com:587`. Le message prod différait de l'erreur locale de mot de passe
+   (`Username and Password not accepted`) : **ce n'était pas la même méthode d'authentification**.
+3. Diagnostic temporaire (empreintes SHA-256 uniquement, aucun secret exposé, retiré après mesure)
+   → la variable réellement injectée en production était :
+   `MAIL_HOST=smtp.sendgrid.net`, `MAIL_USER=apikey`, alors que le mot de passe stocké était bien
+   le nouveau mot de passe d'application Gmail (empreinte identique).
+   **Le projet Vercel était configuré pour SendGrid** : Gmail recevait la requête d'un autre
+   serveur, d'où le rejet. Le secret n'a jamais été en cause.
+
+**Correctif** : `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`, `MAIL_SECURE=false`,
+`MAIL_USER=revendsen@gmail.com`, `MAIL_FROM=revendsen@gmail.com`, `MAIL_ENABLED=true`.
+Vérifié après redéploiement : `email envoyé`, `transport: smtp`, sans `EAUTH`.
+
+Leçon : en cas d'échec SMTP en production, **lire l'environnement réellement injecté** (hôte,
+utilisateur, empreinte du secret) au lieu de comparer au `.env.local` local.
 
 ### Livraison
 - Branche `fix/v6-on-799a7ab` créée depuis `799a7ab`, patch V6 réappliqué, correctif CSP ajouté.
-- Commit `323ebb7` (50 fichiers, parent `799a7ab`) — **non poussé**.
-- Déploiement production `revends-4onl62hcg` (`dpl_Dw1M3bpL8eNmNrkC5Kv81DJAbw9A`), alias
-  `https://revends.vercel.app` basculé.
+- Commit `323ebb7` (50 fichiers, parent `799a7ab`) — **non poussé**, suivi de `f119b0b` (journal +
+  migration rapatriée).
+- Déploiements production successifs, alias `https://revends.vercel.app` basculé à chaque fois ;
+  builds finaux : images `dpl_Dw1M3bpL8eNmNrkC5Kv81DJAbw9A`, e-mail `dpl_` (revends-6biamthh7).
 
 ### Preuves exécutées (2026-11-05)
 - **Serveur** : `npm test` → **30 suites, 514/514, 0 échec** (`✅ ALL SUITES GREEN`), dont
@@ -3612,13 +3625,19 @@ qui s'affichent et un e-mail qui fonctionne.
   `/api/health` → **200**.
 - **Production — images** : sur `/shop`, sonde `new Image()` → **3/3 photos Blob chargées**
   (1024×1024, 1024×1024, 1254×1024), **0 échec**. Catégories `hero.jpg` et `bottom-banner.jpg` → 200.
-- **Production — e-mail** : `POST /api/auth/forgot-password` → 202, puis logs runtime
-  `échec d'envoi d'email`, `transport: smtp`, `attempts: 2`, `EAUTH 535` → **confirme le blocage
-  secret, pas un défaut de code**.
+- **Production — e-mail (après correctif SMTP)** : `POST /api/auth/forgot-password` → **202**, puis
+  log runtime `{"level":"info","msg":"email envoyé","event":"password_reset","transport":"smtp"}` —
+  **aucun `EAUTH`, aucun `échec d'envoi`**.
+- **Production — navigateur** : `/`, `/shop`, `/catalogue`, `/panier`, `/login`, `/register` →
+  **0 erreur console** ; `/` 5/5 images, `/shop` 3/3, `/catalogue` 3/3, fiche produit 5/5,
+  **0 image cassée**, **0 placeholder**.
+- **Production — +221** : `/register` champ `phone` prérempli `+221 `, libellé « NUMÉRO WHATSAPP ».
+- **Secrets** : grep du bundle client (`smtp.gmail`, `revendsen@gmail`, mot de passe, `SESSION_SECRET`,
+  `postgres://`) → **0 occurrence**.
 
 ### Reste à faire
-1. Nouveau mot de passe d'application Gmail → `MAIL_PASSWORD` (Production) → redéploiement →
-   vérifier une ligne `email envoyé` sans `EAUTH`.
-2. Secrets Meta WhatsApp (`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`,
+1. Secrets Meta WhatsApp (`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`,
    template pré-approuvé) toujours absents → `WHATSAPP_ENABLED=false`.
-3. Rapatrier `013_product_image_repair.sql` (présent dans `schema_migrations` prod, absent du dépôt).
+2. Le mot de passe d'application Gmail a transité par la conversation : à **révoquer et régénérer**
+   dès que l'utilisateur le souhaite (procédure : Google → Sécurité → Mots de passe des applications),
+   puis remplacer `MAIL_PASSWORD` sur Vercel et redéployer.
