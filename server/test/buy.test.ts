@@ -183,12 +183,15 @@ describe('Droits d’accès aux commandes (CA-BUY01-04, §1.4)', () => {
     assert.ok(items.some((o: any) => o.id === orderId));
   });
 
-  it('création de commande valide : notifications N3 (acheteur) + N5 (vendeur) INSÉRÉES', async () => {
+  it('création de commande valide : l’acheteur est notifié, JAMAIS le vendeur avant paiement', async () => {
     const buyerNotif = await buyer.get('/api/me/notifications');
     const types = (buyerNotif.body as any).items.map((n: any) => n.type);
     assert.ok(types.includes('order_created'), 'acheteur notifié');
+    // Règle métier : une commande non payée n'est pas valide — le vendeur ne
+    // doit recevoir AUCUNE notification (in-app ni e-mail) avant validation du
+    // paiement par l'admin.
     const sellerNotif = await seller.get('/api/me/notifications');
     const stypes = (sellerNotif.body as any).items.map((n: any) => n.type);
-    assert.ok(stypes.includes('article_reserved'), 'vendeur notifié');
+    assert.ok(!stypes.includes('article_reserved'), 'le vendeur ne doit pas être notifié avant paiement');
   });
 });

@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { formatDate, formatFcfa } from '../lib/format'
 import { orderStatusBadge } from '../lib/constants'
 import { resolveImageUrl } from '../lib/catalogPhotos'
+import { ResilientImg } from '../components/ui/ResilientImg'
 import { Crumb, SiteEmpty, SiteHead } from '../components/site/SiteBits'
 import { StatusBadge } from '../components/ui/StatusBadge'
 import { TableSkeleton } from '../components/ui/Loading'
@@ -61,7 +62,7 @@ export function MyOrdersPage() {
                       <td>
                         <div className="prod-cell">
                           {o.product.image ? (
-                            <img src={resolveImageUrl(o.product.image.url)} alt={o.product.name} className="prod-thumb" />
+                            <ResilientImg src={resolveImageUrl(o.product.image.url)} alt={o.product.name} className="prod-thumb" />
                           ) : (
                             <div className="prod-thumb" aria-hidden="true">
                               <Ico name="image" cls="sm" />

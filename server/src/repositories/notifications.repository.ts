@@ -22,7 +22,12 @@ export type NotificationType =
   // V4 — étape SHIPPED (Prête/Expédiée, DDL 006).
   | 'order_shipped'
   // V5 — suppression administrative d'un article (C4, migration 009).
-  | 'article_deleted';
+  | 'article_deleted'
+  // Preuve de paiement (migration 013).
+  | 'payment_proof_submitted'
+  | 'payment_proof_approved'
+  | 'payment_proof_rejected'
+  | 'payment_instructions';
 
 const NOTIFICATION_COLUMNS = 'id, type, title, message, read_at, created_at';
 

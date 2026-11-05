@@ -37,6 +37,7 @@ import type {
   ProductListParams,
   ProductsResponse,
   RegisterPayload,
+  PaymentProof,
   SearchSuggestionsResponse,
   SelfUser,
 } from './types'
@@ -275,6 +276,21 @@ export class ApiClient {
     return request<{ order: OrderDetail }>(`/api/orders/${encodeURIComponent(String(id))}`)
   }
 
+  /**
+   * Soumet une preuve de paiement (capture). ⚠️ Le statut de la commande ne
+   * change PAS : seule une revue admin peut valider le paiement.
+   */
+  submitPaymentProof(id: number, file: File, note?: string): Promise<{ proof: PaymentProof }> {
+    const form = new FormData()
+    form.append('proof', file)
+    if (note && note.trim()) form.append('note', note.trim())
+    return request<{ proof: PaymentProof }>(
+      `/api/orders/${encodeURIComponent(String(id))}/payment-proof`,
+      { method: 'POST', body: form },
+      TIMEOUTS.command,
+    )
+  }
+
   /* --- Mes articles --- */
 
   myProducts(): Promise<MyProductsResponse> {
@@ -407,6 +423,18 @@ export class ApiClient {
 
   adminOrderDetail(id: number): Promise<{ order: AdminOrderDetail }> {
     return request<{ order: AdminOrderDetail }>(`/api/admin/orders/${id}`)
+  }
+
+  /** Revue d'une preuve de paiement. APPROVED valide réellement le paiement côté serveur. */
+  reviewPaymentProof(
+    id: number,
+    proofId: number,
+    body: { decision: 'APPROVED' | 'REJECTED'; reason?: string; reference?: string },
+  ): Promise<{ order: AdminOrderDetail }> {
+    return request<{ order: AdminOrderDetail }>(
+      `/api/admin/orders/${id}/payment-proof/${proofId}/review`,
+      { method: 'POST', body: JSON.stringify(body) },
+    )
   }
 
   confirmPayment(id: number, body: { method: string; reference?: string }): Promise<{ order: AdminOrderDetail }> {

@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { currentUser, requireAuth, requireUser } from '../middleware/auth.js';
-import { checkoutSchema, createOrderSchema, idParamSchema } from '../utils/validation.js';
+import { uploadPaymentProof } from '../middleware/upload.js';
+import { checkoutSchema, createOrderSchema, idParamSchema, paymentProofSchema } from '../utils/validation.js';
 import { checkout, createOrder, getOrderForUser } from '../services/orders.service.js';
+import { submitPaymentProof } from '../services/payment-proofs.service.js';
 
 export const ordersRouter = Router();
 
@@ -24,6 +26,17 @@ ordersRouter.get('/:id', requireAuth, async (req, res) => {
   const user = currentUser(res);
   const { id } = idParamSchema.parse(req.params);
   res.json(await getOrderForUser(id, user));
+});
+
+// POST /api/orders/:id/payment-proof — l'acheteur soumet une capture.
+// ⚠️ Une preuve N'EST PAS un paiement validé : statut inchangé (PAYMENT_PENDING),
+// vendeur non notifié ; seul un admin peut approuver.
+ordersRouter.post('/:id/payment-proof', requireUser, uploadPaymentProof.single('proof'), async (req, res) => {
+  const user = currentUser(res);
+  const { id } = idParamSchema.parse(req.params);
+  const { note } = paymentProofSchema.parse((req.body ?? {}) as Record<string, unknown>);
+  const file = req.file as Express.Multer.File | undefined;
+  res.status(201).json(await submitPaymentProof(user.id, id, note ?? null, file));
 });
 
 // Les routes d'administration des commandes vivent dans `admin.routes.ts`

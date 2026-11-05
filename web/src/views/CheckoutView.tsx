@@ -38,7 +38,7 @@ function validate(form: typeof INITIAL): FieldErrors {
   const errors: FieldErrors = {}
   if (form.name.trim().length < 2) errors.name = 'Veuillez saisir votre nom complet.'
   if (form.phone.trim().length < 8 || !/^[+\d][\d\s().+-]{5,}$/.test(form.phone.trim())) {
-    errors.phone = 'Numéro de téléphone invalide (ex. 07 07 00 00 00).'
+    errors.phone = 'Numéro WhatsApp invalide (ex. 77 123 45 67 ou +221 77 123 45 67).'
   }
   if (form.city.trim().length < 2) errors.city = 'Veuillez saisir votre ville.'
   if (form.address.trim().length < 5) errors.address = 'Veuillez saisir votre adresse de livraison.'
@@ -228,13 +228,13 @@ export function CheckoutView() {
           </div>
 
           <div className="field">
-            <label htmlFor="ckPhone">Téléphone</label>
+            <label htmlFor="ckPhone">Numéro WhatsApp</label>
             <input
               className={`inp${errors.phone ? ' bad' : ''}`}
               id="ckPhone"
               type="tel"
               autoComplete="tel"
-              placeholder="07 07 00 00 00"
+              placeholder="77 123 45 67"
               required
               value={form.phone}
               onChange={(e) => setField('phone', e.target.value)}

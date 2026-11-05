@@ -6,6 +6,7 @@ import { insertNotification } from './notifications.service.js';
 import { buildAdminProduct, loadImagesBatch, serializeAdminProductRow } from './products.service.js';
 import { getAdminOrderDetail, loadOrderListParts, updateOrderStatus } from './orders.service.js';
 import { queueMail } from '../mail/queue.js';
+import { notifyUser, whatsappPaymentConfirmed, whatsappSellerNewOrder } from './notification-dispatch.service.js';
 import { formatFCFA, serializeAdminOrder, serializeAdminUser, serializeHistoryRow, type UserRow, type OrderStatus } from '../utils/serializers.js';
 import {
   countAdminHistory,
@@ -201,43 +202,65 @@ export async function listAdminOrders(opts: { status?: string; payout?: string; 
 // ---------------------------------------------------------------------------
 
 export async function confirmPayment(adminId: number, orderId: number, input: { method: string; reference?: string }): Promise<Record<string, unknown>> {
-  await withTransaction(async (client) => {
-    const order = await lockOrderWithPayment(client, orderId);
-    if (!order) throw notFound('ORDER_NOT_FOUND', 'Commande introuvable');
-    // Accepte PAYMENT_PENDING (flux standard) OU PRODUCT_RECEIVED (paiement à la livraison)
-    const fromStatus = order.status as OrderStatus;
-    if (!['PAYMENT_PENDING', 'PRODUCT_RECEIVED'].includes(fromStatus)) {
-      throw invalidTransition(fromStatus);
-    }
-
-    await updateOrderStatus(client, orderId, fromStatus, 'PAID', 'admin', null);
-    await updateOrderStatus(client, orderId, 'PAID', 'PRODUCT_WAITING', 'system', 'Produit en attente');
-
-    const sold = await markProductSold(client, order.product_id);
-    if (!sold) throw conflict('PRODUCT_NOT_RESERVED', "Le produit n'est plus réservé — paiement annulé");
-    await updatePaymentPaid(client, orderId, input.method, input.reference ?? null);
-    await insertPayout(client, orderId, order.seller_id, order.seller_amount, 'PENDING');
-    await insertAdminAction(client, {
-      adminId,
-      action: 'payment.confirmed',
-      targetType: 'order',
-      targetId: orderId,
-      description: `Paiement acheteur confirmé — ${order.order_number} — ${formatFCFA(order.amount)} FCFA`,
-    });
-    await insertNotification(client, order.buyer_id, 'payment_confirmed', `Paiement confirmé pour ${order.order_number}`, order.product_name);
-    await insertNotification(client, order.seller_id, 'order_product_waiting', `Produit en attente pour ${order.order_number}`, order.product_name);
-    queueMail(order.buyer_id, 'payment_confirmed_buyer', {
-      orderNumber: order.order_number,
-      amountFcfa: order.amount,
-      linkPath: `/mes-commandes/${order.id}`,
-    });
-    queueMail(order.seller_id, 'payment_confirmed_seller', {
-      productName: order.product_name,
-      amountFcfa: order.seller_amount,
-      linkPath: '/mes-articles',
-    });
-  });
+  await withTransaction((client) => confirmPaymentInTransaction(client, adminId, orderId, input));
   return { order: (await getAdminOrderDetail(orderId)).order };
+}
+
+/**
+ * Cœur de la validation de paiement, réutilisable DANS une transaction
+ * existante (revue d'une preuve de paiement). Ne notifie le vendeur qu'APRÈS
+ * la validation — jamais à la création de la commande.
+ */
+export async function confirmPaymentInTransaction(
+  client: DbClient,
+  adminId: number,
+  orderId: number,
+  input: { method: string; reference?: string },
+): Promise<void> {
+  const order = await lockOrderWithPayment(client, orderId);
+  if (!order) throw notFound('ORDER_NOT_FOUND', 'Commande introuvable');
+  // Accepte PAYMENT_PENDING (flux standard) OU PRODUCT_RECEIVED (paiement à la livraison)
+  const fromStatus = order.status as OrderStatus;
+  if (!['PAYMENT_PENDING', 'PRODUCT_RECEIVED'].includes(fromStatus)) {
+    throw invalidTransition(fromStatus);
+  }
+
+  await updateOrderStatus(client, orderId, fromStatus, 'PAID', 'admin', null);
+  await updateOrderStatus(client, orderId, 'PAID', 'PRODUCT_WAITING', 'system', 'Produit en attente');
+
+  const sold = await markProductSold(client, order.product_id);
+  if (!sold) throw conflict('PRODUCT_NOT_RESERVED', "Le produit n'est plus réservé — paiement annulé");
+  await updatePaymentPaid(client, orderId, input.method, input.reference ?? null);
+  await insertPayout(client, orderId, order.seller_id, order.seller_amount, 'PENDING');
+  await insertAdminAction(client, {
+    adminId,
+    action: 'payment.confirmed',
+    targetType: 'order',
+    targetId: orderId,
+    description: `Paiement acheteur confirmé — ${order.order_number} — ${formatFCFA(order.amount)} FCFA`,
+  });
+  await insertNotification(client, order.buyer_id, 'payment_confirmed', `Paiement confirmé pour ${order.order_number}`, order.product_name);
+  await insertNotification(client, order.seller_id, 'order_product_waiting', `Produit en attente pour ${order.order_number}`, order.product_name);
+  notifyUser({
+    event: 'payment_confirmed_buyer',
+    idempotencyKey: `payment_confirmed_buyer:${order.id}:${order.buyer_id}`,
+    userId: order.buyer_id,
+    mail: {
+      event: 'payment_confirmed_buyer',
+      vars: { orderNumber: order.order_number, amountFcfa: order.amount, linkPath: `/mes-commandes/${order.id}` },
+    },
+    whatsapp: { body: whatsappPaymentConfirmed(order.order_number, order.amount) },
+  });
+  notifyUser({
+    event: 'payment_confirmed_seller',
+    idempotencyKey: `payment_confirmed_seller:${order.id}:${order.seller_id}`,
+    userId: order.seller_id,
+    mail: {
+      event: 'payment_confirmed_seller',
+      vars: { productName: order.product_name, amountFcfa: order.seller_amount, linkPath: '/mes-articles' },
+    },
+    whatsapp: { body: whatsappSellerNewOrder(order.order_number, order.product_name, order.seller_amount) },
+  });
 }
 
 export async function markProductReceived(adminId: number, orderId: number, note?: string): Promise<Record<string, unknown>> {

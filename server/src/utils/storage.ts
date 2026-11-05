@@ -33,6 +33,8 @@ const EXT_BY_MIME: Record<string, string> = {
 
 /** Dossier logique (aussi utilisé comme préfixe de chemin dans le store Blob). */
 const PUBLIC_DIR = 'uploads/products';
+/** Preuves de paiement : dossier séparé, jamais exposé comme photo produit. */
+const PROOF_DIR = 'uploads/payment-proofs';
 
 export function blobStorageEnabled(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
@@ -74,6 +76,32 @@ export async function savePhoto(buffer: Buffer, mime: string): Promise<string> {
   const absPath = path.join(config.uploadDir, filename);
   await writeFile(absPath, buffer);
   return `${PUBLIC_DIR}/${filename}`;
+}
+
+/**
+ * Écrit une preuve de paiement (capture). Même logique que `savePhoto` mais
+ * dans un dossier dédié : une preuve n'est PAS une photo publique de produit.
+ */
+export async function savePaymentProof(buffer: Buffer, mime: string): Promise<string> {
+  const filename = `${crypto.randomUUID()}.${extFor(mime)}`;
+
+  if (blobStorageEnabled()) {
+    const { url } = await put(`${PROOF_DIR}/${filename}`, buffer, {
+      access: 'public',
+      contentType: mime,
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    logger.info('preuve de paiement écrite (blob)', { bytes: buffer.length });
+    return url;
+  }
+
+  const dir = path.resolve(process.cwd(), PROOF_DIR);
+  const { mkdir, writeFile: write } = await import('node:fs/promises');
+  await mkdir(dir, { recursive: true });
+  await write(path.join(dir, filename), buffer);
+  logger.info('preuve de paiement écrite (disque)', { bytes: buffer.length });
+  return `${PROOF_DIR}/${filename}`;
 }
 
 /** Supprime une photo (best effort) — utilisée en compensation et au retrait. */

@@ -3470,3 +3470,90 @@ oubliqué, overflow admin.
 run: mvuqgiqd-oq90pcmh — produit #844
 Images cassées: 0 sur 13 étapes
 Verdict: GO PRODUCTION
+
+---
+
+## 2026-11-04 — V6 : WhatsApp Cloud API, preuve de paiement sécurisée, numéros +221, SEO
+
+### Objectif
+Finaliser la production `https://revends.vercel.app` sans régresser la version en ligne :
+notifications e-mail + WhatsApp Business officielles, workflow « commande non payée = invalide »
+avec preuve de paiement validée côté serveur, numéros sénégalais +221 par défaut, SEO consolidé.
+
+### Livré
+**Base de données (Neon production + base de test)**
+- `013_payment_proofs.sql` : enum `payment_proof_status`, table `payment_proofs`, 4 types de
+  notification, table `notification_deliveries` (idempotence e-mail/WhatsApp).
+- `014_phone_221_migration.sql` : migration **contrôlée** des anciens `+225` sénégalais (9 chiffres,
+  mobile `7…`) vers `+221`, journal `phone_migration_audit`, **aucune** modification des numéros
+  ivoiriens (8 ou 10 chiffres) ; anti-doublon renforcé (deux candidats vers le même `+221` → un seul
+  corrigé, l'autre journalisé `skipped_duplicate`) pour ne jamais violer l'unicité `users.phone`.
+
+**Backend**
+- `server/src/utils/phone.ts` + `normalizePhone()` dans `registerSchema`/`shippingSchema` (messages
+  « Numéro WhatsApp ») ; indicatif étranger explicite préservé.
+- `server/src/services/notification-dispatch.service.ts` : dispatcher e-mail + WhatsApp indépendant
+  (`Promise.allSettled`), idempotent via `notification_deliveries`, retries max 3, jamais bloquant.
+  Correctif : `markDelivery` typait mal `$2` (`inconsistent types deduced`) → les livraisons
+  restaient `PENDING`. Désormais `SENT`/`FAILED` réellement écrits.
+- `server/src/whatsapp/whatsapp.service.ts` : Cloud API Graph officielle, timeout 8 s, numéro masqué,
+  ne lève jamais ; `WHATSAPP_ENABLED=false` par défaut.
+- `server/src/services/payment-proofs.service.ts` : soumission acheteur + revue admin.
+  `APPROVED` réutilise `confirmPaymentInTransaction` (validation **réelle** du paiement, puis
+  notifications vendeur) ; `REJECTED` exige un motif et laisse la commande en `PAYMENT_PENDING`.
+- `orders.service.ts` : **plus aucune notification vendeur** à la création d'une commande
+  (in-app, e-mail et WhatsApp) ; l'acheteur est notifié ; les preuves sont attachées aux vues
+  acheteur et admin (jamais vendeur).
+- Routes : `POST /api/orders/:id/payment-proof`, `POST /api/admin/orders/:id/payment-proof/:proofId/review`.
+
+**Frontend web**
+- Inscription : champ « Numéro WhatsApp » prérempli `+221 `, placeholder `77 123 45 67`.
+- Checkout : libellé « Numéro WhatsApp », validation et message d'erreur alignés Sénégal.
+- `MyOrderDetailPage` : envoi d'une capture (JPEG/PNG/WebP) + note, liste des preuves et statuts.
+- `AdminOrderDetailPage` : accepter (valide le paiement) / refuser avec motif obligatoire.
+- `api.ts`/`types.ts` : `PaymentProof`, `submitPaymentProof`, `reviewPaymentProof`.
+
+**SEO**
+- `web/index.html` : title/description ciblés (« ReVendsen », « revends », « revends Sénégal »,
+  « marketplace »), canonical, OG, Twitter, JSON-LD Organization + WebSite (SearchAction),
+  `theme-init.js` externe (CSP `script-src 'self'` respectée).
+- `robots.txt` : pages privées exclues, sitemap déclaré. `sitemap.xml` : `/`, `/shop`, `/catalogue`,
+  `/category` — `/sell` retiré (privé), aucune URL publique existante supprimée.
+- Route SPA `/catalogue` ajoutée (elle était dans le sitemap sans route).
+
+### Preuves exécutées (2026-11-04)
+- **Serveur** : `npm test` → **29 suites, 514/514 tests, 0 échec** (`✅ ALL SUITES GREEN`).
+  Nouvelles suites : `phone-221.test.ts` 12/12, `payment-proofs.test.ts` 6/6.
+- **Web** : `npx vitest run` → **235/235**, 0 échec.
+- **Typecheck** : `tsc --noEmit` serveur OK ; `tsc -b` web OK.
+- **Build** : `vite build` OK (`dist/index.html` 5,18 Ko, `assets/index-C8qtnJ9D.js`), `tsc -p` serveur OK.
+- **Migration SQL validée à blanc** sur PostgreSQL 16 : deux candidats identiques → 1 `corrected`
+  + 1 `skipped_duplicate`, ivoiriens `07…`/`05…` → `skipped_foreign`, aucun conflit d'unicité.
+- **Déploiement** : `scripts/deploy-vercel.sh` → `dpl_4fmrtSsFcbhtCMirUbRMYfZ333LR`,
+  alias `https://revends.vercel.app` (READY).
+- **Production** : `/` 200 (title, description, canonical, JSON-LD, `/theme-init.js`,
+  `/assets/index-C8qtnJ9D.js`), `/robots.txt` 200, `/sitemap.xml` 200, `/api/health` 200
+  (`{"status":"ok"}`), `/catalogue` 200, assets JS/CSS 200.
+- **Navigateur (production)** : `/` et `/catalogue` sans erreur console ; `/register` affiche
+  « Numéro WhatsApp », champ prérempli `+221 `.
+- **Migrations production (Neon)** appliquées manuellement (`RUN_MIGRATIONS=false` en prod) :
+  `013_payment_proofs.sql`, `014_phone_221_migration.sql`. Sauvegarde préalable
+  `/tmp/opencode/users-phone-backup-20261104-103213.tsv` (28 lignes).
+  Audit : **22 `skipped_foreign`**, **0 `corrected`** (aucun ancien `+225` sénégalais en base),
+  **28 utilisateurs avant = 28 après**, 28 téléphones distincts.
+  Tables `payment_proofs` et `notification_deliveries` présentes.
+
+### Risques / points ouverts
+1. **BLOCKED — token WhatsApp Meta** : seuls Phone Number ID `1402477729623665`, WABA ID
+   `1134631982481889`, App ID `1106613282161028` sont connus. `WHATSAPP_ACCESS_TOKEN`,
+   `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` absents → `WHATSAPP_ENABLED=false`, canal
+   `SKIPPED`. L'e-mail fonctionne indépendamment.
+2. **Template WhatsApp business-initiated** non pré-approuvé : hors fenêtre de 24 h, Meta exige un
+   template validé (`WHATSAPP_TEMPLATE_*` documentés dans `.env.example`).
+3. `RUN_MIGRATIONS=false` en production : toute nouvelle migration doit être appliquée
+   manuellement (procédure ci-dessus, avec sauvegarde).
+4. La production a appliqué `013_product_image_repair.sql` (absent du dépôt local) : la table
+   `schema_migrations` contient donc une migration d'une autre branche. Aucun impact sur V6,
+   à rapatrier dans le dépôt pour éviter une divergence future.
+5. WhatsApp réel non testable de bout en bout sans les secrets Meta (tests unitaires et
+   `WHATSAPP_ENABLED=false` couverts ; e-mail prouvé par la suite `emails.test.ts`).

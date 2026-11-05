@@ -250,6 +250,10 @@ function subjectOf(event: MailEvent): string {
     order_cancelled: 'Votre commande a été annulée',
     order_completed_buyer: 'Votre commande est terminée',
     password_reset: 'Réinitialisation de votre mot de passe',
+    payment_instructions_buyer: 'Instructions de paiement — ReVends',
+    payment_proof_received_buyer: 'Preuve de paiement reçue — vérification en cours',
+    payment_proof_rejected_buyer: 'Preuve de paiement refusée — action requise',
+    payment_proof_submitted_admin: 'Nouvelle preuve de paiement à vérifier',
     reservation_expired_seller: 'La réservation d\'un de vos articles a expiré',
   };
   return map[event];

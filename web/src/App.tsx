@@ -74,6 +74,7 @@ export function App() {
 
         {/* ── Catalogue (la « boutique » de la référence) ────────────── */}
         <Route path="/shop" element={<ShopView />} />
+        <Route path="/catalogue" element={<ShopView />} />
         <Route path="/search" element={<ShopView />} />
         {/* `/category` DOIT exister : c'est la cible du lien « Catégories » de la
             navbar et de « Toutes les catégories » du footer (CA-V5-137, RG-V5-08). */}

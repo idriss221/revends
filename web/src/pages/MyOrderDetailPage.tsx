@@ -1,9 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import type { ReactNode } from 'react'
 import { api } from '../lib/api'
 import { formatCountdown, formatDateTime, formatFcfa } from '../lib/format'
 import { orderStatusBadge, PAYMENT_METHODS } from '../lib/constants'
+import { useToast } from '../lib/toast'
+import type { PaymentProof } from '../lib/types'
 import { Crumb, SiteHead } from '../components/site/SiteBits'
 import { StatusBadge } from '../components/ui/StatusBadge'
 import { PageLoader } from '../components/ui/Loading'
@@ -24,12 +27,37 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   )
 }
 
+/** Libellé/badge d'une preuve de paiement (une pièce, pas une validation). */
+function proofStatus(proof: PaymentProof): { kind: 'pending' | 'approved' | 'rejected'; label: string } {
+  if (proof.status === 'APPROVED') return { kind: 'approved', label: 'Acceptée' }
+  if (proof.status === 'REJECTED') return { kind: 'rejected', label: 'Refusée' }
+  return { kind: 'pending', label: 'En vérification' }
+}
+
 /** Détail d'une commande — vocabulaire Bureau. */
 export function MyOrderDetailPage() {
   const { id = '' } = useParams()
+  const qc = useQueryClient()
+  const toast = useToast()
+  const [proofFile, setProofFile] = useState<File | null>(null)
+  const [proofNote, setProofNote] = useState('')
   const order = useQuery({
     queryKey: ['my-order', id],
     queryFn: () => api.myOrderDetail(id),
+  })
+
+  const submitProof = useMutation({
+    mutationFn: () => api.submitPaymentProof(Number(id), proofFile!, proofNote),
+    onSuccess: () => {
+      toast('success', 'Preuve envoyée. La commande reste en attente jusqu’à validation par notre équipe.')
+      setProofFile(null)
+      setProofNote('')
+      qc.invalidateQueries({ queryKey: ['my-order', id] })
+      qc.invalidateQueries({ queryKey: ['my-orders'] })
+    },
+    onError: (err) => {
+      toast('error', err instanceof Error && err.message ? err.message : 'Envoi de la preuve impossible.')
+    },
   })
 
   return (
@@ -100,6 +128,75 @@ export function MyOrderDetailPage() {
                   </dl>
                 </div>
               </div>
+
+              {o.role === 'buyer' && (
+                <div className="box">
+                  <h3>Preuve de paiement</h3>
+                  {(o.paymentProofs?.length ?? 0) === 0 && (
+                    <p className="muted">
+                      Aucune preuve envoyée. Tant que le paiement n’est pas validé par notre équipe,
+                      la commande n’est pas confirmée et le vendeur n’est pas prévenu.
+                    </p>
+                  )}
+                  {o.paymentProofs && o.paymentProofs.length > 0 && (
+                    <ul className="proof-list">
+                      {o.paymentProofs.map((proof) => {
+                        const badge = proofStatus(proof)
+                        return (
+                          <li key={proof.id} className="proof-item">
+                            <a href={proof.fileUrl} target="_blank" rel="noopener noreferrer">
+                              <Ico name="camera" cls="sm" /> Voir la capture
+                            </a>
+                            <StatusBadge kind={badge.kind} label={badge.label} />
+                            <span className="muted">{formatDateTime(proof.createdAt)}</span>
+                            {proof.status === 'REJECTED' && proof.rejectionReason && (
+                              <span className="err show">Motif : {proof.rejectionReason}</span>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+
+                  {o.status === 'PAYMENT_PENDING' && o.payment.status !== 'PAID' && (
+                    <form
+                      className="form proof-upload"
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        if (proofFile) submitProof.mutate()
+                      }}
+                    >
+                      <div className="field">
+                        <label htmlFor="proofFile">Capture du paiement (JPEG, PNG ou WebP)</label>
+                        <input
+                          className="inp"
+                          id="proofFile"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                          required
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor="proofNote">Référence / note (optionnel)</label>
+                        <input
+                          className="inp"
+                          id="proofNote"
+                          type="text"
+                          maxLength={500}
+                          value={proofNote}
+                          onChange={(e) => setProofNote(e.target.value)}
+                          placeholder="Ex. transaction Orange Money 123456"
+                        />
+                      </div>
+                      <button className="btn" type="submit" disabled={!proofFile || submitProof.isPending}>
+                        <Ico name="camera" cls="sm" />{' '}
+                        {submitProof.isPending ? 'Envoi…' : 'Envoyer la preuve de paiement'}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
 
               {(o.deliveryCarrier || o.trackingNumber) && (
                 <div className="box">

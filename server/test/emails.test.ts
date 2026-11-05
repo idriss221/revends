@@ -376,20 +376,35 @@ describe('E10 — Réservation expirée (2 envois, PO-V5-14)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// E11 — Article réservé (au VENDEUR)
+// E11 — AVANT paiement : AUCUNE notification vendeur
 // ---------------------------------------------------------------------------
-describe('E11 — Article réservé (au vendeur)', () => {
-  it('une commande envoie un email au VENDEUR (article réservé)', async () => {
-    clearSentMails();
+describe('E11 — Commande non payée : le vendeur n’est JAMAIS notifié', () => {
+  it('createOrder n’envoie ni email ni notification in-app au vendeur', async () => {
     const buyerAccount = await registerUser(server, 'reserveBuy');
     const buyer = buyerAccount.client;
     const product = await createApprovedProduct(seller, admin, { name: 'Article réservé' });
-    const { status } = await createOrder(buyer, product.id);
-    assert.equal(status, 201);
+    // On purge APRÈS la création/approbation du produit : `product_approved`
+    // envoie légitimement un e-mail au vendeur et ne doit pas polluer l'assertion.
+    clearSentMails();
+    const { status: created } = await createOrder(buyer, product.id);
+    assert.equal(created, 201);
 
-    const mail = await oneMailOf('article_reserved');
-    assert.equal(mail.to, norm(sellerEmail), 'E11 → vendeur');
-    assert.ok(mail.subject.includes('réservé'), `sujet : ${mail.subject}`);
+    // Aucun email « article réservé » ne doit partir avant validation du paiement.
+    const sellerMails = await mailsOf('article_reserved');
+    assert.equal(sellerMails.length, 0, 'aucun email vendeur avant paiement');
+    const all = await recentSentMails();
+    assert.ok(
+      all.every((m) => m.to !== norm(sellerEmail)),
+      'le vendeur ne reçoit AUCUN email à la création de la commande',
+    );
+
+    // Aucune notification in-app `article_reserved` non plus.
+    const rows = await dbQuery<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM notifications
+        WHERE user_id = $1 AND type = 'article_reserved'`,
+      [product.product.ownerId ?? seller.id],
+    );
+    assert.equal(rows[0]!.n, '0', 'le vendeur ne reçoit aucune notification in-app avant paiement');
   });
 });
 

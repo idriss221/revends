@@ -186,7 +186,9 @@ export function AuthView({ mode }: { mode: AuthMode }) {
   const confirmNeeded = up || resetting
 
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
+  // Marché principal : Sénégal. On préfixe par défaut, sans jamais écraser un
+  // indicatif étranger saisi explicitement (`+225…`, `+33…`).
+  const [phone, setPhone] = useState(up ? '+221 ' : '')
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
   const [pass2, setPass2] = useState('')
@@ -269,7 +271,7 @@ export function AuthView({ mode }: { mode: AuthMode }) {
   function validate(): Partial<Record<FieldKey, string>> {
     return {
       aName: up && name.trim().length < 2 ? 'Indiquez votre nom complet.' : '',
-      aPhone: up && phone.trim().length < 1 ? 'Indiquez votre numéro de téléphone.' : '',
+      aPhone: up && phone.trim().length < 1 ? 'Indiquez votre numéro WhatsApp (ex. +221 77 123 45 67).' : '',
       aMail: resetting ? '' : !/^\S+@\S+\.\S+$/.test(email.trim()) ? 'Saisissez une adresse e-mail valide.' : '',
       aPass: pass.length < 8 ? '8 caractères minimum.' : up && !pwOk.cap ? 'Ajoutez au moins une majuscule.' : up && !pwOk.num ? 'Ajoutez au moins un chiffre.' : '',
       aPass2: confirmNeeded && pass2 !== pass ? 'Les mots de passe ne correspondent pas.' : '',
@@ -415,12 +417,12 @@ export function AuthView({ mode }: { mode: AuthMode }) {
                     name="phone"
                     type="tel"
                     autoComplete="tel"
-                    placeholder=" "
+                    placeholder="77 123 45 67"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     aria-invalid={errors.aPhone ? 'true' : 'false'}
                   />
-                  <label htmlFor="aPhone">Téléphone</label>
+                  <label htmlFor="aPhone">Numéro WhatsApp</label>
                 </div>
                 {err('aPhone')}
               </div>

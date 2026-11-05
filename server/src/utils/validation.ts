@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizePhone, PHONE_ERROR_MESSAGE, PHONE_REQUIRED_MESSAGE } from './phone.js';
 
 // ---------------------------------------------------------------------------
 // Schémas de validation — miroir de la matrice api.md §4 (serveur = autorité)
@@ -18,8 +19,10 @@ export const registerSchema = z.object({
     .max(255, { error: 'Adresse e-mail trop longue' })
     .transform((v) => v.trim().toLowerCase()),
   phone: z
-    .string({ error: 'Le numéro de téléphone est requis' })
-    .regex(/^\+?[0-9 ]{8,20}$/, { error: 'Numéro de téléphone invalide (ex. +225 07 00 00 00 00)' }),
+    .string({ error: PHONE_REQUIRED_MESSAGE })
+    .trim()
+    .transform((value) => normalizePhone(value))
+    .refine((value): value is string => value !== null, { error: PHONE_ERROR_MESSAGE }),
   password: z.string({ error: 'Le mot de passe est requis' }).min(8, { error: 'Le mot de passe doit contenir au moins 8 caractères' }).max(72),
   acceptedCgu: z.literal(true, { error: 'Vous devez accepter les conditions d\'utilisation' }),
 });
@@ -178,9 +181,10 @@ export const shippingSchema = z.object({
     .min(1, { error: 'Le nom du destinataire est requis' })
     .max(120, { error: 'Le nom du destinataire doit contenir au plus 120 caractères' }),
   phone: z
-    .string({ error: 'Le téléphone du destinataire est requis' })
+    .string({ error: 'Le numéro WhatsApp du destinataire est requis' })
     .trim()
-    .regex(/^\+?[0-9 ]{8,20}$/, { error: 'Numéro de téléphone invalide (ex. +225 07 00 00 00 00)' }),
+    .transform((value) => normalizePhone(value))
+    .refine((value): value is string => value !== null, { error: PHONE_ERROR_MESSAGE }),
   city: z
     .string({ error: 'La ville est requise' })
     .trim()
@@ -235,7 +239,23 @@ export const sellerPayoutSchema = z.object({
   reference: z.string().max(255).optional(),
 });
 
-/** mark-product-received : note optionnelle ≤ 500 (visible via events[], PO-4, RG-ORD-6). */
+/** Preuve de paiement — note libre optionnelle (la capture est un fichier). */
+export const paymentProofSchema = z.object({
+  note: z.string().max(500, { error: 'La note doit contenir au plus 500 caractères' }).optional(),
+});
+
+/** Revue admin d'une preuve : APPROVED déclenche la validation du paiement. */
+export const reviewPaymentProofSchema = z
+  .object({
+    decision: z.enum(['APPROVED', 'REJECTED'], { error: 'Décision invalide' }),
+    reason: z.string().max(500, { error: 'Le motif doit contenir au plus 500 caractères' }).optional(),
+    reference: z.string().max(255).optional(),
+  })
+  .refine((v) => v.decision !== 'REJECTED' || (v.reason?.trim().length ?? 0) > 0, {
+    error: 'Le motif du refus est requis',
+    path: ['reason'],
+  });
+
 export const markProductReceivedSchema = z.object({
   note: z
     .string()

@@ -27,6 +27,7 @@ import {
 } from './helpers.js';
 import type { ServerHandle } from './helpers.js';
 import { pool } from '../src/db/pool.js';
+import { flushAfterCommit } from '../src/utils/db.js';
 import { rateLimit } from '../src/middleware/rate-limit.js';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -140,6 +141,10 @@ describe('CA-V5-071/072 — Budgets de requêtes par endpoint', () => {
     const buyer = (await registerUser(server, 'perfbuy')).client;
     const rows = await dbQuery<{ id: number }>("SELECT id FROM products WHERE status = 'AVAILABLE' AND deleted_at IS NULL LIMIT 3");
     for (const row of rows) await createOrder(buyer, row.id);
+    // Les notifications partent APRÈS le commit (effets asynchrones) : sans ce
+    // flush, leurs requêtes retomberaient dans la fenêtre de mesure de la
+    // première requête et fausseraient le budget (5 au lieu de 2).
+    await flushAfterCommit();
 
     const counts: number[] = [];
     for (const perPage of [1, 12, 48]) {

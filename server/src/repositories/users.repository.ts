@@ -61,6 +61,24 @@ export async function findEmailById(id: number, q: Queryable = pool): Promise<st
   return rows[0]?.email ?? null;
 }
 
+/** Téléphone/WhatsApp résolu par identifiant — même règle anti-spam que l'e-mail. */
+export async function findPhoneById(id: number, q: Queryable = pool): Promise<string | null> {
+  const { rows } = await query<{ phone: string | null }>(
+    'SELECT phone FROM users WHERE id = $1',
+    [id],
+  );
+  return rows[0]?.phone ?? null;
+}
+
+/** Identifiants des administrateurs (alertes de preuve de paiement). */
+export async function findAdminIds(q: Queryable = pool): Promise<number[]> {
+  const { rows } = await query<{ id: number }>(
+    "SELECT id FROM users WHERE role = 'admin' ORDER BY id",
+    [],
+  );
+  return rows.map((r) => r.id);
+}
+
 /**
  * Vue admin d'un utilisateur avec ses compteurs `productCount`/`orderCount`.
  * `includeOrderCount: false` supprime complètement la sous-requête (vue produit

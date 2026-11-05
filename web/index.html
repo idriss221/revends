@@ -4,36 +4,97 @@
     <meta charset="UTF-8" />
     <meta name="google-site-verification" content="Sok2t5JNg8uIAJtdyF1O56INwX5xrdQuV7eXxcINv6w" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ==================================================================
+         SEO — ReVends / ReVendsen (marketplace seconde main, Sénégal)
+         La production est la référence : on CONSERVE le title, l'icône et
+         les URLs existantes ; on ajoute canonical, Open Graph complet,
+         Twitter Card et données structurées Organization + WebSite.
+         ================================================================== -->
+    <title>ReVendsen — Marketplace seconde main au Sénégal | ReVends</title>
+    <meta
+      name="description"
+      content="ReVendsen (ReVends) est la marketplace sénégalaise de la seconde main : achetez et vendez vêtements, téléphones et articles d'occasion en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
+    />
+    <meta
+      name="keywords"
+      content="revends, revendsen, revendsen direct, revends Sénégal, revends marketplace, marketplace Sénégal, seconde main Sénégal, articles d'occasion, friperie en ligne, vendre en ligne Sénégal, acheter pas cher"
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://revends.vercel.app/" />
+
+    <!-- Open Graph (Facebook, X/Twitter, WhatsApp, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ReVendsen" />
+    <meta property="og:locale" content="fr_SN" />
+    <meta property="og:url" content="https://revends.vercel.app/" />
+    <meta property="og:title" content="ReVendsen — Marketplace seconde main au Sénégal" />
+    <meta
+      property="og:description"
+      content="Achetez et vendez vos articles d'occasion au Sénégal en toute confiance. Paiement sécurisé, livraison suivie et vendeurs vérifiés."
+    />
+    <meta property="og:image" content="https://revends.vercel.app/apple-touch-icon.png" />
+    <meta property="og:image:alt" content="ReVendsen — marketplace seconde main" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ReVendsen — Marketplace seconde main au Sénégal" />
+    <meta
+      name="twitter:description"
+      content="Achetez et vendez vos articles d'occasion au Sénégal en toute confiance. Paiement sécurisé, livraison suivie."
+    />
+    <meta name="twitter:image" content="https://revends.vercel.app/apple-touch-icon.png" />
+
+    <!-- Données structurées : Organization + WebSite (search action) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://revends.vercel.app/#organization",
+            "name": "ReVendsen",
+            "alternateName": ["ReVends", "revendsen"],
+            "url": "https://revends.vercel.app/",
+            "logo": "https://revends.vercel.app/apple-touch-icon.png",
+            "areaServed": { "@type": "Country", "name": "Sénégal" },
+            "description": "Marketplace sénégalaise de la seconde main : achat et vente d'articles d'occasion en toute confiance."
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://revends.vercel.app/#website",
+            "url": "https://revends.vercel.app/",
+            "name": "ReVendsen",
+            "alternateName": "ReVends",
+            "inLanguage": "fr",
+            "publisher": { "@id": "https://revends.vercel.app/#organization" },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://revends.vercel.app/shop?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          }
+        ]
+      }
+    </script>
+
     <!-- Thème clair/sombre appliqué AVANT le premier rendu (anti-flash).
+         Fichier EXTERNE : la CSP `script-src 'self'` interdit l'inline.
          Défaut = SOMBRE (« Burgundy Night ») ; seul un choix explicite
          "light" repasse en clair. Clé de persistance : "rv:theme". -->
-    <script>
-      ;(function () {
-        var t = null
-        try {
-          t = localStorage.getItem('rv:theme')
-        } catch (e) {}
-        var mode = t === 'light' ? 'light' : 'dark'
-        document.documentElement.setAttribute('data-theme', mode)
-        var m = document.querySelector('meta[name="theme-color"]')
-        if (m) m.setAttribute('content', mode === 'dark' ? '#11100F' : '#FFFFFF')
-      })()
-    </script>
+    <script src="/theme-init.js"></script>
+
     <!-- Favicons REVENDS (DA §2) : SVG 32 prioritaire, ICO 16/32 en repli. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-    <!-- Couleur de la barre d'adresse par défaut (thème sombre) : mise à jour par le script ci-dessus. -->
     <meta name="theme-color" content="#11100F" />
-    <meta
-      name="description"
-      content="ReVends — achetez et vendez vos articles d'occasion en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
-    />
-    <!-- Token CSRF pour les requêtes mutantes (POST/PATCH/DELETE).
-         Rempli par le backend via cookie `csrf_token` ou header de réponse.
-         Le client (apiClient.ts) lit ce meta tag en fallback. -->
+
+    <!-- Token CSRF pour les requêtes mutantes (POST/PATCH/DELETE). -->
     <meta name="csrf-token" content="" />
-    <title>ReVends - Donnez une seconde vie aux belles choses</title>
   </head>
   <body>
     <div id="root"></div>

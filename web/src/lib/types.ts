@@ -234,6 +234,20 @@ export interface CheckoutResponse {
   count: number
 }
 
+/** Preuve de paiement soumise par l'acheteur — une PIÈCE, jamais une validation. */
+export type PaymentProofStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+export interface PaymentProof {
+  id: number
+  orderId: number
+  fileUrl: string
+  note: string | null
+  status: PaymentProofStatus
+  rejectionReason: string | null
+  reviewedAt: string | null
+  createdAt: string
+}
+
 /** Détail d'une commande, vue acheteur OU vendeur (GET /api/orders/:id, §3.4) */
 export interface OrderDetail extends OrderSummary {
   role: 'buyer' | 'seller'
@@ -245,6 +259,8 @@ export interface OrderDetail extends OrderSummary {
   trackingNumber?: string | null
   /** historique complet des changements de statut (order_events, V3) */
   events: OrderEvent[]
+  /** preuves de paiement — présentes uniquement dans la vue acheteur */
+  paymentProofs?: PaymentProof[]
 }
 
 export interface AdminOrderItem {
@@ -304,6 +320,8 @@ export interface AdminOrderDetail extends AdminOrderItem {
   deliveryCarrier?: string | null
   trackingNumber?: string | null
   events: OrderEvent[]
+  /** preuves de paiement (vue admin : revue approuver/refuser). */
+  paymentProofs?: PaymentProof[]
 }
 
 export interface Notification {

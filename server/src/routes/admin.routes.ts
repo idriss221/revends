@@ -11,6 +11,7 @@ import {
   markProductReceivedSchema,
   patchCategorySchema,
   rejectSchema,
+  reviewPaymentProofSchema,
   sellerPayoutSchema,
   startDeliverySchema,
 } from '../utils/validation.js';
@@ -32,6 +33,7 @@ import {
   startDelivery,
 } from '../services/admin.service.js';
 import { getAdminOrderDetail } from '../services/orders.service.js';
+import { reviewPaymentProof } from '../services/payment-proofs.service.js';
 import { listAllCategories, patchCategory } from '../services/categories.service.js';
 import { normalizeAdminListParams } from '../utils/normalize.js';
 import { gone } from '../utils/errors.js';
@@ -105,6 +107,16 @@ adminRouter.post('/orders/:id/confirm-payment', async (req: Request, res: Respon
   const { id } = idParamSchema.parse(req.params);
   const input = confirmPaymentSchema.parse(req.body);
   res.json(await confirmPayment(currentUser(res).id, id, input));
+});
+
+// POST /api/admin/orders/:id/payment-proof/:proofId/review — approuve/refuse une preuve.
+// APPROVED déclenche la validation RÉELLE du paiement (et les notifications vendeur).
+adminRouter.post('/orders/:id/payment-proof/:proofId/review', async (req: Request, res: Response) => {
+  const { id } = idParamSchema.parse(req.params);
+  const proofId = idParamSchema.parse({ id: req.params.proofId }).id;
+  const input = reviewPaymentProofSchema.parse(req.body);
+  await reviewPaymentProof(currentUser(res).id, id, proofId, input);
+  res.json(await getAdminOrderDetail(id));
 });
 
 // POST /api/admin/orders/:id/mark-product-received — PRODUCT_WAITING → PRODUCT_RECEIVED → PREPARING

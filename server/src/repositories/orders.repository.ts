@@ -457,13 +457,14 @@ export interface OrderPaymentLock {
   buyer_id: number;
   product_id: number;
   product_name: string;
+  payment_method: string;
 }
 
 /** Verrou commande + paiement (confirm/cancel) — `FOR UPDATE OF o, pm`. */
 export async function lockOrderWithPayment(client: Queryable, orderId: number): Promise<OrderPaymentLock | undefined> {
   const { rows } = await client.query<OrderPaymentLock>(
     `SELECT o.id, o.status, o.order_number, o.amount, o.seller_amount, o.seller_id, o.buyer_id, o.product_id,
-            p.name AS product_name
+            p.name AS product_name, pm.method AS payment_method
        FROM orders o
        JOIN products p ON p.id = o.product_id
        JOIN payments pm ON pm.order_id = o.id

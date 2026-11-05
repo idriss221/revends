@@ -25,6 +25,12 @@ const SHIPPING = {
   city: 'Abidjan, Cocody',
   address: 'Rue des Jardins, Immeuble Palmier, Appt 12',
 };
+/**
+ * Le serveur NORMALISE désormais le téléphone (`shippingSchema` → format
+ * E.164-ish, ex. `+2250707070707`) : les vues et la BDD renvoient la forme
+ * normalisée, jamais la saisie brute. L'indicatif étranger reste préservé.
+ */
+const SHIPPING_NORMALIZED = { ...SHIPPING, phone: '+2250707070707' };
 const NOTE = 'Livrer de préférence en semaine';
 
 before(async () => {
@@ -63,7 +69,7 @@ describe('POST /api/orders/checkout — panier multi-produits', () => {
       assert.equal(order.role, 'buyer');
       assert.equal(order.status, 'PAYMENT_PENDING');
       assert.equal(order.payment.status, 'PENDING');
-      assert.deepEqual(order.shipping, SHIPPING, 'shipping exposé en vue acheteur');
+      assert.deepEqual(order.shipping, SHIPPING_NORMALIZED, 'shipping exposé en vue acheteur (téléphone normalisé)');
       assert.equal(order.note, NOTE, 'note acheteur exposée en vue acheteur');
     }
 
@@ -76,7 +82,7 @@ describe('POST /api/orders/checkout — panier multi-produits', () => {
     assert.equal(oRows.length, 2);
     for (const r of oRows) {
       assert.equal(r.shipping_name, SHIPPING.name);
-      assert.equal(r.shipping_phone, SHIPPING.phone);
+      assert.equal(r.shipping_phone, SHIPPING_NORMALIZED.phone);
       assert.equal(r.shipping_city, SHIPPING.city);
       assert.equal(r.shipping_address, SHIPPING.address);
       assert.equal(r.buyer_note, NOTE);
@@ -100,7 +106,7 @@ describe('POST /api/orders/checkout — panier multi-produits', () => {
     const detail = await buyer.get(`/api/orders/${orderIds[0]}`);
     assert.equal(detail.status, 200);
     const d = (detail.body as any).order;
-    assert.deepEqual(d.shipping, SHIPPING);
+    assert.deepEqual(d.shipping, SHIPPING_NORMALIZED);
     assert.equal(d.note, NOTE);
 
     // SÉCURITÉ : la vue vendeur ne fuit NI shipping NI note (RG 7.7 / D2).

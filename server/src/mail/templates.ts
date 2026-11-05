@@ -67,7 +67,11 @@ export type MailEvent =
   | 'order_product_received'
   | 'order_cancelled'
   | 'order_completed_buyer'
-  | 'password_reset';
+  | 'password_reset'
+  | 'payment_instructions_buyer'
+  | 'payment_proof_received_buyer'
+  | 'payment_proof_rejected_buyer'
+  | 'payment_proof_submitted_admin';
 
 export interface TemplateVars {
   /**
@@ -268,13 +272,13 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
       const { html, text } = layout(
         'Votre commande est enregistrée',
         [
-          para('Votre commande est bien enregistrée. Le vendeur a été prévenu et prépare l\'article.'),
+          para('Votre commande est bien enregistrée, mais elle n\'est PAS encore validée : le paiement doit être confirmé.'),
           order ? para('Commande :', `<strong>${order}</strong>`) : '',
-          para('Un nouvel e-mail vous parviendra à la confirmation du paiement, puis à l\'expédition.'),
+          para('Envoyez votre preuve de paiement depuis la page de la commande, ou par WhatsApp. Dès validation par notre équipe, le vendeur sera prévenu et préparera l\'article.'),
         ].filter(Boolean),
         link,
       );
-      return { subject: 'Votre commande est enregistrée', html, text };
+      return { subject: 'Votre commande est enregistrée — paiement en attente', html, text };
     }
 
     case 'order_shipped': {
@@ -419,6 +423,64 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         link,
       );
       return { subject: 'Votre commande est terminée', html, text };
+    }
+
+    case 'payment_instructions_buyer': {
+      const { html, text } = layout(
+        'Instructions de paiement',
+        [
+          para('Votre commande est en attente de paiement. Effectuez le paiement puis envoyez la capture (preuve) depuis votre commande.'),
+          order ? para('Commande :', `<strong>${order}</strong>`) : '',
+          vars.amountFcfa !== undefined
+            ? para('Montant à régler :', `<strong>${escapeHtml(money(vars.amountFcfa))}</strong>`)
+            : '',
+          para('Tant que le paiement n\'est pas validé par notre équipe, la commande n\'est pas confirmée et le vendeur n\'est pas notifié.'),
+        ].filter(Boolean),
+        link,
+      );
+      return { subject: 'Instructions de paiement — ReVends', html, text };
+    }
+
+    case 'payment_proof_received_buyer': {
+      const { html, text } = layout(
+        'Votre preuve de paiement a été reçue',
+        [
+          para('Nous avons bien reçu votre preuve de paiement. Elle est en cours de vérification.'),
+          order ? para('Commande :', `<strong>${order}</strong>`) : '',
+          para('La commande ne sera confirmée qu\'après validation par notre équipe.'),
+        ].filter(Boolean),
+        link,
+      );
+      return { subject: 'Preuve de paiement reçue — vérification en cours', html, text };
+    }
+
+    case 'payment_proof_rejected_buyer': {
+      const motif = vars.reason ? ` Motif : ${vars.reason}` : '';
+      const { html, text } = layout(
+        'Votre preuve de paiement a été refusée',
+        [
+          para(`La preuve de paiement transmise n\'a pas pu être validée.${motif}`),
+          order ? para('Commande :', `<strong>${order}</strong>`) : '',
+          para('Vous pouvez renvoyer une preuve lisible depuis la page de votre commande. Aucun débit ne sera effectué tant que le paiement n\'est pas confirmé.'),
+        ].filter(Boolean),
+        link,
+      );
+      return { subject: 'Preuve de paiement refusée — action requise', html, text };
+    }
+
+    case 'payment_proof_submitted_admin': {
+      const { html, text } = layout(
+        'Nouvelle preuve de paiement à vérifier',
+        [
+          para('Un acheteur a transmis une preuve de paiement. Elle doit être vérifiée avant toute notification au vendeur.'),
+          order ? para('Commande :', `<strong>${order}</strong>`) : '',
+          vars.amountFcfa !== undefined
+            ? para('Montant :', `<strong>${escapeHtml(money(vars.amountFcfa))}</strong>`)
+            : '',
+        ].filter(Boolean),
+        link ?? internalLink('/admin/commandes'),
+      );
+      return { subject: 'Nouvelle preuve de paiement à vérifier', html, text };
     }
 
     default: {

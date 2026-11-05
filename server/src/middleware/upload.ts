@@ -72,3 +72,18 @@ export const uploadProductPhotos = multer({
     parts: 20, // champs (max 16) + photos (max 4)
   },
 });
+
+/**
+ * Preuve de paiement : UNE capture, mêmes bornes que les photos produit.
+ * Le MIME réel est vérifié par magic bytes dans le service (jamais le header).
+ */
+export const uploadPaymentProof = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: MAX_PHOTO_BYTES,
+    files: 1,
+    fields: 4,
+    fieldSize: 10_000,
+    parts: 6,
+  },
+});

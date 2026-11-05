@@ -107,6 +107,38 @@
 > - Les 19 routes `/api/admin/*` exigent le rôle `admin` : anonyme → `401 UNAUTHENTICATED`, utilisateur simple → `403 FORBIDDEN`. Le contrôle précède toute lecture métier : un identifiant inexistant donne le **même** `403` qu'un identifiant valide (§1.4, pas de divulgation par le code de statut).
 > - `POST /api/admin/orders/:id/pay-seller` → `410 GONE` (inchangé, §3.6).
 
+> ## Évolution V6 — WhatsApp, preuve de paiement, numéros +221 (encart, v2.5)
+>
+> **V6.1 — Téléphone normalisé, Sénégal par défaut.**
+> - `registerSchema.phone` et `shippingSchema.phone` passent par `normalizePhone()` (`server/src/utils/phone.ts`) : la réponse expose une forme canonique (`+221771234567`, `+2250700000000`, `+33612345678`).
+> - Règles : `77 123 45 67`, `771234567`, `0771234567`, `00221…`, `221…` → `+221…` ; **tout indicatif étranger explicite est préservé** (`+225`, `+33`, …). Une saisie inexploitable → `400 VALIDATION_ERROR`, message « Numéro WhatsApp invalide… ».
+> - Les libellés UI deviennent « Numéro WhatsApp » (inscription et checkout) ; le champ est prérempli `+221 ` côté web.
+> - Les comptes existants restent valides : la normalisation ne s'applique qu'aux nouvelles écritures. La migration `014_phone_221_migration.sql` corrige uniquement les anciens `+225` **manifestement sénégalais** (9 chiffres, mobile `7…`), journalise chaque décision dans `phone_migration_audit` et **ne touche jamais** un numéro ivoirien (8 ou 10 chiffres après `225`).
+>
+> **V6.2 — `POST /api/orders/:id/payment-proof` — NOUVEAU (acheteur propriétaire).**
+> - `multipart/form-data` : `proof` (JPEG/PNG/WebP, 1 fichier, MIME vérifié par magic bytes) + `note` optionnelle (≤ 500 caractères).
+> - **201** `{ proof: PaymentProof }`. La commande **reste `PAYMENT_PENDING`**, le paiement reste `PENDING`, et **le vendeur n'est pas notifié** : une preuve est une pièce, pas une validation.
+> - `404 ORDER_NOT_FOUND` (commande absente ou d'un autre acheteur — non-divulgation), `409 INVALID_TRANSITION` (statut ≠ `PAYMENT_PENDING`), `400 PAYMENT_PROOF_FILE_REQUIRED` / `PAYMENT_PROOF_INVALID_TYPE`.
+> - `PaymentProof` : `{ id, orderId, fileUrl, note, status: 'PENDING'|'APPROVED'|'REJECTED', rejectionReason, reviewedAt, createdAt }`. Exposé **uniquement** dans les vues acheteur et admin (jamais vendeur).
+>
+> **V6.3 — `POST /api/admin/orders/:id/payment-proof/:proofId/review` — NOUVEAU (admin).**
+> - Corps : `{ decision: 'APPROVED'|'REJECTED', reason?, reference? }`. `REJECTED` **exige** `reason` (sinon `400 PAYMENT_PROOF_REASON_REQUIRED`).
+> - `APPROVED` réutilise `confirmPaymentInTransaction` : le paiement passe réellement `PAID`, la commande passe `PRODUCT_WAITING`, le produit devient `SOLD`, le payout est créé — **puis** l'acheteur et le vendeur sont notifiés.
+> - `REJECTED` laisse la commande en `PAYMENT_PENDING` (l'acheteur peut renvoyer une preuve) et le notifie.
+> - Revuer une preuve déjà traitée → `409 PAYMENT_PROOF_ALREADY_REVIEWED`. Preuve inconnue → `404 PAYMENT_PROOF_NOT_FOUND`. Réponse : `{ order: AdminOrderDetail }` (avec `paymentProofs[]`).
+>
+> **V6.4 — Commande non payée = aucune sollicitation vendeur.**
+> - `POST /api/orders` et `POST /api/orders/checkout` ne créent **plus** de notification vendeur (`article_reserved` in-app et e-mail sont supprimés). Seul l'acheteur est notifié (`order_created`).
+> - Le vendeur est notifié **après validation du paiement** (`payment_confirmed_seller`, in-app + e-mail + WhatsApp si activé).
+> - `notification_type` : **4 valeurs ajoutées** (`payment_proof_submitted`, `payment_proof_approved`, `payment_proof_rejected`, `payment_instructions`) — DDL `013_payment_proofs.sql`.
+>
+> **V6.5 — Notifications e-mail + WhatsApp indépendantes.**
+> - Dispatcher unique (`notification-dispatch.service.ts`) : `Promise.allSettled` sur les canaux ; **l'échec de l'un ne bloque jamais l'autre**, et aucun échec ne fait échouer l'action métier.
+> - Idempotence : table `notification_deliveries` (clé `event:entité:userId` + canal, statut `PENDING/SENT/FAILED/SKIPPED`, `attempts`, `last_error`). Rejouer une requête ne renvoie **jamais** un second message ; max **3 tentatives**.
+> - WhatsApp = **Cloud API officielle Meta** uniquement (Graph `/{phoneNumberId}/messages`), timeout 8 s, numéro masqué dans les logs. `WHATSAPP_ENABLED=false` par défaut : sans token, le canal est **coupé proprement** (statut `SKIPPED`), l'e-mail continue.
+>
+> **V6.6 — SEO.** `web/index.html` : title/description ciblés (« ReVendsen », « revends », « revends Sénégal », « marketplace »), canonical, Open Graph, Twitter Card, JSON-LD `Organization` + `WebSite` (SearchAction). `robots.txt` exclut les pages privées ; `sitemap.xml` conserve `/` et `/catalogue` et ajoute `/shop`, `/category`. Aucune URL publique existante n'est supprimée.
+
 ## 1. Vue d'ensemble et conventions
 
 ### 1.1 Principes

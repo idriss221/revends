@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Ico } from '../brand/Ico'
+import { ResilientImg } from '../ui/ResilientImg'
 
 /**
  * Recherche à suggestions — docs/design-system-revends-v5.md §3.2 + CA-V5-136.
@@ -312,7 +313,7 @@ export function SearchSuggest({
                           >
                             <span className="sug-thumb">
                               {s.imageUrl ? (
-                                <img src={s.imageUrl} alt="" />
+                                <ResilientImg src={s.imageUrl} alt="" />
                               ) : (
                                 <Ico
                                   name={

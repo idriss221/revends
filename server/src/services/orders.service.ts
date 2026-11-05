@@ -4,7 +4,8 @@ import { config } from '../config.js';
 import { badRequest, conflict, invalidTransition, notFound } from '../utils/errors.js';
 import { releaseExpiredReservation } from './expiry.service.js';
 import { insertNotification } from './notifications.service.js';
-import { queueMail } from '../mail/queue.js';
+import { notifyUser, whatsappOrderCreated } from './notification-dispatch.service.js';
+import { selectProofsByOrderId, serializePaymentProof } from '../repositories/payment-proofs.repository.js';
 import { buildAdminProductHistory, loadAdminUser, loadPrimaryImage, loadUser } from './products.service.js';
 import {
   serializeAdminOrder,
@@ -152,24 +153,22 @@ export async function createOrderInTransaction(
   await reserveProduct(client, product.id, 365);
 
   await insertNotification(client, buyerId, 'order_created', `Commande ${order.order_number} enregistrée`, product.name);
-  await insertNotification(client, product.owner_id, 'article_reserved', 'Votre article est réservé', product.name);
+  // ⚠️ RÈGLE ABSOLUE : le vendeur n'est PAS notifié ici. La commande n'est pas
+  // payée ; une preuve ou une capture ne vaut pas validation. Le vendeur sera
+  // notifié uniquement après `confirmPayment` (voir admin.service).
 
   // Confirmation envoyée à la PERSONNE CONNECTÉE qui vient de commander : on
-  // passe son `id` (session), `queueMail` relit son adresse en base au moment
-  // de l'envoi, après le commit. Aucune adresse n'entre par la requête
-  // (CA-V5-011) — un e-mail de contact saisi dans un formulaire ne décide
-  // jamais du destinataire.
-  queueMail(buyerId, 'order_created_buyer', {
-    orderNumber: order.order_number,
-    productName: product.name,
-    linkPath: '/mes-commandes',
-  });
-
-  // Le vendeur est prévenu par e-mail que son article est réservé (en plus de
-  // la notification in-app `article_reserved` ci-dessus).
-  queueMail(product.owner_id, 'article_reserved', {
-    productName: product.name,
-    linkPath: '/mes-articles',
+  // passe son `id` (session), le dispatch relit son adresse/numéro en base au
+  // moment de l'envoi, après le commit. Aucune adresse n'entre par la requête.
+  notifyUser({
+    event: 'order_created_buyer',
+    idempotencyKey: `order_created_buyer:${order.id}:${buyerId}`,
+    userId: buyerId,
+    mail: {
+      event: 'order_created_buyer',
+      vars: { orderNumber: order.order_number, productName: product.name, linkPath: '/mes-commandes' },
+    },
+    whatsapp: { body: whatsappOrderCreated(order.order_number, amount) },
   });
 
   return serializeBuyerOrder(await loadOrderParts(order.id, client));
@@ -358,13 +357,17 @@ export async function loadOrderListParts(
 export async function getAdminOrderDetail(orderId: number): Promise<Record<string, unknown>> {
   const parts = await loadOrderParts(orderId);
   const [buyer, seller] = await Promise.all([loadAdminUser(parts.buyer.id), loadAdminUser(parts.seller.id)]);
+  const proofs = await selectProofsByOrderId(orderId);
   return {
-    order: serializeAdminOrder(parts, {
-      buyer: serializeAdminUser(buyer),
-      seller: serializeAdminUser(seller),
-      product: await buildAdminProductHistory(parts.product.id),
-      events: parts.events.map(serializeOrderEvent),
-    }),
+    order: {
+      ...serializeAdminOrder(parts, {
+        buyer: serializeAdminUser(buyer),
+        seller: serializeAdminUser(seller),
+        product: await buildAdminProductHistory(parts.product.id),
+        events: parts.events.map(serializeOrderEvent),
+      }),
+      paymentProofs: proofs.map(serializePaymentProof),
+    },
   };
 }
 
@@ -380,7 +383,12 @@ export async function getOrderForUser(orderId: number, user: UserRow): Promise<R
 
   const parts = await loadOrderParts(orderId);
   const role: 'buyer' | 'seller' = isBuyer ? 'buyer' : 'seller';
-  return { order: serializeOrderForParty(parts, role) };
+  const serialized = serializeOrderForParty(parts, role);
+  // Le vendeur ne doit jamais voir la pièce justificative de l'acheteur.
+  if (role === 'buyer') {
+    serialized.paymentProofs = (await selectProofsByOrderId(orderId)).map(serializePaymentProof);
+  }
+  return { order: serialized };
 }
 
 export type { OrderListData };

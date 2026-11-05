@@ -75,6 +75,8 @@ export function AdminOrderDetailPage() {
   const [cancelNote, setCancelNote] = useState('')
   const [payoutOpen, setPayoutOpen] = useState(false)
   const [payoutReference, setPayoutReference] = useState('')
+  // Motif de refus par preuve (revue admin).
+  const [proofReasons, setProofReasons] = useState<Record<number, string>>({})
 
   const order = useQuery({
     queryKey: ['admin', 'order', id],
@@ -171,6 +173,29 @@ export function AdminOrderDetailPage() {
       invalidate()
     },
     onError: fail(TOAST_COPY.payoutFailed),
+  })
+
+  const reviewProof = useMutation({
+    mutationFn: (vars: { proofId: number; decision: 'APPROVED' | 'REJECTED'; reason?: string }) =>
+      api.reviewPaymentProof(Number(id), vars.proofId, {
+        decision: vars.decision,
+        reason: vars.reason,
+      }),
+    onSuccess: (_data, vars) => {
+      toast(
+        'success',
+        vars.decision === 'APPROVED'
+          ? 'Preuve acceptée — paiement validé, vendeur notifié.'
+          : 'Preuve refusée — l’acheteur peut en renvoyer une.',
+      )
+      setProofReasons((prev) => {
+        const next = { ...prev }
+        delete next[vars.proofId]
+        return next
+      })
+      invalidate()
+    },
+    onError: fail('Revue de la preuve impossible.'),
   })
 
   return (
@@ -324,6 +349,94 @@ export function AdminOrderDetailPage() {
                 </div>
               )}
             </Card>
+
+            {/* PREUVES DE PAIEMENT — une capture n'est PAS un paiement validé.
+                Approuver déclenche la validation réelle côté serveur, donc la
+                notification vendeur ; refuser laisse la commande en attente. */}
+            {o.paymentProofs && o.paymentProofs.length > 0 && (
+              <Card className="mb-6">
+                <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+                  <i className="fas fa-receipt text-terracotta-ink" aria-hidden="true" /> Preuves de paiement
+                </h3>
+                <div className="flex flex-col gap-4">
+                  {o.paymentProofs.map((proof) => {
+                    const badge =
+                      proof.status === 'APPROVED'
+                        ? { kind: 'approved' as const, label: 'Acceptée' }
+                        : proof.status === 'REJECTED'
+                          ? { kind: 'rejected' as const, label: 'Refusée' }
+                          : { kind: 'pending' as const, label: 'En vérification' }
+                    return (
+                      <div key={proof.id} className="rounded-md border border-line p-4">
+                        <div className="mb-3 flex flex-wrap items-center gap-3">
+                          <a
+                            href={resolveImageUrl(proof.fileUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-terracotta-ink underline"
+                          >
+                            <i className="fas fa-image mr-1" aria-hidden="true" /> Ouvrir la capture
+                          </a>
+                          <StatusBadge kind={badge.kind} label={badge.label} dot />
+                          <span className="text-sm text-muted">{formatDateTime(proof.createdAt)}</span>
+                        </div>
+                        {proof.note && <p className="mb-3 text-sm text-ink">Note : {proof.note}</p>}
+                        {proof.status === 'REJECTED' && proof.rejectionReason && (
+                          <p className="mb-3 text-sm text-danger">Motif : {proof.rejectionReason}</p>
+                        )}
+
+                        {proof.status === 'PENDING' && o.status === 'PAYMENT_PENDING' && (
+                          <div className="flex flex-col gap-3 border-t border-line pt-3">
+                            <p className="text-sm text-muted">
+                              Vérifiez la capture dans votre application bancaire. L’acceptation vaut
+                              validation du paiement et préviendra le vendeur.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="positive"
+                                onClick={() => reviewProof.mutate({ proofId: proof.id, decision: 'APPROVED' })}
+                                disabled={reviewProof.isPending}
+                              >
+                                <i className="fas fa-check" aria-hidden="true" /> Accepter et valider le paiement
+                              </Button>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                              <label className="flex-1 text-sm font-medium text-ink">
+                                Motif du refus (obligatoire pour refuser)
+                                <textarea
+                                  className="mt-1 w-full rounded-md border border-line bg-ivory p-2 text-sm text-ink"
+                                  rows={2}
+                                  maxLength={500}
+                                  value={proofReasons[proof.id] ?? ''}
+                                  onChange={(e) =>
+                                    setProofReasons((prev) => ({ ...prev, [proof.id]: e.target.value }))
+                                  }
+                                />
+                              </label>
+                              <Button
+                                variant="outline"
+                                onClick={() =>
+                                  reviewProof.mutate({
+                                    proofId: proof.id,
+                                    decision: 'REJECTED',
+                                    reason: (proofReasons[proof.id] ?? '').trim(),
+                                  })
+                                }
+                                disabled={
+                                  reviewProof.isPending || (proofReasons[proof.id] ?? '').trim().length === 0
+                                }
+                              >
+                                <i className="fas fa-xmark" aria-hidden="true" /> Refuser la preuve
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+            )}
 
             {/* Blocs d'information */}
             {/* D14 : `max-[…]` seul — la sidebar 260 px décale la largeur utile, donc

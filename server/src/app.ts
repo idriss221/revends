@@ -62,9 +62,27 @@ export function createApp(): express.Express {
   // TOUTE erreur (même sur une route inconnue) soit traçable.
   app.use(requestId);
   // les photos `/uploads` à être chargées par le web/mobile sur une autre origine.
+  //
+  // ⚠️ CSP : les photos produit sont servies par Vercel Blob, sur une origine
+  // distincte (`<store>.public.blob.vercel-storage.com`). La CSP par défaut de
+  // Helmet (`img-src 'self' data:`) les BLOQUE : les `<img>` restent vides en
+  // production alors que le fichier répond 200. Ne jamais retirer ces sources
+  // (régression constatée : commit 77269eb — images cassées sur tout le site).
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          'img-src': [
+            "'self'",
+            'data:',
+            'blob:',
+            'https://*.public.blob.vercel-storage.com',
+            'https://*.blob.vercel-storage.com',
+          ],
+        },
+      },
     }),
   );
 

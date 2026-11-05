@@ -64,6 +64,22 @@ const envSchema = z.object({
   MAIL_FROM: z.string().default(''),
   SITE_URL: z.string().default('http://localhost:5173'),
 
+  // WhatsApp Business — Cloud API officielle (Meta). Désactivé par défaut :
+  // tant que le token et le Phone Number ID ne sont pas fournis, aucun appel
+  // réseau n'est effectué (dégradation propre, l'e-mail continue).
+  WHATSAPP_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().default(''),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().default(''),
+  WHATSAPP_ACCESS_TOKEN: z.string().default(''),
+  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  WHATSAPP_TEMPLATE_NAME: z.string().default(''),
+  WHATSAPP_TEMPLATE_LANG: z.string().default('fr'),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().default(''),
+  META_APP_SECRET: z.string().default(''),
+
   // CORS : liste d'origines séparées par des virgules. Vide ⇒ [SITE_URL].
   // `*` est ignoré (incompatible avec `credentials: true`).
   CORS_ORIGINS: z.string().default(''),
@@ -233,6 +249,24 @@ if (env.NODE_ENV === 'production') {
   }
 }
 
+/**
+ * WhatsApp : une activation incomplète ne doit JAMAIS faire tomber l'API ni
+ * bloquer l'e-mail. On journalise précisément ce qui manque et on repasse en
+ * mode désactivé (le service `whatsapp.service` vérifie aussi à l'appel).
+ */
+const whatsappMissing = (
+  [
+    ['WHATSAPP_ACCESS_TOKEN', env.WHATSAPP_ACCESS_TOKEN],
+    ['WHATSAPP_PHONE_NUMBER_ID', env.WHATSAPP_PHONE_NUMBER_ID],
+  ] as const
+)
+  .filter(([, value]) => value.length === 0)
+  .map(([name]) => name);
+const whatsappEnabled = env.WHATSAPP_ENABLED && whatsappMissing.length === 0;
+if (env.WHATSAPP_ENABLED && whatsappMissing.length > 0) {
+  logger.warn('WhatsApp désactivé : configuration incomplète', { missing: whatsappMissing });
+}
+
 const databaseUrl =
   env.DATABASE_URL ??
   `postgres://${encodeURIComponent(env.DB_USER)}:${encodeURIComponent(env.DB_PASSWORD)}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}`;
@@ -314,6 +348,17 @@ export const config = {
     password: env.MAIL_PASSWORD,
     from: env.MAIL_FROM,
   },
+  whatsapp: {
+    enabled: whatsappEnabled,
+    phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,
+    businessAccountId: env.WHATSAPP_BUSINESS_ACCOUNT_ID,
+    accessToken: env.WHATSAPP_ACCESS_TOKEN,
+    apiVersion: env.WHATSAPP_API_VERSION,
+    templateName: env.WHATSAPP_TEMPLATE_NAME,
+    templateLang: env.WHATSAPP_TEMPLATE_LANG,
+    webhookVerifyToken: env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+  },
+  metaAppSecret: env.META_APP_SECRET,
   instanceId,
   sessionStore: env.SESSION_STORE,
   cacheEnabled: env.CACHE_ENABLED,
