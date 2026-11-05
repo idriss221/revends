@@ -179,6 +179,40 @@ describe('E1 — Email de bienvenue (POST /api/auth/register)', () => {
     assert.ok(!/<img\b/i.test(html), 'aucune image distante');
     assert.ok(subject.length > 0, 'sujet déclaré');
   });
+
+  it('« Ouvrir dans ReVends » est un vrai lien tappable, stylé, vers le site', () => {
+    const { html, text } = renderTemplate('welcome', { linkPath: '/' });
+    const url = `${config.siteUrl}/`;
+
+    // 1. Un <a href> réel avec la bonne cible, ouvert hors de l'application mail.
+    assert.ok(
+      html.includes(`<a href="${url}" target="_blank" rel="noopener noreferrer"`),
+      'ancre réelle, href = SITE_URL, target=_blank',
+    );
+    // 2. Un rendu de bouton (styles inline) : sans style, certains clients
+    //    mobiles affichent le libellé comme du texte inerte.
+    assert.ok(/background-color:#7A1B2E/.test(html), 'bouton bordeaux stylé');
+    assert.ok(/padding:12px 22px/.test(html), 'cible tactile suffisante');
+    // 3. L'URL brute reste visible et cliquable (repli si le bouton est bloqué).
+    assert.ok(html.includes(`>${url}</a>`), 'URL en clair sous le bouton');
+    // 4. La part texte met l'URL sur sa propre ligne (linkification des clients
+    //    qui n'affichent que le plain-text).
+    assert.ok(text.includes(`Ouvrir dans ReVends :\n${url}`), 'URL seule sur sa ligne en texte brut');
+    // 5. Aucun lien mort : le lien par défaut n'est PAS l'ancien /dashboard.
+    assert.ok(!html.includes('/dashboard'), 'défaut = accueil, pas une route inexistante');
+  });
+
+  it('un lien contenant & est échappé UNE seule fois (pas de &amp;amp;)', () => {
+    const { html, text } = renderTemplate('password_reset', {
+      linkPath: '/reset-password?token=a&next=/mes-commandes',
+    });
+    assert.ok(html.includes('?token=a&amp;next=/mes-commandes'), 'HTML : &amp; unique');
+    assert.ok(!html.includes('&amp;amp;'), 'pas de double échappement');
+    assert.ok(
+      text.includes('?token=a&next=/mes-commandes'),
+      'texte : URL réelle, sans entité HTML',
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -249,6 +283,13 @@ describe('E0 — Commande enregistrée (POST /api/orders) → acheteur connecté
       all.every((m) => !m.to.toLowerCase().includes('pirate@example.com')),
       'une adresse saisie dans la requête ne devient JAMAIS destinataire',
     );
+
+    // Instructions de paiement : le 2e e-mail de la création (montant + lien commande).
+    const instructions = (await mailsOf('payment_instructions_buyer')).filter((m) => m.to === norm(account.email));
+    assert.equal(instructions.length, 1, 'un seul envoi d’instructions, à l’acheteur');
+    assert.equal(instructions[0]!.ok, true, 'instructions effectivement envoyées');
+    assert.ok(instructions[0]!.subject.includes('paiement'), `sujet : ${instructions[0]!.subject}`);
+    assert.ok(instructions.every((m) => m.to !== norm(sellerEmail)), 'instructions : jamais au vendeur');
 
     const orderNumber = (res.body as any).order.order_number ?? (res.body as any).order.orderNumber;
     const rendered = renderTemplate('order_created_buyer', { orderNumber });
@@ -872,9 +913,9 @@ describe('E1b — Bienvenue pour un compte OAuth', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Couverture — les 17 événements se rendent tous sans trou ni lien sortant
+// Couverture — les 21 événements se rendent tous sans trou ni lien sortant
 // ---------------------------------------------------------------------------
-describe('Couverture — 17 événements, rendu complet', () => {
+describe('Couverture — 21 événements, rendu complet', () => {
   const ALL_EVENTS: MailEvent[] = [
     'welcome',
     'product_approved',
@@ -893,6 +934,10 @@ describe('Couverture — 17 événements, rendu complet', () => {
     'order_cancelled',
     'order_completed_buyer',
     'password_reset',
+    'payment_instructions_buyer',
+    'payment_proof_received_buyer',
+    'payment_proof_rejected_buyer',
+    'payment_proof_submitted_admin',
   ];
 
   it('chaque événement produit un sujet, un HTML et un texte exploitables (CA-V5-007)', () => {
@@ -914,7 +959,7 @@ describe('Couverture — 17 événements, rendu complet', () => {
     }
   });
 
-  it('sur les 17, tous les liens pointent vers le site (CA-V5-009)', () => {
+  it('sur les 21, tous les liens pointent vers le site (CA-V5-009)', () => {
     for (const event of ALL_EVENTS) {
       const { html } = renderTemplate(event, { linkPath: '/dashboard' });
       const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]!);

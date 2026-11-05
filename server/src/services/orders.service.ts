@@ -171,6 +171,19 @@ export async function createOrderInTransaction(
     whatsapp: { body: whatsappOrderCreated(order.order_number, amount) },
   });
 
+  // Instructions de paiement : le 2e e-mail transactionnel de la création.
+  // Il portait un template + un sujet mais AUCUN déclencheur (vérifié par
+  // grep : jamais émis). Il part après le commit, clé d'idempotence dédiée.
+  notifyUser({
+    event: 'payment_instructions_buyer',
+    idempotencyKey: `payment_instructions_buyer:${order.id}:${buyerId}`,
+    userId: buyerId,
+    mail: {
+      event: 'payment_instructions_buyer',
+      vars: { orderNumber: order.order_number, amountFcfa: amount, linkPath: `/mes-commandes/${order.id}` },
+    },
+  });
+
   return serializeBuyerOrder(await loadOrderParts(order.id, client));
 }
 

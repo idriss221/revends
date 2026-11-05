@@ -56,37 +56,29 @@ export function afterCommit(job: AfterCommitJob): void {
   jobs.push(job);
 }
 
-/** Durée maximale d'un effet post-commit : au-delà, la file avance sans lui. */
-const AFTER_COMMIT_JOB_TIMEOUT_MS = 10_000;
-
-/** Un job bloqué (SMTP sans socket timeout) ne doit jamais figer la file. */
-class AfterCommitTimeoutError extends Error {
-  constructor(timeoutMs: number) {
-    super(`effet post-commit interrompu après ${timeoutMs} ms`);
-    this.name = 'AfterCommitTimeoutError';
-  }
-}
-
-/** Exécute les effets en isolant chaque échec (P8 : un mail ne casse rien). */
+/**
+ * Un seul effet post-commit par invocation serverless.
+ *
+ * Le problème que cela corrige : `withTransaction` enchaîne les effets en série
+ * (`chain = chain.then(() => runSafely(job))`) et `track(chain)` ne fait PAS
+ * `runInBackground(chain)`. Sur Vercel, la fonction est gelée dès la réponse :
+ * la chaîne repartait quand l'instance suivante était réutilisée, mais
+ * pouvait être interrompue à tout moment — d'où la perte du mail
+ * `product_rejected` en production (ETIMEDOUT 186 s + 25 s) alors que
+ * `welcome`/`password_reset` (déclenchés via `runInBackground`) arrivaient.
+ *
+ * Correctif : la chaîne sérialisée est passée à `runInBackground` (`waitUntil`),
+ * ce qui préserve l'ordre PO-V5-14 (test E4/E5) tout en survivant au gel.
+ * `runSafely` garde P8 (un échec ne casse rien) et n'impose plus de timeout
+ * artificiel : le bornage réseau vit dans le transport SMTP (5/5/8 s,
+ * 3 tentatives = 54 s), compatible avec la durée maximale serverless.
+ */
 async function runSafely(job: AfterCommitJob): Promise<void> {
-  let timer: NodeJS.Timeout | undefined;
   try {
-    await Promise.race([
-      Promise.resolve().then(() => job()),
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new AfterCommitTimeoutError(AFTER_COMMIT_JOB_TIMEOUT_MS)), AFTER_COMMIT_JOB_TIMEOUT_MS);
-        timer.unref?.();
-      }),
-    ]);
+    await job();
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    if (err instanceof AfterCommitTimeoutError) {
-      logger.error('effet post-commit interrompu (timeout)', { errorMessage: reason, timeoutMs: AFTER_COMMIT_JOB_TIMEOUT_MS });
-    } else {
-      logger.error('effet post-commit ignoré après erreur', { errorMessage: reason });
-    }
-  } finally {
-    if (timer) clearTimeout(timer);
+    logger.error('effet post-commit ignoré après erreur', { errorMessage: reason });
   }
 }
 
@@ -169,16 +161,17 @@ async function withTransactionBody<T>(
         // latence de la réponse HTTP du serveur SMTP (CA-V5-014). Le seul
         // effet secondaire retenu est un log d'échec.
         //
-        // Ils sont enchaînés SÉRIELLEMENT dans l'ordre d'enregistrement :
-        // PO-V5-14 impose qu'un même événement envoie l'e-mail acheteur (E4)
-        // avant celui du vendeur (E5). Les lancer en parallèle (ancien
-        // `for … dispatch`) laissait l'ordre dépendre du planificateur et
-        // rendait `test/emails.test.ts` (E4/E5) aléatoire. Le chaînage ne
-        // retient toujours PAS la réponse HTTP : seule la file de fond avance.
+        // Ils sont enchaînés SÉRIELLEMENT (PO-V5-14 : e-mail acheteur E4 avant
+        // vendeur E5) ET la chaîne entière est passée à `runInBackground`
+        // (`waitUntil`). L'ancien code ne faisait que `track(chain)` sans
+        // `runInBackground` : sur Vercel, la fonction gelée après la réponse
+        // interrompait la chaîne — cause de perte du mail `product_rejected`
+        // en production (ETIMEDOUT 186 s + 25 s, `effet post-commit interrompu`).
         const pending = jobs.splice(0);
         if (pending.length > 0) {
           let chain: Promise<void> = Promise.resolve();
           for (const job of pending) chain = chain.then(() => runSafely(job));
+          runInBackground(chain);
           track(chain);
         }
       }

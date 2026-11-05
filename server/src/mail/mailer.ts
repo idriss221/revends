@@ -29,19 +29,18 @@ export type MailTransportKind = 'smtp' | 'json' | 'console' | 'disabled';
  * Sans elles, Nodemailer applique des valeurs très hautes (jusqu'à 10 min sur
  * `socketTimeout`) : un SMTP lent bloquerait le worker d'une instance API
  * pendant tout ce temps. Une notification transactionnelle n'a aucune raison
- * de durer plus de quelques secondes.
+ * de durer plus de quelques secondes. Les valeurs effectives sont posées dans
+ * `getTransporter()` : 5 s / 5 s / 8 s, pour tenir dans la durée serverless.
  */
-const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
-const SMTP_GREETING_TIMEOUT_MS = 10_000;
-const SMTP_SOCKET_TIMEOUT_MS = 20_000;
 
 /**
- * Nombre de tentatives totales (1 envoi + 1 reprise) et délai avant reprise.
+ * Nombre de tentatives totales (1 envoi + 2 reprises) et délai avant reprise.
  * On ne rejoue QUE les erreurs de transport (le message n'a pas été remis) :
  * rejouer une erreur applicative 5xx de SendGrid risquerait un doublon.
+ * 3 tentatives tiennent dans la durée serverless (voir bornes ci-dessus).
  */
-const MAX_ATTEMPTS = 2;
-const RETRY_DELAY_MS = 250;
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 500;
 
 /** Erreurs de transport considérées comme rejouables (le message n'est pas parti). */
 const RETRYABLE_CODES = new Set([
@@ -138,10 +137,13 @@ function getTransporter(): { transporter: Transporter; kind: MailTransportKind }
       // Nodemailer automatiquement sur le port submission (587).
       secure: config.mail.secure,
       auth: { user: config.mail.user, pass: config.mail.password },
-      // Bornes explicites : jamais de worker bloqué sur un SMTP muet.
-      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
-      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
-      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
+      // Bornes explicites tenant dans la durée serverless (Hobby : 60 s max) :
+      // pire cas = 3 tentatives × (5 s connexion + 5 s salut + 8 s socket) = 54 s.
+      // L'ancien choix (10/10/20 s, 2 tentatives) laissait un ETIMEDOUT Gmail
+      // (prod, product_rejected) prendre 186 s puis 25 s, sans retry utile.
+      connectionTimeout: 5_000,
+      greetingTimeout: 5_000,
+      socketTimeout: 8_000,
     });
     return { transporter, kind: transportKind };
   }

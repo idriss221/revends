@@ -124,7 +124,10 @@ function internalLink(linkPath: string | undefined): string | null {
   if (/^https?:\/\//i.test(candidate)) return null;
 
   const cleaned = candidate.replace(/[^\w\-./?=&#%]/g, '').replace(/^\/+/, '/');
-  return escapeHtml(`${site}${cleaned}`);
+  // URL BRUTE : `layout()` échappe une seule fois pour le HTML, et la part
+  // texte garde l'URL réelle (un `&amp;` affiché dans le plain-text serait un
+  // bug). Échapper ici ET dans `layout()` produisait `&amp;amp;`.
+  return `${site}${cleaned}`;
 }
 
 /**
@@ -133,11 +136,28 @@ function internalLink(linkPath: string | undefined): string | null {
  * externe, aucune image, aucun script.
  */
 function layout(heading: string, paragraphs: string[], link: string | null): { html: string; text: string } {
+  // CTA « Ouvrir dans ReVends » : un VRAI bouton, pas un simple texte.
+  //
+  // Pourquoi des styles inline et une URL répétée en clair :
+  //  - un `<a>` sans style est parfois rendu comme du texte inerte par certains
+  //    clients mobiles (et le libellé seul ne donne aucune cible tactile) ;
+  //  - la part `text/plain` n'est pas toujours linkifiée → l'URL doit rester
+  //    visible, sur sa propre ligne, pour être tapée ou copiée.
+  // Aucun CSS externe, aucune image, aucun script (CA-V5-007).
+  const href = link === null ? null : escapeHtml(link);
   const htmlLink =
-    link === null
+    href === null
       ? ''
-      : `<p><a href="${escapeHtml(link)}">Ouvrir dans ReVends</a></p>`;
-  const textLink = link === null ? '' : `\n\nOuvrir dans ReVends : ${link}\n`;
+      : '<p style="margin:0 0 10px;">' +
+        `<a href="${href}" target="_blank" rel="noopener noreferrer" ` +
+        'style="display:inline-block;background-color:#7A1B2E;color:#FFFFFF;' +
+        'font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;' +
+        'line-height:20px;padding:12px 22px;border-radius:6px;text-decoration:none;">' +
+        'Ouvrir dans ReVends</a></p>' +
+        '<p style="margin:0 0 12px;font-size:13px;color:#6b7280;">' +
+        'Lien direct : ' +
+        `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#7A1B2E;">${href}</a></p>`;
+  const textLink = link === null ? '' : `\n\nOuvrir dans ReVends :\n${link}\n`;
   return {
     html:
       '<!doctype html><html lang="fr"><head><meta charset="utf-8">' +
@@ -204,7 +224,7 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
             'Votre compte est créé. Vous pouvez maintenant publier vos articles et acheter auprès de la communauté.',
           ),
         ],
-        link ?? internalLink('/dashboard'),
+        link ?? internalLink('/'),
       );
       return { subject: 'Bienvenue sur ReVends', html, text };
     }
@@ -216,7 +236,7 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
           para('Bonne nouvelle : votre article est validé et visible sur le catalogue.'),
           para('Article :', `<strong>${product}</strong>`),
         ],
-        link ?? internalLink('/dashboard/articles'),
+        link ?? internalLink('/mes-articles'),
       );
       return { subject: 'Votre article est approuvé', html, text };
     }
@@ -232,7 +252,7 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
           para('Article :', `<strong>${product}</strong>`),
           para('Vous pouvez modifier l\'article et le soumettre à nouveau.'),
         ],
-        link ?? internalLink('/dashboard/articles'),
+        link ?? internalLink('/mes-articles'),
       );
       return { subject: 'Votre article a été refusé', html, text };
     }
