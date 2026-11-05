@@ -3635,6 +3635,14 @@ utilisateur, empreinte du secret) au lieu de comparer au `.env.local` local.
 - **Secrets** : grep du bundle client (`smtp.gmail`, `revendsen@gmail`, mot de passe, `SESSION_SECRET`,
   `postgres://`) → **0 occurrence**.
 
+### Déploiement final de validation (5/11, 11:06 UTC)
+- `revends-kcnzcqfs8` / `dpl_BfQ2PJ2C7zrvfax47f4Fhq7WVf1t`, alias `https://revends.vercel.app`,
+  construit depuis l'arbre au commit `7093840`.
+- Revérifié après déploiement : routes publiques **200**, CSP images complète, title/canonical OK,
+  images **16/16** (accueil, shop, catalogue, fiche produit), e-mail `email envoyé` / `transport: smtp`.
+- Seule ligne console : `401` sur `/api/auth/me` pour un visiteur anonyme — comportement attendu
+  (sonde de session), pas une régression.
+
 ### Reste à faire
 1. Secrets Meta WhatsApp (`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`,
    template pré-approuvé) toujours absents → `WHATSAPP_ENABLED=false`.
