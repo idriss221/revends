@@ -3557,3 +3557,68 @@ avec preuve de paiement validée côté serveur, numéros sénégalais +221 par 
    à rapatrier dans le dépôt pour éviter une divergence future.
 5. WhatsApp réel non testable de bout en bout sans les secrets Meta (tests unitaires et
    `WHATSAPP_ENABLED=false` couverts ; e-mail prouvé par la suite `emails.test.ts`).
+
+## 2026-11-05 — Correctif production : images Vercel Blob (CSP) + e-mail
+
+### Demande utilisateur
+Repartir de la **version valide du 31/10** (`799a7ab`, déploiement `dpl_9KsRcXig57LPNm3koLuaGQ1pU7iw`)
+et y réintégrer les modifications V6 (WhatsApp, preuves de paiement, +221, SEO), avec des images
+qui s'affichent et un e-mail qui fonctionne.
+
+### Cause racine n°1 (images cassées) — trouvée et corrigée
+- Le déploiement V6 recevait bien les photos (HTTP 200 depuis Vercel Blob), mais la CSP répondait
+  `img-src 'self' data:` (valeur par défaut de Helmet) → **le navigateur bloquait toutes les images
+  Blob**, d'où des `<img>` vides sur tout le site.
+- Le correctif CSP existait **uniquement dans le build local du 31/10** : `799a7ab` ne l'a jamais
+  versionné, et le revert `77269eb` a effacé la directive du code source. Tout rebuild propre
+  reproduisait donc la panne.
+- Correctif versionné dans `server/src/app.ts` :
+  `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com`.
+- Non-régression verrouillée par `server/test/security-headers.test.ts` (assertion sur l'en-tête réel).
+
+### Cause racine n°2 (images legacy) — atténuée
+- Les produits 1–7 pointent vers des chemins relatifs `uploads/products/…` dont les fichiers sont
+  absents de Vercel Blob (404) **et** du disque (produits `REJECTED` ou supprimés).
+  Fichiers irrécupérables : aucune copie locale ni distante.
+- `ResilientImg` (retry ×2 + repli visuel neutre) restauré et utilisé dans `MyArticlesPage`,
+  `MyOrdersPage`, `SalesSection`, `AdminTable`, `AdminProductSheet`, `SearchSuggest` : plus d'icône
+  « image cassée » ni de texte alternatif brut.
+
+### Cause racine n°3 (e-mail) — bloquée côté secret
+- En production, le runtime répondait `email désactivé (MAIL_ENABLED=false)`.
+  → `MAIL_ENABLED=true` réappliqué sur l'environnement Production Vercel.
+- Le secret `MAIL_PASSWORD` stocké est **refusé par Google** :
+  `535 5.7.8 Username and Password not accepted` (`EAUTH`), testé localement avec le mot de passe
+  brut (19 caractères) **et** compacté sans espaces (16 caractères). Jetons révoqués/expirés
+  (`535 Authentication failed: The provided authorization grant is invalid, expired, or revoked`).
+- Action utilisateur requise : nouveau **mot de passe d'application** Gmail (16 caractères) pour
+  `revendsen@gmail.com`, puis mise à jour de `MAIL_PASSWORD` et redéploiement.
+
+### Livraison
+- Branche `fix/v6-on-799a7ab` créée depuis `799a7ab`, patch V6 réappliqué, correctif CSP ajouté.
+- Commit `323ebb7` (50 fichiers, parent `799a7ab`) — **non poussé**.
+- Déploiement production `revends-4onl62hcg` (`dpl_Dw1M3bpL8eNmNrkC5Kv81DJAbw9A`), alias
+  `https://revends.vercel.app` basculé.
+
+### Preuves exécutées (2026-11-05)
+- **Serveur** : `npm test` → **30 suites, 514/514, 0 échec** (`✅ ALL SUITES GREEN`), dont
+  `security-headers.test.ts` 1/1. `tsc --noEmit` OK, `tsc -p` OK.
+- **Web** : `npx vitest run` (depuis `web/`) → **15 fichiers, 235/235, 0 échec**. `vite build` OK.
+- **Production — en-têtes** : CSP contient `img-src 'self' data: blob:
+  https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com`.
+- **Production — SEO** : `<title>ReVendsen — Marketplace seconde main au Sénégal | ReVends</title>`,
+  canonical/OG/JSON-LD présents, assets `/assets/index-DqAeYjh7.js` + `/assets/index-7vwuHU1h.css`.
+- **Production — routes** : `/`, `/shop`, `/catalogue`, `/category`, `/login`, `/register`,
+  `/api/health` → **200**.
+- **Production — images** : sur `/shop`, sonde `new Image()` → **3/3 photos Blob chargées**
+  (1024×1024, 1024×1024, 1254×1024), **0 échec**. Catégories `hero.jpg` et `bottom-banner.jpg` → 200.
+- **Production — e-mail** : `POST /api/auth/forgot-password` → 202, puis logs runtime
+  `échec d'envoi d'email`, `transport: smtp`, `attempts: 2`, `EAUTH 535` → **confirme le blocage
+  secret, pas un défaut de code**.
+
+### Reste à faire
+1. Nouveau mot de passe d'application Gmail → `MAIL_PASSWORD` (Production) → redéploiement →
+   vérifier une ligne `email envoyé` sans `EAUTH`.
+2. Secrets Meta WhatsApp (`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`,
+   template pré-approuvé) toujours absents → `WHATSAPP_ENABLED=false`.
+3. Rapatrier `013_product_image_repair.sql` (présent dans `schema_migrations` prod, absent du dépôt).
