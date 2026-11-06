@@ -20,6 +20,8 @@ export interface WhatsAppResult {
   skipped?: boolean;
   status?: number;
   error?: string;
+  /** Identifiant Whapi du message envoyé (observabilité, jamais un secret). */
+  messageId?: string;
 }
 
 /** Masque un numéro dans les logs : +221 77 ••• •• 67. */
@@ -63,9 +65,10 @@ export async function sendWhatsAppMessage(rawPhone: string, body: string, opts: 
     token?: string;
   };
   const apiUrl = (wa.apiUrl || 'https://gate.whapi.cloud').replace(/\/+$/, '');
-  // Whapi attend le destinataire (format international, ex. 221770673233).
+  // Doc officielle Whapi : POST /messages/text avec {to, body}
+  // (voir https://whapi.readme.io/reference/sendmessagetext).
   const to = phone.replace(/^\+/, '');
-  const url = `${apiUrl}/messages`;
+  const url = `${apiUrl}/messages/text`;
 
   const payload = {
     to,
@@ -95,12 +98,22 @@ export async function sendWhatsAppMessage(rawPhone: string, body: string, opts: 
       return { ok: false, status: res.status, error: `HTTP_${res.status}` };
     }
 
+    const data = (await res.json().catch(() => ({}))) as {
+      sent?: boolean;
+      message?: { id?: string; status?: string };
+    };
+    const messageId = data.message?.id;
+    const messageStatus = data.message?.status;
+
     logger.info('message WhatsApp Whapi envoyé', {
       phone: maskPhone(phone),
       mode: 'text',
+      sent: data.sent,
+      messageId,
+      messageStatus,
       durationMs: Date.now() - startedAt,
     });
-    return { ok: true, status: res.status };
+    return { ok: true, status: res.status, messageId };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     logger.error('échec envoi WhatsApp Whapi', {
