@@ -1,7 +1,7 @@
 /**
  * Normalisation des numéros de téléphone / WhatsApp.
  *
- * ReVends est destiné au marché sénégalais : l'indicatif par défaut est +221.
+ * Ranga est destiné au marché sénégalais : l'indicatif par défaut est +221.
  * Règles (ne jamais écraser un indicatif étranger explicite) :
  *   1. `+XXX…` ou `00XXX…` → conservé tel quel (format international) ;
  *   2. numéro local sénégalais à 9 chiffres (`77 123 45 67`) → `+221…` ;
@@ -65,7 +65,7 @@ export function isE164(value: string): boolean {
  */
 export function countryCode(value: string): string | null {
   if (!isE164(value)) return null;
-  // Les indicatifs utilisés par ReVends ont 2 ou 3 chiffres. On privilégie
+  // Les indicatifs utilisés par Ranga ont 2 ou 3 chiffres. On privilégie
   // les préfixes connus, puis on retombe sur 3 chiffres (Afrique de l'Ouest).
   if (value.startsWith('+221') || value.startsWith('+225') || value.startsWith('+33')) {
     return value.slice(1, 4);

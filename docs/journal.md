@@ -1,4 +1,4 @@
-# Journal de projet — ReVends
+# Journal de projet — Ranga
 
 Suivi d'avancement tenu par le chef de projet. Dates au format JJ/MM/AAAA.
 Source de vérité produit : `docs/cahier-des-charges-v3.md`.
@@ -269,7 +269,7 @@ Refonte de la HomePage + Navbar pour un rendu marketplace type Jumia :
   0 référence Unsplash).
 
 ### Risques
-- **R1 — Railway free tier (3 services)** : ReVends (API + Postgres) = 2 slots ;
+- **R1 — Railway free tier (3 services)** : Ranga (API + Postgres) = 2 slots ;
   actuellement `atelier-os-backend` + Postgres occupy 2. L'utilisateur a autorisé
   le décommissionnement d'`atelier-os-backend` (non actif). `nprojet` (MySQL)
   reste intact. → Action : supprimer `atelier-os-backend` avant `railway init`.
@@ -281,7 +281,7 @@ Refonte de la HomePage + Navbar pour un rendu marketplace type Jumia :
 
 ### Décisions à valider par l'utilisateur
 1. Décommissionner `atelier-os-backend` (projet + service + Postgres) sur
-   Railway pour déployer ReVends (mono-entité + plugin Postgres) ?
+   Railway pour déployer Ranga (mono-entité + plugin Postgres) ?
 2. Confirmer les valeurs d'env de production : `ADMIN_EMAIL`,
    `ADMIN_PASSWORD`, `SESSION_SECRET`, `COMMISSION_RATE=0.10`,
    `RESERVATION_MINUTES=15`.
@@ -517,7 +517,7 @@ parcours navigateur `#/cart`, `#/favs`, `#/account` → **0 appel API en erreur*
 - **Upstream en dur** (`server 172.30.0.5:4000`…) non reproductible →
   remplacé par les noms de service Docker (`api1:4000`…) + `max_fails`.
 - **nginx ne servait PAS le SPA** : aucun montage de `web/dist` → page d'accueil
-  nginx par défaut. Montage ajouté, `<title>ReVends…` servi.
+  nginx par défaut. Montage ajouté, `<title>Ranga…` servi.
 - `client_max_body_size` implicitement 1 Mo alors que l'API accepte 2 Mo → 413.
   Fixé à 4m.
 - `COOKIE_SECURE=false` explicite (Docker sans TLS au bord) + commentaire indiquant
@@ -697,12 +697,12 @@ au profit d'un **Single Sender** vérifié.
 - `GET /v3/senders` : 2 senders existants (`revends`, `revdns`) sur `no-reply@revends.com`,
   tous `verified:{status:false}` → inutilisables.
 - `POST /v3/senders` → **sender id 9990169** créé :
-  `from = ReVends <dioufidrissaa@gmail.com>`, `reply_to = dioufidrissaa@gmail.com`,
+  `from = Ranga <dioufidrissaa@gmail.com>`, `reply_to = dioufidrissaa@gmail.com`,
   adresse Cocody/Abidjan/CI. (HTTP 201)
 - `POST /v3/senders/9990169/resend_verification` → **HTTP 204** (mail de vérification envoyé).
-- `MAIL_FROM` passé à `ReVends <dioufidrissaa@gmail.com>` dans `.env`, `.env.example`
+- `MAIL_FROM` passé à `Ranga <dioufidrissaa@gmail.com>` dans `.env`, `.env.example`
   et les 3 défauts `${MAIL_FROM:-…}` de `docker-compose.yml`.
-- Conteneurs `api1/api2/api3` recréés : `printenv MAIL_FROM` = `ReVends <dioufidrissaa@gmail.com>`
+- Conteneurs `api1/api2/api3` recréés : `printenv MAIL_FROM` = `Ranga <dioufidrissaa@gmail.com>`
   sur les 3 ; site 200, health 200.
 
 ### Action utilisateur (obligatoire pour l'envoi réel)
@@ -828,10 +828,10 @@ Web OAuth Login = Oui / Enforce HTTPS = Non.
 ## U. (2026-10-15) Mails : envoi OK, délivrabilité en cause
 
 Preuve SendGrid `GET /v3/messages` :
-- 00:57 `delivered` → dioufidrissaa+revends1@gmail.com « Bienvenue sur ReVends » (register HTTP 201).
+- 00:57 `delivered` → dioufidrissaa+revends1@gmail.com « Bienvenue sur Ranga » (register HTTP 201).
 - 23:57 `delivered` → dioufidrissaa@gmail.com « Réinitialisation de votre mot de passe ».
 Logs API : `[mail] event=welcome userId=9100 … transport=smtp` (aucune erreur).
-Env des 3 API : NODE_ENV=production, MAIL_ENABLED=true, smtp.sendgrid.net:587, MAIL_FROM=ReVends <dioufidrissaa@gmail.com>.
+Env des 3 API : NODE_ENV=production, MAIL_ENABLED=true, smtp.sendgrid.net:587, MAIL_FROM=Ranga <dioufidrissaa@gmail.com>.
 
 Diagnostic : l'envoi fonctionne, mais **expéditeur = adresse gmail.com via SendGrid**
 → pas d'alignement SPF/DKIM (gmail.com n'autorise que les serveurs Google) + `from == to`
@@ -851,7 +851,7 @@ FAIL 535 pour dioufidrissaa@gmail.com avec le MÊME code.
 Correctif appliqué (.env, sauvegarde .env.bak.smtp2.*) :
 - MAIL_HOST=smtp.gmail.com, MAIL_PORT=587, MAIL_SECURE=false
 - MAIL_USER=revendsen@gmail.com, MAIL_PASSWORD=<app password 16c>
-- MAIL_FROM=ReVends <revendsen@gmail.com>   (expéditeur = compte authentifié → SPF/DKIM alignés)
+- MAIL_FROM=Ranga <revendsen@gmail.com>   (expéditeur = compte authentifié → SPF/DKIM alignés)
 Recreation api1/api2/api3, env vérifié sur les 3.
 
 Tests (register → welcome) :
@@ -1768,7 +1768,7 @@ Objectif utilisateur : servir sur http://localhost:8080 la **vraie** application
 - **Config prod-like = `docker compose -f docker-compose.yml …`** (exclut
   l'override dev). L'override reste réservé au `--profile dev`.
 - Le conteneur hérité `revends-postgres` (projet `server`, port 5433) n'est pas
-  utilisé par ReVends ; ne pas le confondre avec `revends_postgres` (5440).
+  utilisé par Ranga ; ne pas le confondre avec `revends_postgres` (5440).
 
 ---
 
@@ -1973,7 +1973,7 @@ Cet entry trace les 4 correctifs et leur preuve.
 
 ### Reste / décisions ouvertes
 - **Titre d'onglet** : maquette `REVENDS — Seconde vie. Nouveau propriétaire.`
-  vs actuel `ReVends - Donnez une seconde vie aux belles choses` — **0 assertion
+  vs actuel `Ranga - Donnez une seconde vie aux belles choses` — **0 assertion
   `toHaveTitle`** dans la suite : arbitrage non tranché (cosmétique).
 - **Pages d'auth** (`/login`, `/register`) : hors `SiteShell`, rendues par
   `AuthLayout` (fond Ivory, carte, story) — **pas** `body.bare` de la maquette.
@@ -2393,7 +2393,7 @@ réappliqué avec `--single-transaction` (aucun état partiel possible).
 
 **Diagnostic (mesuré, pas supposé)** :
 1. `localhost:5173` = **`atelier-os/frontend`, un AUTRE projet** (vérifié
-   `/proc/<pid>/cwd`), pas ReVends. Le site est sur `http://localhost:8080`.
+   `/proc/<pid>/cwd`), pas Ranga. Le site est sur `http://localhost:8080`.
 2. Sur 8080, héros (`/categories/hero.jpg` 959×1199), fond connexion
    (`/categories/auth.jpg` 960×1280) et tuiles étaient déjà rendus — **mais**
    `web/public/categories/` contenait encore **10 photos de l'ancienne
@@ -2970,7 +2970,7 @@ production**, avec de belles photos illustrant chaque catégorie.
 ## 21 octobre 2026 (suite) — Préparation du déploiement production (Render)
 
 ### Objectif
-Déployer ReVends en production. Plateforme retenue : **Render** (Blueprint
+Déployer Ranga en production. Plateforme retenue : **Render** (Blueprint
 `render.yaml`), code hébergé sur **GitHub**.
 
 ### Infrastructure décrite (`render.yaml`, validée)
@@ -3072,7 +3072,7 @@ compte, sans carte**.
 ### Vérifications publiques (preuves, depuis l'extérieur)
 | Contrôle | Résultat |
 |---|---|
-| Accueil `GET /` | **200** `text/html`, titre « ReVends… » |
+| Accueil `GET /` | **200** `text/html`, titre « Ranga… » |
 | `GET /api/health` | `{"status":"ok"}` |
 | `GET /api/categories` | 5 mères + 17 enfants = **22** |
 | `GET /api/products` | **total 0** (site neuf) |
@@ -3170,7 +3170,7 @@ changement front exige `cd web && npm run build` AVANT d'être visible.
 
 Remplacer le tunnel Cloudflare (temporaire) par un hébergement **24/7
 gratuit** : Vercel Hobby + Neon (PostgreSQL) + Vercel Blob, sur l'URL fixe
-`https://revends.vercel.app`, en conservant la stack Docker locale comme
+`https://ranga.vercel.app`, en conservant la stack Docker locale comme
 filet de secours. Contrainte dure : **aucune carte bancaire**.
 
 ### Résumé exécutif
@@ -3178,7 +3178,7 @@ filet de secours. Contrainte dure : **aucune carte bancaire**.
 | Élément | Avant | Après |
 |---|---|---|
 | Hébergement | tunnel Cloudflare (temporaire) | Vercel Hobby (serveurless) |
-| URL | variable | `https://revends.vercel.app` (fixe) |
+| URL | variable | `https://ranga.vercel.app` (fixe) |
 | Base | Render (clé à révoquer) | Neon `noisy-breeze-38171898` (free) |
 | Coût | 0 | 0 (plan `hobby`, `billing.status=active`) |
 | Coût Photo | disque local | Vercel Blob (store `revends-photos`) |
@@ -3240,13 +3240,13 @@ public/                  → front compilé, téléversé (sortie statique CDN)
 `NODE_ENV=production` · `SESSION_STORE=pg` · `CACHE_ENABLED=false` ·
 `RATE_LIMIT_BACKEND=memory` · `MAIL_ENABLED=false` · `RUN_MIGRATIONS=false` ·
 `DISABLE_CRON=true` · `UPLOAD_DIR=/tmp/revends/uploads/products` ·
-`PG_POOL_MAX=2` · `WEB_DIST=public` · `SITE_URL=https://revends.vercel.app`.
+`PG_POOL_MAX=2` · `WEB_DIST=public` · `SITE_URL=https://ranga.vercel.app`.
 
 ### Recette production (11/11 — `scripts/deploy-vercel.sh` puis curl)
 
 | Contrôle | Attendu | Obtenu |
 |---|---|---|
-| `GET /` | 200 (SPA) | ✅ 200 (2041 o, `<title>ReVends…`) |
+| `GET /` | 200 (SPA) | ✅ 200 (2041 o, `<title>Ranga…`) |
 | `GET /categorie/vehicules` | 200 | ✅ 200 |
 | `GET /favicon.ico`, `/assets/index-*.js` | 200 | ✅ 200 |
 | `GET /api/health` | 200 | ✅ 200 |
@@ -3299,7 +3299,7 @@ scripts/deploy-vercel.sh      # build front → copie public/ → vercel build �
 
 ### 2. OAuth Google / Facebook
 **Cause racine** : les identifiants n'étaient **pas** dans Vercel (le redirect marchait grâce au `.env` embarqué).
-**Correctif** : variables posées dans Vercel (type secret). Redirect URI déclarée dans la console Google Cloud : `https://revends.vercel.app/api/auth/google/callback` + `https://revends.vercel.app/api/auth/facebook/callback` + JS origin `https://revends.vercel.app`.
+**Correctif** : variables posées dans Vercel (type secret). Redirect URI déclarée dans la console Google Cloud : `https://ranga.vercel.app/api/auth/google/callback` + `https://ranga.vercel.app/api/auth/facebook/callback` + JS origin `https://ranga.vercel.app`.
 **État** : redirect 302 vers Google OK (client_id réel), callback nécessite l'action utilisateur (déclaration dans la console) → non testée end-to-end faute d'accès à la console Google/Facebook.
 
 ### 3. Racine `/` → 404 (corrigée)
@@ -3323,14 +3323,14 @@ scripts/deploy-vercel.sh      # build front → copie public/ → vercel build �
 - Cibles tactiles ≥ 44×44 px
 - Hiérarchie typo `Manrope`/`DM Serif Display`
 - Font Awesome supprimé du public → `Ico.tsx` / `IconSprite.tsx` (sprite SVG)
-- Liens sociaux corrigés, graphie unique « ReVends », « Six familles », copy soigné
+- Liens sociaux corrigés, graphie unique « Ranga », « Six familles », copy soigné
 - Admin (`.market-admin`) inchangé (garde Tailwind/Font Awesome)
 **Preuves** : `npm run build` ✅ (547 kB JS, 230 kB CSS), `npm test` ✅ 235/235, grep legacy → 0 dans le public.
 **Point d'attention** : le bloc RE-SKIN PUBLIC reste dans `index.css` (filet) — sera supprimé une fois l'admin migré ou validé visuellement.
 
 ### Déploiement final
 - Pipeline : `scripts/deploy-vercel.sh` (build local + `--prebuilt`)
-- Production : `https://revends.vercel.app` — **11/11 CONFORME**
+- Production : `https://ranga.vercel.app` — **11/11 CONFORME**
 - Secrets : plus aucune fuite, bundle propre.
 
 ---
@@ -3347,7 +3347,7 @@ scripts/deploy-vercel.sh      # build front → copie public/ → vercel build �
 
 ## 2026-10-22 (suite) — Images catégories hébergées localement
 
-**Problème** : Pinterest bloque le hotlinking depuis revends.vercel.app (pas de CORS, protection anti-hotlink). Les images externes ne s'affichaient pas.
+**Problème** : Pinterest bloque le hotlinking depuis ranga.vercel.app (pas de CORS, protection anti-hotlink). Les images externes ne s'affichaient pas.
 
 **Solution** : Téléchargement des 6 images Pinterest → `web/public/categories/` (mode.jpg, maison.jpg, electronique.jpg, electromenager.jpg, loisirs.jpg, bottom-banner.jpg). Mise à jour de `catalogPhotos.ts` et `HomeView.tsx` pour utiliser les chemins locaux (`/categories/...jpg?v=2026-10-22`). CSP restauré à sa config par défaut.
 
@@ -3476,7 +3476,7 @@ Verdict: GO PRODUCTION
 ## 2026-11-04 — V6 : WhatsApp Cloud API, preuve de paiement sécurisée, numéros +221, SEO
 
 ### Objectif
-Finaliser la production `https://revends.vercel.app` sans régresser la version en ligne :
+Finaliser la production `https://ranga.vercel.app` sans régresser la version en ligne :
 notifications e-mail + WhatsApp Business officielles, workflow « commande non payée = invalide »
 avec preuve de paiement validée côté serveur, numéros sénégalais +221 par défaut, SEO consolidé.
 
@@ -3514,7 +3514,7 @@ avec preuve de paiement validée côté serveur, numéros sénégalais +221 par 
 - `api.ts`/`types.ts` : `PaymentProof`, `submitPaymentProof`, `reviewPaymentProof`.
 
 **SEO**
-- `web/index.html` : title/description ciblés (« ReVendsen », « revends », « revends Sénégal »,
+- `web/index.html` : title/description ciblés (« Ranga », « revends », « revends Sénégal »,
   « marketplace »), canonical, OG, Twitter, JSON-LD Organization + WebSite (SearchAction),
   `theme-init.js` externe (CSP `script-src 'self'` respectée).
 - `robots.txt` : pages privées exclues, sitemap déclaré. `sitemap.xml` : `/`, `/shop`, `/catalogue`,
@@ -3530,7 +3530,7 @@ avec preuve de paiement validée côté serveur, numéros sénégalais +221 par 
 - **Migration SQL validée à blanc** sur PostgreSQL 16 : deux candidats identiques → 1 `corrected`
   + 1 `skipped_duplicate`, ivoiriens `07…`/`05…` → `skipped_foreign`, aucun conflit d'unicité.
 - **Déploiement** : `scripts/deploy-vercel.sh` → `dpl_4fmrtSsFcbhtCMirUbRMYfZ333LR`,
-  alias `https://revends.vercel.app` (READY).
+  alias `https://ranga.vercel.app` (READY).
 - **Production** : `/` 200 (title, description, canonical, JSON-LD, `/theme-init.js`,
   `/assets/index-C8qtnJ9D.js`), `/robots.txt` 200, `/sitemap.xml` 200, `/api/health` 200
   (`{"status":"ok"}`), `/catalogue` 200, assets JS/CSS 200.
@@ -3610,7 +3610,7 @@ utilisateur, empreinte du secret) au lieu de comparer au `.env.local` local.
 - Branche `fix/v6-on-799a7ab` créée depuis `799a7ab`, patch V6 réappliqué, correctif CSP ajouté.
 - Commit `323ebb7` (50 fichiers, parent `799a7ab`) — **non poussé**, suivi de `f119b0b` (journal +
   migration rapatriée).
-- Déploiements production successifs, alias `https://revends.vercel.app` basculé à chaque fois ;
+- Déploiements production successifs, alias `https://ranga.vercel.app` basculé à chaque fois ;
   builds finaux : images `dpl_Dw1M3bpL8eNmNrkC5Kv81DJAbw9A`, e-mail `dpl_` (revends-6biamthh7).
 
 ### Preuves exécutées (2026-11-05)
@@ -3619,7 +3619,7 @@ utilisateur, empreinte du secret) au lieu de comparer au `.env.local` local.
 - **Web** : `npx vitest run` (depuis `web/`) → **15 fichiers, 235/235, 0 échec**. `vite build` OK.
 - **Production — en-têtes** : CSP contient `img-src 'self' data: blob:
   https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com`.
-- **Production — SEO** : `<title>ReVendsen — Marketplace seconde main au Sénégal | ReVends</title>`,
+- **Production — SEO** : `<title>Ranga — Marketplace seconde main au Sénégal | Ranga</title>`,
   canonical/OG/JSON-LD présents, assets `/assets/index-DqAeYjh7.js` + `/assets/index-7vwuHU1h.css`.
 - **Production — routes** : `/`, `/shop`, `/catalogue`, `/category`, `/login`, `/register`,
   `/api/health` → **200**.
@@ -3636,7 +3636,7 @@ utilisateur, empreinte du secret) au lieu de comparer au `.env.local` local.
   `postgres://`) → **0 occurrence**.
 
 ### Déploiement final de validation (5/11, 11:06 UTC)
-- `revends-kcnzcqfs8` / `dpl_BfQ2PJ2C7zrvfax47f4Fhq7WVf1t`, alias `https://revends.vercel.app`,
+- `revends-kcnzcqfs8` / `dpl_BfQ2PJ2C7zrvfax47f4Fhq7WVf1t`, alias `https://ranga.vercel.app`,
   construit depuis l'arbre au commit `7093840`.
 - Revérifié après déploiement : routes publiques **200**, CSP images complète, title/canonical OK,
   images **16/16** (accueil, shop, catalogue, fiche produit), e-mail `email envoyé` / `transport: smtp`.
@@ -3649,3 +3649,65 @@ utilisateur, empreinte du secret) au lieu de comparer au `.env.local` local.
 2. Le mot de passe d'application Gmail a transité par la conversation : à **révoquer et régénérer**
    dès que l'utilisateur le souhaite (procédure : Google → Sécurité → Mots de passe des applications),
    puis remplacer `MAIL_PASSWORD` sur Vercel et redéployer.
+
+---
+
+## 2026-11-07 — Rebranding ReVends → Ranga + nouvelle URL `ranga-sn.vercel.app`
+
+### Contexte
+Reprise du rebranding laissé **incomplet** (77 fichiers modifiés non commités) : les commentaires
+étaient traduits, mais les textes **visibles** (`Logo`, `Navbar`, `Footer`, `AuthView`,
+`ProductView`, `SellView`, `LegalPage`), les images (`logo.png`, `og-cover.png`) et le domaine
+`vercel.app` étaient encore sur l'ancienne marque. Les remplacements globaux de l'IA précédente
+pointaient vers `https://ranga.vercel.app`, **domaine déjà pris par un autre site** (`<title>合成大西瓜</title>`,
+HTTP 200). Cette entrée corrige ces deux points.
+
+### Décision d'URL
+- `ranga.vercel.app` : **indisponible** (autre projet Vercel).
+- `ranga-sn.vercel.app` : disponible (`404 DEPLOYMENT_NOT_FOUND` avant affectation) → ajouté au
+  projet Vercel `revends` via `vercel domains add`, et aliasé au déploiement de production.
+- `revends.vercel.app` **conservé** : il porte encore les callbacks OAuth (voir « Reste à faire »).
+
+### Modifications
+- **Textes visibles** : `Logo` (`R` accent, `Ranga`/`RANGA`), `Navbar` (2 wordmarks), `Footer`
+  (logo + copyright), `AuthView` (`RANGA.`, « Rejoignez Ranga », « Nouveau chez Ranga ? »),
+  `ProductView` (eyebrow `RANGA`), `SellView` (3 libellés de commission), `LegalPage`
+  (`contact@ranga.ci`, ancrage `role-ranga`), `favicon.svg` (aria-label), titres d'images du
+  sitemap, attente e2e `/register`.
+- **SEO** : `<title>`, description, OG/Twitter, JSON-LD (`alternateName`), `canonical`, sitemap
+  (31 URLs), `robots.txt`, script de déploiement → `https://ranga-sn.vercel.app`.
+- **Binaires** : `web/public/logo.png` (512×512) et `web/public/og-cover.png` (1200×630)
+  régénérés **depuis les originaux**. Anneau, tuile, palette et typographie inchangés —
+  mesures conservées : logo centre `(256,256)`, rayon externe `166`, interne `124`, trait `42`,
+  ouverture `45°` sur la droite ; og-cover centre `(321,321)`, rayon `212`, trait `54`, fond
+  `#171513`, ivoire `#F7F3EC`. Seul le logotype change (`REVENDSEN` → `RANGA`, même police
+  DejaVu Sans Bold, même hauteur d'œil, même couleur, même ancrage).
+- **Identifiants internes conservés** (aucune migration de données) : base `revends`,
+  `revends_test`, `revends_e2e`, préfixe Redis `revends:`, clés localStorage `revends-cart` /
+  `revends:favorites`, `admin@revends.com`, noms de packages, domaines `@test.revends`.
+
+### Preuves exécutées (2026-11-07)
+- **Types** : `tsc -b` (web) et `tsc --noEmit` (server) → **0 erreur**.
+- **Web** : `npx vitest run` → **15 fichiers, 235/235, 0 échec**.
+- **Serveur** : `npm test` → **`✅ ALL SUITES GREEN`**.
+- **Build** : `npm run build --prefix web` OK ; le bundle ne contient plus que 4 occurrences de
+  `revends` (= clés localStorage volontairement conservées), **0 texte de marque**.
+- **E2E ciblé** : `/register` → `1 passed`, h1 « Rejoignez Ranga ».
+- **Production** (`https://ranga-sn.vercel.app`, alias de `depl_ErcuKYSZQEXZv7BAGknJp5gu25D5`) :
+  titre « Ranga — Friperie en ligne & Articles d'occasion au Sénégal », canonical/OG/JSON-LD
+  `ranga-sn`, `logo.png` md5 `119993d1…`, `og-cover.png` md5 `7500d383…`, `/api/health`
+  `{"status":"ok"}`, sitemap et robots sur `ranga-sn`, CSRF same-host validé (login avec un
+  mauvais mot de passe → `401 INVALID_CREDENTIALS`, pas `403`).
+- **E2E complet** : 11 réussis / 3 échoués — échecs **hors rebranding** : `ADMIN_EMAIL` /
+  `ADMIN_PASSWORD` absents dans l'environnement e2e (login admin → `/login`, approbation seed →
+  `401`) et un test `/catalogue` qui attend encore un 404 alors que la route rend « Découvrir ».
+
+### Reste à faire (action propriétaire)
+1. **OAuth** : `GOOGLE_CALLBACK_URL` et `FACEBOOK_CALLBACK_URL` pointent toujours sur
+   `https://revends.vercel.app/api/auth/{google,facebook}/callback`. Pour basculer entièrement :
+   ajouter les callbacks `https://ranga-sn.vercel.app/api/auth/{google,facebook}/callback` dans les
+   consoles Google/Facebook, puis mettre à jour ces 2 secrets **et** `SITE_URL`
+   (`https://ranga-sn.vercel.app`) sur Vercel. Tant que ce n'est pas fait, la connexion sociale
+   aboutit sur l'ancien domaine (fonctionnelle, mais hors URL canonique).
+2. `contact@ranga.ci` est un **placeholder** (comme l'ancien `contact@revends.ci`) : fournir
+   l'adresse réelle.

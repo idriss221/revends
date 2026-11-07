@@ -44,7 +44,7 @@ export function SplashLoader() {
       className={`rv-splash${out ? ' is-out' : ''}`}
       role="status"
       aria-live="polite"
-      aria-label="Chargement de ReVends"
+      aria-label="Chargement de Ranga"
     >
       <div className="rv-splash__box">
         <svg className="rv-heart" viewBox="0 0 120 112" aria-hidden="true">
@@ -54,7 +54,7 @@ export function SplashLoader() {
           />
           <path className="shine" d="M34 38 C 42 30 52 30 58 38" />
         </svg>
-        <span className="rv-splash__cap">ReVends</span>
+        <span className="rv-splash__cap">Ranga</span>
       </div>
     </div>
   )

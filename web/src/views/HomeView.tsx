@@ -18,7 +18,7 @@ import type { Category, ProductCardItem } from '../lib/types'
      5. produits en vedette              → `section=discover`
      6. découvrir / les plus demandés     → `section=popular`
      7. articles à bas prix              → `price_max=25000`
-     8. vendre sur ReVends               → bloc éditorial + CTA
+     8. vendre sur Ranga               → bloc éditorial + CTA
      9. pied de page                     → `Footer` (dans la coquille)
 
    Données 100 % réelles (API) ; une section vide est MASQUÉE plutôt que
@@ -98,7 +98,7 @@ function CatRail({ cats }: { cats: Category[] }) {
   )
 }
 
-/** Bloc « Vendre sur ReVends » — reprend la bannière éditoriale réelle. */
+/** Bloc « Vendre sur Ranga » — reprend la bannière éditoriale réelle. */
 function SellSection() {
   return (
     <section className="editorial sell-cta" id="vendre">
@@ -115,7 +115,7 @@ function SellSection() {
           />
         </div>
         <div className="rv">
-          <span className="eyebrow">Vendre sur ReVends</span>
+          <span className="eyebrow">Vendre sur Ranga</span>
           <h2>
             Ce qui dort dans un placard <em>attend quelqu’un.</em>
           </h2>

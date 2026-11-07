@@ -1,5 +1,5 @@
 # =============================================================================
-# ReVends — stack Docker (production-like)
+# Ranga — stack Docker (production-like)
 #
 # Architecture (décision 2026) : UN SEUL PostgreSQL = source de vérité unique,
 # plus de sharding ni de réplication. Redis (sessions + rate-limit + cache) est
@@ -83,7 +83,7 @@ services:
       # Certificat auto-signé pour l'écouteur TLS local (443) — redirections OAuth https.
       - ./server/nginx/certs:/etc/nginx/certs:ro
       # Build Vite (web/dist) servi en statique par nginx. Sans ce montage,
-      # nginx expose sa page d'accueil par défaut au lieu du SPA ReVends.
+      # nginx expose sa page d'accueil par défaut au lieu du SPA Ranga.
       - ./web/dist:/usr/share/nginx/html:ro
     depends_on:
       - api1

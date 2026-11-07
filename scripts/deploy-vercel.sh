@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ReVends — déploiement production Vercel (gratuit, sans carte bancaire)
+# Ranga — déploiement production Vercel (gratuit, sans carte bancaire)
 # ============================================================================
 #
 # POURQUOI UN BUILD LOCAL + `--prebuilt` ?
@@ -73,5 +73,5 @@ echo "▸ 4/4 — déploiement de l'output pré-construit (production)…"
 vercel deploy --prebuilt --prod --yes
 
 echo
-echo "✅ Déploiement terminé — https://revends.vercel.app"
-echo "   Recette : /tmp/opencode/prove-prod.sh https://revends.vercel.app"
+echo "✅ Déploiement terminé — https://ranga-sn.vercel.app"
+echo "   Recette : /tmp/opencode/prove-prod.sh https://ranga-sn.vercel.app"

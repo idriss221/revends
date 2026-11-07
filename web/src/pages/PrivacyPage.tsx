@@ -8,7 +8,7 @@ export function PrivacyPage() {
     <LegalPage
       title="Confidentialité"
       updated="septembre 2026"
-      intro="Quelles données ReVends collecte, pourquoi, combien de temps elles sont conservées et comment exercer vos droits."
+      intro="Quelles données Ranga collecte, pourquoi, combien de temps elles sont conservées et comment exercer vos droits."
       sections={PRIVACY_SECTIONS}
     />
   )

@@ -1,4 +1,4 @@
-# CONTRAT D'API REST — ReVends (V5)
+# CONTRAT D'API REST — Ranga (V5)
 
 | | |
 |---|---|
@@ -137,7 +137,7 @@
 > - Idempotence : table `notification_deliveries` (clé `event:entité:userId` + canal, statut `PENDING/SENT/FAILED/SKIPPED`, `attempts`, `last_error`). Rejouer une requête ne renvoie **jamais** un second message ; max **3 tentatives**.
 > - WhatsApp = **Cloud API officielle Meta** uniquement (Graph `/{phoneNumberId}/messages`), timeout 8 s, numéro masqué dans les logs. `WHATSAPP_ENABLED=false` par défaut : sans token, le canal est **coupé proprement** (statut `SKIPPED`), l'e-mail continue.
 >
-> **V6.6 — SEO.** `web/index.html` : title/description ciblés (« ReVendsen », « revends », « revends Sénégal », « marketplace »), canonical, Open Graph, Twitter Card, JSON-LD `Organization` + `WebSite` (SearchAction). `robots.txt` exclut les pages privées ; `sitemap.xml` conserve `/` et `/catalogue` et ajoute `/shop`, `/category`. Aucune URL publique existante n'est supprimée.
+> **V6.6 — SEO.** `web/index.html` : title/description ciblés (« Ranga », « revends », « revends Sénégal », « marketplace »), canonical, Open Graph, Twitter Card, JSON-LD `Organization` + `WebSite` (SearchAction). `robots.txt` exclut les pages privées ; `sitemap.xml` conserve `/` et `/catalogue` et ajoute `/shop`, `/category`. Aucune URL publique existante n'est supprimée.
 
 ## 1. Vue d'ensemble et conventions
 
@@ -1918,7 +1918,7 @@ Journal `admin_actions`, tri `created_at DESC` (CA-ADM07 — « qui a fait quoi,
 
 | # | Déclencheur | Événement endpoint | Destinataire(s) | Objet |
 |---|---|---|---|---|
-| E1 | Inscription | `POST /api/auth/register` | nouvel utilisateur | « Bienvenue sur ReVends » |
+| E1 | Inscription | `POST /api/auth/register` | nouvel utilisateur | « Bienvenue sur Ranga » |
 | E2 | Article approuvé | `POST /api/admin/products/:id/approve` | vendeur | « Votre article est approuvé » |
 | E3 | Article refusé | `POST /api/admin/products/:id/reject` | vendeur | « Votre article a été refusé » (+ motif) |
 | E4 | Commande payée | `POST /api/admin/orders/:id/confirm-payment` | **acheteur** | « Commande confirmée » |

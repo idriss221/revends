@@ -1,4 +1,4 @@
-# DESIGN SYSTEM — ReVends
+# DESIGN SYSTEM — Ranga
 
 | | |
 |---|---|
@@ -45,7 +45,7 @@
 | 9 | **Couleurs plaquées en dur dans le JSX** | `web/src/views/HomeView.tsx:66-67,164-165,244-245` · `web/src/views/AuthView.tsx:96-97` · `web/src/components/site/SiteImage.tsx:20,44,50,64,123-124` · `web/src/views/SellView.tsx:370` (`color:'#fff'`) | Ces valeurs **ne suivent pas le thème** : l'illustration « champagne » reste crème en sombre ; `#fff` en dur casse le mode sombre. |
 | 10 | **Six rayons pour six usages, sans règle** | `bureau.css:52` (`--r:12px`), `:53` (`--r-lg:18px`), `:1696` (`14px`), `:1702` (`10px`) · `bureau-fixes.css:129` (`8px`), `:288` (`10px`) · Tailwind `rounded-md` 16 px / `rounded-lg` 20 px (`index.css:107-108`) | Aucun langage de forme : deux boutons voisins peuvent avoir 12 et 16 px de rayon. |
 | 11 | **Cibles tactiles sous 44 px** | `bureau.css:1722` `.card .fav{width:34px;height:34px}` · `bureau-fixes.css:39-42` `.link-arrow{min-height:24px}` · `.badge` (`bureau.css:175-178`) non dimensionné | Cible de 34 px sur l'élément le plus sollicité du catalogue (favori) ; liens de section à 24 px alors que le DA exige 44 px sous 768 px. |
-| 12 | **Identité et copy incohérentes** | Marque écrite « REVENDS » (`Navbar.tsx:119`), « ReVends » (`web/index.html:35`), « Le Cœur couture » (`web/src/components/ui/SplashLoader.tsx:4`, commentaire source) · `HomeView.tsx:209` « **Cinq** familles, mille trouvailles » alors qu'il y a **six** univers (`lib/menus.ts:25-32`) · `Footer.tsx:85-92` et `Navbar.tsx:277-285` : liens sociaux pointant vers `/` | Promesse fausse sur l'accueil, trois graphies de marque, liens sociaux morts. |
+| 12 | **Identité et copy incohérentes** | Marque écrite « REVENDS » (`Navbar.tsx:119`), « Ranga » (`web/index.html:35`), « Le Cœur couture » (`web/src/components/ui/SplashLoader.tsx:4`, commentaire source) · `HomeView.tsx:209` « **Cinq** familles, mille trouvailles » alors qu'il y a **six** univers (`lib/menus.ts:25-32`) · `Footer.tsx:85-92` et `Navbar.tsx:277-285` : liens sociaux pointant vers `/` | Promesse fausse sur l'accueil, trois graphies de marque, liens sociaux morts. |
 
 | 13 | **En sombre, les bordures de tous les contrôles de formulaire sont invisibles** | Thème sombre : `--line` = `#292522` (`vendor/theme.css:95,120`), `--color-border-strong` = `--champagne` = `#352F2C` (`:96`, `:130`). Ces deux jetons bordent **tous** les contrôles : `.search input` (`vendor/styles.css:141` + `theme.css:151`), `.inp`/`.sel` (`styles.css:513` + `editorial.css:178`), `.cbtn`/`.chip` (`:393` + `editorial.css:182`), `.qty` (`styles.css:485` + `editorial.css:245`), `.drop` (`styles.css:522` + `editorial.css:258`) | **1,25:1 à 1,44:1** — la bordure est le **seul** indice d'existence du champ : **WCAG 1.4.11 non respecté** sur chaque formulaire du site. En plus, le thème sombre n'a **aucune structure visible** : les cartes se fondent dans le fond (`#352F2C` / `#211D1B` = **1,27:1**). |
 
@@ -556,7 +556,7 @@ Tous les badges : hauteur 24 px, `font: 700 11px/1 var(--sans)`, `letter-spacing
 - 4 colonnes : identité+baseline / Découvrir / Vendre / Mon compte.
 - Baseline : « Les belles choses méritent une nouvelle histoire. » (déjà dans `Footer.tsx:38` — à garder).
 - Liens : `--text-secondary` (7,83:1+), survol `--text-primary`, focus anneau `--focus`, `min-height: 44px` (la correction actuelle `bureau-fixes.css:52-64` ne fixe que la zone de texte, pas la cible).
-- Réseaux sociaux : **liens réels obligatoires** — tant que les URL ne sont pas fournies, les remplacer par un lien « Suivre ReVends » unique et non trompeur (au lieu de 3 liens morts vers `/`).
+- Réseaux sociaux : **liens réels obligatoires** — tant que les URL ne sont pas fournies, les remplacer par un lien « Suivre Ranga » unique et non trompeur (au lieu de 3 liens morts vers `/`).
 
 ### 4.7 Tableau (Mes articles / Mes commandes)
 
@@ -806,7 +806,7 @@ Sobre, concret, jamais exclamatif. On **décrit l'objet**, on ne **vend pas**. P
 
 ### 9.2 Règles de forme
 
-- **Marque** : **ReVends** dans les textes (une seule graphie). Le logotype en majuscules `REVENDS.` est réservé au logo lui-même. Supprimer la mention « Le Cœur couture » du commentaire source (`SplashLoader.tsx:4`) — la caption visible est déjà « ReVends » (`SplashLoader.tsx:57`).
+- **Marque** : **Ranga** dans les textes (une seule graphie). Le logotype en majuscules `REVENDS.` est réservé au logo lui-même. Supprimer la mention « Le Cœur couture » du commentaire source (`SplashLoader.tsx:4`) — la caption visible est déjà « Ranga » (`SplashLoader.tsx:57`).
 - **Devise** : « 45 000 FCFA » (espace fine insécable), jamais « 45000 FCFA » ni « 45 000 F » (`SiteBits.tsx:16-18` fait déjà bien).
 - **Punctuation** : espaces insécables avant `:` `;` `!` `?` et autour de `« »`.
 - ** Titres** : phrase case, jamais de majuscule initiale ni de point final.
@@ -820,10 +820,10 @@ Sobre, concret, jamais exclamatif. On **décrit l'objet**, on ne **vend pas**. P
 | `HomeView.tsx:209` | « Cinq familles, mille trouvailles » | « Six univers, mille trouvailles » |
 | `HomeView.tsx:176` | « Des pièces uniques, choisies avec soin… » | « Des pièces uniques, choisies avec soin, qui méritent une nouvelle histoire. » (déjà bon — ne pas toucher) |
 | `HomeView.tsx:255-256` | « Acheter d'occasion, c'est choisir la qualité sans le neuf » | Garder. C'est la meilleure phrase du site : elle doit devenir la **baseline** (footer + page « À propos »). |
-| `SplashLoader.tsx:4` (commentaire) | « Splash d'ouverture « Le Cœur couture » » | Aligner sur « Splash d'ouverture ReVends » — ou supprimer le splash (cf. §7.3). La caption (`:57`) est déjà correcte. |
-| `index.html:35` | « ReVends - Donnez une seconde vie aux belles choses » | « ReVends — Donnez une seconde vie aux belles choses · Dakar » |
+| `SplashLoader.tsx:4` (commentaire) | « Splash d'ouverture « Le Cœur couture » » | Aligner sur « Splash d'ouverture Ranga » — ou supprimer le splash (cf. §7.3). La caption (`:57`) est déjà correcte. |
+| `index.html:35` | « Ranga - Donnez une seconde vie aux belles choses » | « Ranga — Donnez une seconde vie aux belles choses · Dakar » |
 | `index.html:29` | « …vendeurs vérifiés » | « …paiement Mobile Money, livraison à Dakar » (**ne pas annoncer une vérification qui n'existe pas**) |
-| `Footer.tsx:85-92`, `Navbar.tsx:277-285` | 3 liens sociaux → `/` | Liens réels, ou un unique lien « Suivre ReVends » |
+| `Footer.tsx:85-92`, `Navbar.tsx:277-285` | 3 liens sociaux → `/` | Liens réels, ou un unique lien « Suivre Ranga » |
 | `AuthView.tsx:123` | « Produits authentiques » | « Annonces validées par l'équipe » (uniquement si l'admin filtre réellement) |
 
 ---
@@ -862,7 +862,7 @@ Sobre, concret, jamais exclamatif. On **décrit l'objet**, on ne **vend pas**. P
 | 26 | `web/src/components/layout/Navbar.tsx` (l. 119, 150-189) | Logo `REVENDS` + point `--accent-ui` ; cibles 44 px ; badges `--accent`. | A11y |
 | 27 | `web/src/components/layout/Footer.tsx` (l. 38, 85-92) | Baseline + suppression des liens sociaux morts. | Copy |
 | 28 | `web/index.html` (l. 26-35) | `<meta theme-color>` dynamique (déjà scripté l. 17-18) ; `title` et `description` §9.3 ; `<link rel="preload">` des 2 woff2 publics. | Perf + SEO |
-| 29 | `web/src/components/ui/SplashLoader.tsx` (l. 11-13, 4, 57) | `MIN_VISIBLE_MS` → 0 après 1ʳᵉ visite ; commentaire « Le Cœur couture » → « ReVends ». | Perf |
+| 29 | `web/src/components/ui/SplashLoader.tsx` (l. 11-13, 4, 57) | `MIN_VISIBLE_MS` → 0 après 1ʳᵉ visite ; commentaire « Le Cœur couture » → « Ranga ». | Perf |
 | 30 | `web/src/styles/tokens.css` (pont legacy, §3.11) | **SUPPRIMER** le pont `--terra` / `--bordeaux` / `--champ` une fois le codemod passé. Dernière étape : le système n'a plus qu'une grammaire. | Nettoyage |
 
 **Ordre de livraison recommandé** : 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 (lot « lisibilité, structure et a11y », le plus rentable) → 8, 14 (lot « tactile ») → 11, 17, 18, 19 (lot « un seul bouton ») → 10, 24, 25 (lot « hiérarchie ») → 20, 21, 22, 23 (lot « tokens dans le JSX ») → 12, 13 (lot « dérogations ») → 15, 16 (lot « nettoyage », en dernier : c'est le plus risqué) → 26, 27, 28, 29 (lot « chrome et perf ») → 30 (lot « suppression du pont »).

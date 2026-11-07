@@ -8,7 +8,7 @@ export function ConditionsPage() {
     <LegalPage
       title="Conditions générales"
       updated="septembre 2026"
-      intro="Les règles d'utilisation de la place de marché ReVends : ce que chaque partie s'engage à respecter lorsqu'elle achète, vend ou échange un article."
+      intro="Les règles d'utilisation de la place de marché Ranga : ce que chaque partie s'engage à respecter lorsqu'elle achète, vend ou échange un article."
       sections={CONDITIONS_SECTIONS}
     />
   )

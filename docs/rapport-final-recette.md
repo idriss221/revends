@@ -1,4 +1,4 @@
-# Rapport Final de Recette — ReVends
+# Rapport Final de Recette — Ranga
 
 ## Statut 🟢 GO PRODUCTION
 

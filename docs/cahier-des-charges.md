@@ -1,4 +1,4 @@
-# CAHIER DES CHARGES — Plateforme de revente d'articles d'occasion (« ReVends »)
+# CAHIER DES CHARGES — Plateforme de revente d'articles d'occasion (« Ranga »)
 
 Version du 20/09/2026 — Fourni par le client, à vérifier et améliorer par l'équipe.
 

@@ -89,8 +89,8 @@ export function LegalPage({
 
         <p className="muted rv-legal-foot">
           Une question ? Écrivez-nous à{' '}
-          <a href="mailto:contact@revends.ci">
-            contact@revends.ci
+          <a href="mailto:contact@ranga.ci">
+            contact@ranga.ci
           </a>
           .
         </p>
@@ -105,15 +105,15 @@ export const CONDITIONS_SECTIONS: LegalSection[] = [
     id: 'objet',
     title: 'Objet des conditions',
     paragraphs: [
-      "Les présentes conditions décrivent les règles applicables à l'utilisation du site ReVends, place de marché qui met en relation des acheteurs et des vendeurs particuliers.",
+      "Les présentes conditions décrivent les règles applicables à l'utilisation du site Ranga, place de marché qui met en relation des acheteurs et des vendeurs particuliers.",
       "Toute utilisation du site vaut acceptation pleine et entière de ces règles. Elles complètent les dispositions légales applicables et ne s'y substituent pas.",
     ],
   },
   {
-    id: 'role-revends',
-    title: 'Le rôle de ReVends',
+    id: 'role-ranga',
+    title: 'Le rôle de Ranga',
     paragraphs: [
-      "ReVends est un intermédiaire. Le site n'est ni le vendeur, ni l'acheteur, ni le transporteur : la vente est conclue directement entre le vendeur et l'acheteur.",
+      "Ranga est un intermédiaire. Le site n'est ni le vendeur, ni l'acheteur, ni le transporteur : la vente est conclue directement entre le vendeur et l'acheteur.",
       "Nous moderons les annonces, traitons les paiements et le suivi de commande, et signalons les manquements constatés. Nous n intervenons pas sur la qualité intrinsèque des articles échangés.",
     ],
   },
@@ -138,7 +138,7 @@ export const CONDITIONS_SECTIONS: LegalSection[] = [
       "Un numéro de suivi est communiqué dès l'expédition lorsque le transporteur en fournit un.",
     ],
     paragraphs: [
-      "La commission affichée à la publication de l'annonce s'applique aux ventes conclues sur la plateforme. Aucun frais supplémentaire n'est prélevé par ReVends auprès de l'acheteur.",
+      "La commission affichée à la publication de l'annonce s'applique aux ventes conclues sur la plateforme. Aucun frais supplémentaire n'est prélevé par Ranga auprès de l'acheteur.",
     ],
   },
   {
@@ -164,7 +164,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     id: 'principe',
     title: 'Principe',
     paragraphs: [
-      "ReVends traite les données personnelles pour faire fonctionner la place de marché : créer un compte, publier une annonce, passer une commande, assurer la livraison et le suivi.",
+      "Ranga traite les données personnelles pour faire fonctionner la place de marché : créer un compte, publier une annonce, passer une commande, assurer la livraison et le suivi.",
       "Nous ne vendons pas vos données et nous ne les utilisons pas à des fins publicitaires tierces.",
     ],
   },
@@ -197,14 +197,14 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     title: 'Vos droits',
     paragraphs: [
       "Vous pouvez à tout moment modifier les informations de votre profil, exporter vos données ou demander la suppression de votre compte.",
-      "Pour toute demande, écrivez à contact@revends.ci : nous répondons dans les meilleurs délais.",
+      "Pour toute demande, écrivez à contact@ranga.ci : nous répondons dans les meilleurs délais.",
     ],
   },
   {
     id: 'securite',
     title: 'Sécurité',
     paragraphs: [
-      "Les mots de passe sont stockés sous forme chiffrée et ne sont jamais communiqués. Les paiements transitent par des prestataires agréés : aucun numéro de carte bancaire n'est conservé par ReVends.",
+      "Les mots de passe sont stockés sous forme chiffrée et ne sont jamais communiqués. Les paiements transitent par des prestataires agréés : aucun numéro de carte bancaire n'est conservé par Ranga.",
     ],
   },
 ]

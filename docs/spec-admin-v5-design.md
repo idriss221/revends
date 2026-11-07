@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Projet** | ReVends — back-office d'administration (9 pages) |
+| **Projet** | Ranga — back-office d'administration (9 pages) |
 | **Auteur / destinataire** | Agent design (direction visuelle UI/UX) → `@frontend` (web React + Vite + Tailwind v4.3) |
 | **Sources de vérité** | `docs/cahier-des-charges-v5.md` §5.3 · `docs/design-system.md` (§2 tokens, §3 composants) · `web/src/index.css` (@theme réel) · `reference/maquette-revends.html` (L710-783 layout, L842-926 table+badge, L1953-2264 pages admin) |
 | **Règle d'or** | **100 % tokens existants.** Les 11 tokens du §2.2 sont des *renommages de valeurs déjà présentes dans le code* → rendu strictement identique (CA-V5-032). |

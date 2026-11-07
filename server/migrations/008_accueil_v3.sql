@@ -1,5 +1,5 @@
 -- ============================================================
--- ReVends — 008_accueil_v3.sql  (PostgreSQL 15+)
+-- Ranga — 008_accueil_v3.sql  (PostgreSQL 15+)
 -- Chantier « Accueil V3 » (docs/architecture-accueil-v3.md) :
 --   1. products.old_price   — prix barré + % de réduction (D-ACC-2, RG-PROD-2)
 --   2. products.view_count  — compteur de vues, tri « popular » (D-ACC-3, RG-PROD-3)

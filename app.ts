@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * ReVends — point d'entrée serverless Vercel (Express zéro-config)
+ * Ranga — point d'entrée serverless Vercel (Express zéro-config)
  * ============================================================================
  *
  * POURQUOI UN FICHIER `app.ts` À LA RACINE

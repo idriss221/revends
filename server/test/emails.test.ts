@@ -180,7 +180,7 @@ describe('E1 — Email de bienvenue (POST /api/auth/register)', () => {
     assert.ok(subject.length > 0, 'sujet déclaré');
   });
 
-  it('« Ouvrir dans ReVends » est un vrai lien tappable, stylé, vers le site', () => {
+  it('« Ouvrir dans Ranga » est un vrai lien tappable, stylé, vers le site', () => {
     const { html, text } = renderTemplate('welcome', { linkPath: '/' });
     const url = `${config.siteUrl}/`;
 
@@ -197,7 +197,7 @@ describe('E1 — Email de bienvenue (POST /api/auth/register)', () => {
     assert.ok(html.includes(`>${url}</a>`), 'URL en clair sous le bouton');
     // 4. La part texte met l'URL sur sa propre ligne (linkification des clients
     //    qui n'affichent que le plain-text).
-    assert.ok(text.includes(`Ouvrir dans ReVends :\n${url}`), 'URL seule sur sa ligne en texte brut');
+    assert.ok(text.includes(`Ouvrir dans Ranga :\n${url}`), 'URL seule sur sa ligne en texte brut');
     // 5. Aucun lien mort : le lien par défaut n'est PAS l'ancien /dashboard.
     assert.ok(!html.includes('/dashboard'), 'défaut = accueil, pas une route inexistante');
   });

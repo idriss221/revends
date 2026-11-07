@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Projet** | ReVends — marketplace de revente (Côte d'Ivoire) |
+| **Projet** | Ranga — marketplace de revente (Côte d'Ivoire) |
 | **Auteur** | Agent design (direction visuelle UI/UX) |
 | **Destinataires** | `@frontend` (web React + Vite + Tailwind v4) |
 | **Sources de vérité** | `docs/cahier-des-charges-v4-accueil.md` (fonctionnel, arbitrés ✅) · `docs/design-system.md` (tokens, maquette `reference/maquette-revends.html`) · `web/src/index.css` (tokens Tailwind réels) |
@@ -452,7 +452,7 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │  bg-ink  (fond #1A1A2E, texte blanc/80)                            │
 │ ┌────────────────────┬────────────┬────────────┬──────────────┐    │
-│ │ ReVends  (logo)    │ Catégories │ Acheter    │ Vendre       │    │
+│ │ Ranga  (logo)    │ Catégories │ Acheter    │ Vendre       │    │
 │ │ (icône orange +    │  Mode      │ Recherche  │ Vendre un    │    │
 │ │  titre blanc 28px) │  Maison    │ Panier     │   article    │    │
 │ │ La marketplace de… │  Électron… │ Mes        │ Mes articles │    │
@@ -460,7 +460,7 @@
 │ │                    │  Auto      │            │              │    │
 │ └────────────────────┴────────────┴────────────┴──────────────┘    │
 │ ───────────────────────────────────────────────────────────────────│
-│  © 2026 ReVends · Mentions légales · Confidentialité · Fait avec ♥ │
+│  © 2026 Ranga · Mentions légales · Confidentialité · Fait avec ♥ │
 │   en Côte d'Ivoire                                    (bas de page)│
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -475,7 +475,7 @@
   - **Acheter** : Recherche → `/search` · Panier → `/panier` · Mes commandes → `/mes-commandes` (idem côté : les routes protégées se comportent comme la navbar — redirection `/login?next=` si non connecté, CA-ACC-67).
   - **Vendre** : Vendre un article → `/vendre` · Mes articles → `/mes-articles` (idem redirection si session requise).
 - **Bas de page** : `border-t border-white/10` ; `mx-auto flex max-w-[1280px] flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-white/50 sm:flex-row` :
-  - « © 2026 ReVends — Tous droits réservés » ;
+  - « © 2026 Ranga — Tous droits réservés » ;
   - « Mentions légales » · « Confidentialité » (texte simple, **non cliquable** : pas de route réelle — pas de lien mort ; les libellés restent visibles comme placeholders factices) ;
   - « Fait avec <i fa-heart text-primary> en Côte d'Ivoire » — sobre, unique micro-détail de personnalité.
 

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # ============================================================================
-# ReVends — image de production du service serveur (une seule entité Railway :
+# Ranga — image de production du service serveur (une seule entité Railway :
 # API Express + SPA servie + uploads + cron de réservations, architecture §7).
 #
 # STRATÉGIE FRONT (décision devops) :

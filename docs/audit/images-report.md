@@ -1,6 +1,6 @@
-# Rapport d'audit des images et médias — ReVends
+# Rapport d'audit des images et médias — Ranga
 
-**Projet :** ReVends (`revends/`)
+**Projet :** Ranga (`revends/`)
 **Date :** 27 octobre 2026
 **Auteur :** Chef de projet (pilotage agents IA)
 **Cible de test :** stack Docker live — `http://127.0.0.1:8080` (nginx + api1..3), instance de recette `http://127.0.0.1:4002` (`api-e2e`, `RATE_LIMIT_DISABLED=true`, `MAIL_ENABLED=false`), Postgres `127.0.0.1:5433` (`revends`).
@@ -114,4 +114,4 @@ Publiques : `/`, `/shop`, `/search?q=sac`, `/catalogue/iphone-13-pro`, `/categor
 
 ## Verdict médias
 
-**Les images et médias de ReVends sont opérationnels : 0 anomalie sur 511 images testées dans le navigateur, 161 routes couvertes, 15 largeurs, 2 thèmes.** Le site est visuellement cohérent sur ce périmètre. Aucune donnée de production, aucun secret n'apparaît dans ce rapport.
+**Les images et médias de Ranga sont opérationnels : 0 anomalie sur 511 images testées dans le navigateur, 161 routes couvertes, 15 largeurs, 2 thèmes.** Le site est visuellement cohérent sur ce périmètre. Aucune donnée de production, aucun secret n'apparaît dans ce rapport.

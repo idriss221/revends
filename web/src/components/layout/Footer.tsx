@@ -14,7 +14,7 @@ import { Ico } from '../brand/Ico'
  * EXACTEMENT cet emplacement et cette visibilité, avec un `<button>` (contrôle
  * d'action, ouvre la confirmation) et l'`aria-label` verrouillé par la recette.
  *
- * Marque : « ReVends » (capital V unique), pas « REVENDS » ni « Le Cœur couture ».
+ * Marque : « Ranga » (capital V unique), pas « REVENDS » ni « Le Cœur couture ».
  * Six familles (Mode, Chaussures, Sacs, Tech, Maison, Loisirs).
  * Liens sociaux : placeholders vers les vrais profils (target="_blank").
  */
@@ -38,7 +38,7 @@ export function Footer() {
       <div className="wrap">
         <div className="top">
           <div>
-            <div className="logo">Re<span className="text-terracotta-ink">V</span>ends.</div>
+            <div className="logo"><span className="text-terracotta-ink">R</span>anga.</div>
             <p className="tagline">Les belles choses méritent une nouvelle histoire.</p>
           </div>
 
@@ -82,7 +82,7 @@ export function Footer() {
         </div>
 
         <div className="bottom">
-          <span>© {year} Re<span className="text-terracotta-ink">V</span>ends — Tous droits réservés.</span>
+          <span>© {year} <span className="text-terracotta-ink">R</span>anga — Tous droits réservés.</span>
           <div className="socials">
             <Link to="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram (s'ouvre dans un nouvel onglet)">
               <Ico name="instagram" cls="sm" />

@@ -136,7 +136,7 @@ function internalLink(linkPath: string | undefined): string | null {
  * externe, aucune image, aucun script.
  */
 function layout(heading: string, paragraphs: string[], link: string | null): { html: string; text: string } {
-  // CTA « Ouvrir dans ReVends » : un VRAI bouton, pas un simple texte.
+  // CTA « Ouvrir dans Ranga » : un VRAI bouton, pas un simple texte.
   //
   // Pourquoi des styles inline et une URL répétée en clair :
   //  - un `<a>` sans style est parfois rendu comme du texte inerte par certains
@@ -153,11 +153,11 @@ function layout(heading: string, paragraphs: string[], link: string | null): { h
         'style="display:inline-block;background-color:#7A1B2E;color:#FFFFFF;' +
         'font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;' +
         'line-height:20px;padding:12px 22px;border-radius:6px;text-decoration:none;">' +
-        'Ouvrir dans ReVends</a></p>' +
+        'Ouvrir dans Ranga</a></p>' +
         '<p style="margin:0 0 12px;font-size:13px;color:#6b7280;">' +
         'Lien direct : ' +
         `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#7A1B2E;">${href}</a></p>`;
-  const textLink = link === null ? '' : `\n\nOuvrir dans ReVends :\n${link}\n`;
+  const textLink = link === null ? '' : `\n\nOuvrir dans Ranga :\n${link}\n`;
   return {
     html:
       '<!doctype html><html lang="fr"><head><meta charset="utf-8">' +
@@ -168,9 +168,9 @@ function layout(heading: string, paragraphs: string[], link: string | null): { h
       htmlLink +
       '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;">' +
       '<p style="font-size:12px;color:#6b7280;margin:0;">' +
-      'Message automatique ReVends. Vous recevez cet e-mail car vous avez un compte actif sur la plateforme.</p>' +
+      'Message automatique Ranga. Vous recevez cet e-mail car vous avez un compte actif sur la plateforme.</p>' +
       '</body></html>',
-    text: `${heading}\n\n${paragraphs.map(unescapeHtml).join('\n\n')}${textLink}\n--\nMessage automatique ReVends.`,
+    text: `${heading}\n\n${paragraphs.map(unescapeHtml).join('\n\n')}${textLink}\n--\nMessage automatique Ranga.`,
   };
 }
 
@@ -207,7 +207,7 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
       const { html, text } = layout(
         'Réinitialisation de votre mot de passe',
         [
-          para('Vous avez demandé à réinitialiser votre mot de passe ReVends.'),
+          para('Vous avez demandé à réinitialiser votre mot de passe Ranga.'),
           para('Ce lien est valable une heure et ne peut être utilisé qu\'une seule fois.'),
           para('Si vous n\'êtes pas à l\'origine de cette demande, ignorez simplement ce message : votre mot de passe actuel reste valable.'),
         ],
@@ -218,7 +218,7 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
 
     case 'welcome': {
       const { html, text } = layout(
-        'Bienvenue sur ReVends',
+        'Bienvenue sur Ranga',
         [
           para(
             'Votre compte est créé. Vous pouvez maintenant publier vos articles et acheter auprès de la communauté.',
@@ -226,7 +226,7 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         ],
         link ?? internalLink('/'),
       );
-      return { subject: 'Bienvenue sur ReVends', html, text };
+      return { subject: 'Bienvenue sur Ranga', html, text };
     }
 
     case 'product_approved': {
@@ -458,7 +458,7 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         ].filter(Boolean),
         link,
       );
-      return { subject: 'Instructions de paiement — ReVends', html, text };
+      return { subject: 'Instructions de paiement — Ranga', html, text };
     }
 
     case 'payment_proof_received_buyer': {

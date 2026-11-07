@@ -106,7 +106,7 @@ function AuthArt() {
         <path d="M172 122c-18 4-31 14-38 30 18 2 34-6 38-30Z" />
       </svg>
       <Link className="logo" to="/">
-        REVENDS<b>.</b>
+        RANGA<b>.</b>
       </Link>
       <div className="art-copy">
         <p className="art-line rv" style={{ ['--d' as string]: '0' }}>
@@ -208,7 +208,7 @@ export function AuthView({ mode }: { mode: AuthMode }) {
   /* Textes de `setMode()` (wireAuth 1257-1274) + ResetPasswordPage. */
   const COPY: Record<AuthMode, { title: string; intro: string; submit: string; switchLabel: string }> = {
     register: {
-      title: 'Rejoignez Revends',
+      title: 'Rejoignez Ranga',
       intro: "Commencez votre aventure avec nous en quelques secondes. C'est rapide, sécurisé et gratuit.",
       submit: 'Créer mon compte',
       switchLabel: 'Déjà membre ?',
@@ -217,11 +217,11 @@ export function AuthView({ mode }: { mode: AuthMode }) {
       title: 'Bon retour',
       intro: 'Connectez-vous pour retrouver vos favoris, votre panier et vos annonces.',
       submit: 'Se connecter',
-      switchLabel: 'Nouveau chez Revends ?',
+      switchLabel: 'Nouveau chez Ranga ?',
     },
     reset: {
       title: 'Nouveau mot de passe',
-      intro: 'Choisissez un mot de passe pour votre compte ReVends',
+      intro: 'Choisissez un mot de passe pour votre compte Ranga',
       submit: 'Réinitialiser',
       switchLabel: 'Déjà un compte ?',
     },

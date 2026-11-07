@@ -1,5 +1,5 @@
 # ============================================================================
-# CI ReVends — lint/tests/build sur GitHub Actions (activé au premier push).
+# CI Ranga — lint/tests/build sur GitHub Actions (activé au premier push).
 #
 # Déploiement : les déploiements Railway passent par le CLI
 # (`cd server && bash scripts/stage-web.sh && railway up`), cf. docs/deploiement.md.

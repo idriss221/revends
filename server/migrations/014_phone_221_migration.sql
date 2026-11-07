@@ -1,5 +1,5 @@
 -- ============================================================
--- ReVends — 014_phone_221_migration.sql  (PostgreSQL 15+)
+-- Ranga — 014_phone_221_migration.sql  (PostgreSQL 15+)
 --
 -- Migration CONTRÔLÉE des anciens numéros sénégalais enregistrés par erreur
 -- avec +225 (ou 00225 / 225). Règles strictes :

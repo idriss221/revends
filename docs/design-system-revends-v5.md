@@ -1,8 +1,8 @@
-# DESIGN SYSTEM — ReVends 2026 (direction artistique intégrale)
+# DESIGN SYSTEM — Ranga 2026 (direction artistique intégrale)
 
 | | |
 |---|---|
-| **Projet** | ReVends — marketplace de seconde vie (Côte d'Ivoire) |
+| **Projet** | Ranga — marketplace de seconde vie (Côte d'Ivoire) |
 | **Document** | `docs/design-system-revends-v5.md` — v1.0, **PRIME** sur `docs/design-system.md` §2 et sur `docs/spec-admin-v5-design.md` §2.2 (noms de tokens) |
 | **Auteur** | `@design` — direction visuelle & UX |
 | **Destinataires** | `@frontend` (web React 19 + Vite 7 + Tailwind v4, `revends/web`) |
@@ -188,7 +188,7 @@ Règles : **jamais** de corps de texte en capitales ; `tabular-nums` sur **tout*
 
 | Contexte | Composition | Couleurs | Taille |
 |---|---|---|---|
-| Navbar desktop · mobile | symbole + « ReVends » (`font-display` 400 ; 24px desktop, 19px mobile) ; le **V** en Terracotta | symbole `ink`, V `terracotta` | 32 / 28 px |
+| Navbar desktop · mobile | symbole + « Ranga » (`font-display` 400 ; 24px desktop, 19px mobile) ; le **V** en Terracotta | symbole `ink`, V `terracotta` | 32 / 28 px |
 | Footer | symbole champagne + wordmark `font-display` 28px, V `on-dark-accent` | sur `ink` | 40 px / 28 px |
 | Sidebar admin | symbole champagne + « REVENDS » sans 800 `tracking-[0.14em]` 20px | sur `ink` | 32 px |
 | Page de connexion | symbole centré, 56 px, + wordmark `font-display` 34px | `ink` | 56 px |
@@ -346,7 +346,7 @@ voir §3.10 (Stepper, Progress). Graphique : `<svg viewBox="0 0 720 260" class="
 │                                 │    âge, ville (2 colonnes Field)      │
 │                                 │ ── GARANTIES (4 lignes + icône) :     │
 │                                 │    Paiement protégé · Article vérifié │
-│                                 │    par ReVends · Retour sous 48 h si │
+│                                 │    par Ranga · Retour sous 48 h si │
 │                                 │    non conforme · Livraison suivie    │
 │                                 │ ── DESCRIPTION (read 680px)           │
 └─────────────────────────────────┴───────────────────────────────────────┘
@@ -423,7 +423,7 @@ SIMILAIRES : h2 « Vous aimerez aussi » + rail de 5 ProductCard
 | 15 | **Checkout — étape 4 Confirmation** | `PageLoader` pendant l'appel, puis écran 16. |
 | 16 | **Confirmation** `/confirmation` | Carte centrée `max-w-[640px] rounded-lg bg-white p-10 text-center shadow-sm` : mascotte 64 px (`text-positive`), sur-titre `COMMANDE CONFIRMÉE` champagne-deep, `h1 font-display 34px « C'est parti, {prénom} ! »`, `n° de commande` (mono, copiable), récap 3 lignes, `Progress` 10 %, 2 CTA (`Suivre mon colis` primary, `Continuer mes achats` outline). |
 | 17 | **Suivi de colis** `/commandes/:id/suivi` | Wireframe ④. |
-| 18 | **Connexion (unique)** `/login` | `AuthLayout` : fond `bg-ivory` + panneau blanc `max-w-[440px] rounded-lg p-8 shadow-sm` **centré**, motif éditorial discret (`champagne-soft` derrière). Logo centré (symbole 56 + wordmark 34) · `h2 « Bienvenue sur ReVends »` `font-display text-[32px]` · lede `Connectez-vous pour retrouver vos achats et vos ventes.` · champs Email / Mot de passe (toggle œil `aria-pressed`) · `[Se connecter] primary block` · lien `Mot de passe oublié ?` · séparateur `ou` + `[Créer un compte] outline block` · `ErrorMessage` sous le logo. Redirection par rôle conservée. |
+| 18 | **Connexion (unique)** `/login` | `AuthLayout` : fond `bg-ivory` + panneau blanc `max-w-[440px] rounded-lg p-8 shadow-sm` **centré**, motif éditorial discret (`champagne-soft` derrière). Logo centré (symbole 56 + wordmark 34) · `h2 « Bienvenue sur Ranga »` `font-display text-[32px]` · lede `Connectez-vous pour retrouver vos achats et vos ventes.` · champs Email / Mot de passe (toggle œil `aria-pressed`) · `[Se connecter] primary block` · lien `Mot de passe oublié ?` · séparateur `ou` + `[Créer un compte] outline block` · `ErrorMessage` sous le logo. Redirection par rôle conservée. |
 | 19 | **Inscription** `/register` | Même gabarit ; `h2 « Créez votre compte »` ; champs nom, e-mail, téléphone, mot de passe (jauge de robustesse `Progress` `positive` 0-100 % sous le champ), case CGU ; CTA `[Créer mon compte]` ; lien vers `/login`. |
 | 20 | **Mot de passe oublié** `/login?oubli=1` (modale) | `Modal max-w-md` : `h3 « Réinitialiser le mot de passe »`, texte `text-sm text-muted`, champ e-mail, `[Envoyer le lien] primary block`, `Échap` ferme, focus au premier champ. |
 | 21 | **Notifications** `/notifications` | `h1` + `Segmented` (Toutes / Non lues) + compteur ; `ul` d'`NotificationItem` (§3.12) ; non lue = bord Terracotta ; `[Tout marquer comme lu] ghost` en haut à droite ; vide → texte notifications. |
@@ -432,13 +432,13 @@ SIMILAIRES : h2 « Vous aimerez aussi » + rail de 5 ProductCard
 | 24 | **Mes commandes** `/mes-commandes` | `h1` + `Segmented` statut ; liste de `Card` cliquables (photo 72 px, n°, date, montant `text-[17px] font-bold text-terracotta-ink`, `StatusBadge`, `[Suivre]` `ghost sm`) ; vide → texte ③. |
 | 25 | **Détail commande** `/mes-commandes/:id` | `Breadcrumbs` + `h1 {orderNumber}` + `StatusBadge` ; 2 colonnes : gauche `Card` « Articles », `Card` « Adresse de livraison », `Card` « Paiement » ; droite `Card` « Cycle de commande » avec `OrderTimeline` + `Progress` + bouton `[Suivre mon colis] primary block`. |
 | 26 | **Mes favoris** | Écran 9. |
-| 27 | **Mes produits** `/mes-articles` | `h1` + `Segmented` (Tous / En attente / Publiés / Réservés / Vendus / Refusés) + `[Vendre un article] primary` ; grille `ProductCard` (variante `mini` + `StatusBadge`) ; **aucun bouton Supprimer** (ARB-V5-04) ; ligne d'information `text-[13px] text-muted` « La suppression d'un article est réservée à l'équipe ReVends. » |
+| 27 | **Mes produits** `/mes-articles` | `h1` + `Segmented` (Tous / En attente / Publiés / Réservés / Vendus / Refusés) + `[Vendre un article] primary` ; grille `ProductCard` (variante `mini` + `StatusBadge`) ; **aucun bouton Supprimer** (ARB-V5-04) ; ligne d'information `text-[13px] text-muted` « La suppression d'un article est réservée à l'équipe Ranga. » |
 | 28 | **Mes ventes** `/ventes` | `h1` + 3 `StatCard` (vendu ce mois, en cours, encaissé) + `table-scroll` (article, date, montant, commission 10 %, net, `StatusBadge` paiement) ; vide → texte ④. |
 | 29 | **Mes adresses** `/adresses` | `h1` + grille `md:grid-cols-2` de `Card` (libellé, destinataire, téléphone, adresse, ville, badge « Par défaut » `bg-terracotta-soft text-terracotta-ink`) + `[Ajouter une adresse] outline` ; carte par défaut bord gauche `border-l-[3px] border-terracotta`. |
 | 30 | **Paramètres** `/parametres` | `max-w-form` ; `Card` « Informations personnelles » (nom, téléphone), `Card` « Sécurité » (mot de passe, `[Modifier]` → modale), `Card` « Préférences » (notifications : 4 `Case`, langue `select` si API, zone horaire) ; `Card danger` « Zone sensible » : `[Supprimer mon compte] danger sm` → `ConfirmDelete` listant les conséquences. |
 | 31 | **Créer une annonce — étapes 1-2** `/vendre` | `max-w-form` ; `Stepper` 5 ; **① Photos** : zone drag-drop `rounded-lg border-2 border-dashed border-line-strong bg-white p-10 text-center` (`dragover` → `border-terracotta-strong bg-terracotta-wash`), icône `fa-camera` 32 px `text-terracotta`, `3 photos minimum` `text-[13px] text-muted`, `[Choisir des photos] outline`, grille des vignettes 96 px `rounded-sm` avec `×` et badge « Couverture » ; **② Informations** : nom, catégorie + sous-catégorie (`select` liés), marque, modèle, âge, description `textarea` + compteur `12 / 2000` `tabular-nums`, état `select` (constantes existantes). |
-| 32 | **Créer une annonce — étapes 3-4** | **③ Prix** : champ `inputMode="numeric"` + encadre `rounded-md bg-positive-soft p-4` : « Vous recevez **90 %** · Commission ReVends **10 %** » (`text-positive`), montant net calculé en direct `tabular-nums` ; mini-boutons `50 000` `100 000` `250 000` ; **④ Localisation** : ville `select` (constantes existantes), quartier `input`, précision `textarea` courte, `Case` « Livraison possible ». |
-| 33 | **Créer une annonce — étape 5** | **⑤ Prévisualisation** : la `ProductCard` réelle (variante `default`) à gauche ; à droite les champs en lecture `Field` + 2 boutons `[Modifier]` `ghost` par bloc ; barre d'action `sticky bottom-0 bg-white border-t border-line p-4` : `[Enregistrer le brouillon] outline` + `[Publier mon article] primary` + aide `text-[13px] text-muted` « Votre article sera visible après validation par l'équipe ReVends. » |
+| 32 | **Créer une annonce — étapes 3-4** | **③ Prix** : champ `inputMode="numeric"` + encadre `rounded-md bg-positive-soft p-4` : « Vous recevez **90 %** · Commission Ranga **10 %** » (`text-positive`), montant net calculé en direct `tabular-nums` ; mini-boutons `50 000` `100 000` `250 000` ; **④ Localisation** : ville `select` (constantes existantes), quartier `input`, précision `textarea` courte, `Case` « Livraison possible ». |
+| 33 | **Créer une annonce — étape 5** | **⑤ Prévisualisation** : la `ProductCard` réelle (variante `default`) à gauche ; à droite les champs en lecture `Field` + 2 boutons `[Modifier]` `ghost` par bloc ; barre d'action `sticky bottom-0 bg-white border-t border-line p-4` : `[Enregistrer le brouillon] outline` + `[Publier mon article] primary` + aide `text-[13px] text-muted` « Votre article sera visible après validation par l'équipe Ranga. » |
 | 34 | **Espace vendeur** `/espace-vendeur` | Wireframe ⑤. |
 | 35 | **Ventes — graphique** (panneau de 34) | §3.13 ; légende `Montant net encaissé (FCFA)` ; `StatCard` de synthèse au-dessus ; sélecteur de période ; tooltip au clavier (focus sur les points) — accessibilité du graphique. |
 | 36 | **Admin — dashboard** `/admin` | Wireframe ⑥. Sidebar sombre. |

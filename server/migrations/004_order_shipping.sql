@@ -1,5 +1,5 @@
 -- ============================================================
--- ReVends — 004_order_shipping.sql  (PostgreSQL 15+)
+-- Ranga — 004_order_shipping.sql  (PostgreSQL 15+)
 -- PANIER multi-produits & livraison : coordonnées de livraison
 -- (privées acheteur/admin — jamais en vue vendeur) + note acheteur.
 -- Source : docs/api panier (checkout), CA-BUY-PANIER.

@@ -68,7 +68,7 @@ process.env.MIGRATIONS_DIR = fileURLToPath(new URL('../migrations', import.meta.
 // (CA-V5-015). `MAIL_ENABLED=false` ici disable les tests métier existants ;
 // la suite `emails.test.ts` le repasse à `true` pour asserter les 11 envois.
 process.env.MAIL_ENABLED = process.env.MAIL_ENABLED ?? 'false';
-process.env.MAIL_FROM = process.env.MAIL_FROM ?? 'ReVends <no-reply@revends.test>';
+process.env.MAIL_FROM = process.env.MAIL_FROM ?? 'Ranga <no-reply@revends.test>';
 process.env.SITE_URL = process.env.SITE_URL ?? 'https://revends.test';
 
 // Ré-export silencieux : garantit que l'import seul suffit.

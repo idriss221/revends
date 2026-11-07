@@ -1,4 +1,4 @@
-# Audit de sécurité — ReVends
+# Audit de sécurité — Ranga
 
 - **Date** : 2026-10-27
 - **Périmètre** : API Express 5 + front React 19 + nginx + configuration Docker/Render

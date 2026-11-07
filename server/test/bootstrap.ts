@@ -42,7 +42,7 @@ export function assertSafeToDrop(url: string): string {
     'BOOTSTRAP TEST REFUSÉ — aucune donnée n\'a été détruite.\n' +
       `  Base visée par le DROP SCHEMA : ${name || '(URL illisible)'} (${url})\n` +
       `  Base attendue               : ${TEST_DB_NAME} (nom terminé par « _test »)\n` +
-      '  Les tests ReVends ne peuvent JAMAIS s\'exécuter sur une base de dev ou de production.\n' +
+      '  Les tests Ranga ne peuvent JAMAIS s\'exécuter sur une base de dev ou de production.\n' +
       '  Correctif : lancer la suite via `npm test` (qui pré-charge test/env.ts), ou\n' +
       '  fixer TEST_DATABASE_URL sur une base de test explicitly.',
   );

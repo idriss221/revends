@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Pages privées / transactionnelles — jamais indexées.
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /reset-password
+Disallow: /sell
+Disallow: /vendre
+Disallow: /panier
+Disallow: /cart
+Disallow: /commande
+Disallow: /checkout
+Disallow: /favoris
+Disallow: /favs
+Disallow: /profil
+Disallow: /account
+Disallow: /dashboard
+Disallow: /mes-commandes
+Disallow: /mes-articles
+Disallow: /notifications
+Disallow: /confirmation
+Disallow: /api/
+
+# Sitemap canonique (les anciennes URLs publiques restent servies).
+Sitemap: https://ranga-sn.vercel.app/sitemap.xml

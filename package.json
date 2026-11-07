@@ -2,7 +2,7 @@
   "name": "revends",
   "version": "1.0.0",
   "private": true,
-  "description": "ReVends — API Express + SPA React déployés sur Vercel (serveurless). Racine Vercel : ce package.json existe pour que Vercel puisse construire la fonction `api/` et le front `web/` depuis la racine du dépôt.",
+  "description": "Ranga — API Express + SPA React déployés sur Vercel (serveurless). Racine Vercel : ce package.json existe pour que Vercel puisse construire la fonction `api/` et le front `web/` depuis la racine du dépôt.",
   "type": "module",
   "engines": {
     "node": "22.x"
