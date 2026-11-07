@@ -3733,3 +3733,9 @@ HTTP 200). Cette entrée corrige ces deux points.
 - Inspection de l'URL d'accueil : `https://ranga-senegal.vercel.app/` → « Détectée, actuellement non indexée » (découverte via le sitemap, exploration Google en attente — normal pour un site neuf/deuxième jour).
 - **Demande d'indexation manuelle tentée** (« Demander une indexation » → test d'URL active) : Google répond **`Quota dépassé`** (« veuillez réessayer demain »). Le quota quotidien de demandes d'indexation de ce compte est épuisé — l'indexation se fera automatiquement via le sitemap (délai typique : quelques jours).
 - **Classement #1 sur « ranga »** : aucun outil ne peut le garantir. Le mot est générique (autres marques Ranga, le prénom, des résultats hors Sénégal). Ce qui a été fait pour maximiser les chances : title `Ranga — Friperie…`, canonical unique `ranga-senegal`, OG/Twitter/JSON-LD (`Ranga Sénégal`), sitemap 31 URL, robots correct, propriété validée. Prochaine étape utile : **demander l'indexation de la page d'accueil demain** (quota réinitialisé), puis vérifier dans `Pages` que la page passe « Indexée », et travailler les backlinks/partages sociaux vers `ranga-senegal.vercel.app`.
+
+### Retentative « vas-y, teste via l'URL » (7 nov. 2026, 16:22 UTC)
+
+- **Test de l'URL active** (`Tester l'URL active` sur `https://ranga-senegal.vercel.app/`) : ✅ **réussi** — « Google a accès à cette URL », « La page peut être indexée », testé le 7 nov. 2026 à 16:22. La page est donc crawlable, sans blocage robots/HTTP.
+- **Nouvelle demande d'indexation** (« Demander une indexation ») : ❌ **quota quotidien toujours dépassé** (même message Google). Aucune action supplémentaire possible aujourd'hui côté demande manuelle.
+- Le sitemap reste la voie d'indexation automatique (31 URL découvertes le 7 nov.) ; la demande manuelle sera à relancer demain.
