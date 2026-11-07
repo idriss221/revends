@@ -3713,3 +3713,15 @@ HTTP 200). Cette entrée corrige ces deux points.
    aboutit sur l'ancien domaine (fonctionnelle, mais hors URL canonique).
 2. `contact@ranga.ci` est un **placeholder** (comme l'ancien `contact@revends.ci`) : fournir
    l'adresse réelle.
+
+### Suite 2026-11-07 — bascule Google OAuth (Facebook en attente)
+
+- **Domaine public définitif** : `https://ranga-senegal.vercel.app` (alias → `revends.vercel.app`).
+- **Vercel production** : `MAIL_USER=rangasenegal@gmail.com`, `MAIL_PASSWORD` (app password Gmail), `MAIL_FROM=Ranga <rangasenegal@gmail.com>`, `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`, `MAIL_SECURE=false`, `MAIL_ENABLED=true`, `WHAPI_API_URL=https://gate.whapi.cloud/`, `WHAPI_TOKEN` configuré, `WHATSAPP_ENABLED=true`, `SITE_URL=https://ranga-senegal.vercel.app`, `GOOGLE_CALLBACK_URL=https://ranga-senegal.vercel.app/api/auth/google/callback`, `CORS_ORIGINS=https://ranga-senegal.vercel.app,https://revends.vercel.app`.
+- **Google Cloud Console** (projet `revends`, compte connecté) : callback `https://ranga-senegal.vercel.app/api/auth/google/callback` **ajouté et vérifié après rechargement** (3 URI de redirection présentes).
+- **Search Console** : propriété `https://ranga-senegal.vercel.app/` **validée automatiquement** (balise `google-site-verification` déjà en place), sitemap `/sitemap.xml` **envoyé** — 31 URL découvertes, état « Opération effectuée » (7 nov. 2026).
+- **Email prouvé après bascule** : `POST /api/auth/forgot-password` → `202`, log runtime `email envoyé / password_reset / transport: smtp` (7 nov. 2026, 16:13 UTC), aucun `EAUTH`.
+- **Google OAuth prouvé** : `GET /api/auth/google` → redirection Google avec `redirect_uri=https://ranga-senegal.vercel.app/api/auth/google/callback` ✅ (test après redéploiement).
+- **Contact réel** : `LegalPage.tsx` → `rangasenegal@gmail.com` (3 occurrences), build + déploiement OK, vérifié dans le bundle servi.
+- **Facebook reste en attente** : `FACEBOOK_CALLBACK_URL` pointe encore vers `revends.vercel.app`. Connexion Facebook requise dans `developers.facebook.com` pour ajouter le callback `https://ranga-senegal.vercel.app/api/auth/facebook/callback`, puis mettre à jour le secret Vercel.
+- **Whapi** : variables configurées en production ; aucun envoi de test effectué dans cette session (ne pas envoyer de message réel sans numéro destinataire explicite).
