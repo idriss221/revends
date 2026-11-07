@@ -3725,3 +3725,11 @@ HTTP 200). Cette entrée corrige ces deux points.
 - **Contact réel** : `LegalPage.tsx` → `rangasenegal@gmail.com` (3 occurrences), build + déploiement OK, vérifié dans le bundle servi.
 - **Facebook reste en attente** : `FACEBOOK_CALLBACK_URL` pointe encore vers `revends.vercel.app`. Connexion Facebook requise dans `developers.facebook.com` pour ajouter le callback `https://ranga-senegal.vercel.app/api/auth/facebook/callback`, puis mettre à jour le secret Vercel.
 - **Whapi** : variables configurées en production ; aucun envoi de test effectué dans cette session (ne pas envoyer de message réel sans numéro destinataire explicite).
+
+### Search Console — SEO « ranga » (7 nov. 2026, soir)
+
+- Propriété `https://ranga-senegal.vercel.app/` : **validée** (balise `google-site-verification` déjà présente dans `index.html`).
+- Sitemap `https://ranga-senegal.vercel.app/sitemap.xml` : **envoyé et relu le 7 nov. 2026 — 31 URL découvertes**, état « Opération effectuée ».
+- Inspection de l'URL d'accueil : `https://ranga-senegal.vercel.app/` → « Détectée, actuellement non indexée » (découverte via le sitemap, exploration Google en attente — normal pour un site neuf/deuxième jour).
+- **Demande d'indexation manuelle tentée** (« Demander une indexation » → test d'URL active) : Google répond **`Quota dépassé`** (« veuillez réessayer demain »). Le quota quotidien de demandes d'indexation de ce compte est épuisé — l'indexation se fera automatiquement via le sitemap (délai typique : quelques jours).
+- **Classement #1 sur « ranga »** : aucun outil ne peut le garantir. Le mot est générique (autres marques Ranga, le prénom, des résultats hors Sénégal). Ce qui a été fait pour maximiser les chances : title `Ranga — Friperie…`, canonical unique `ranga-senegal`, OG/Twitter/JSON-LD (`Ranga Sénégal`), sitemap 31 URL, robots correct, propriété validée. Prochaine étape utile : **demander l'indexation de la page d'accueil demain** (quota réinitialisé), puis vérifier dans `Pages` que la page passe « Indexée », et travailler les backlinks/partages sociaux vers `ranga-senegal.vercel.app`.
