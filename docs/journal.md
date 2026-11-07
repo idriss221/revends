@@ -3664,8 +3664,10 @@ HTTP 200). Cette entrée corrige ces deux points.
 
 ### Décision d'URL
 - `ranga.vercel.app` : **indisponible** (autre projet Vercel).
-- `ranga-sn.vercel.app` : disponible (`404 DEPLOYMENT_NOT_FOUND` avant affectation) → ajouté au
-  projet Vercel `revends` via `vercel domains add`, et aliasé au déploiement de production.
+- `ranga-sn.vercel.app` : disponible (`404 DEPLOYMENT_NOT_FOUND` avant affectation) → aliasé au
+  déploiement de production. Un alias `.vercel.app` ne suivant pas les déploiements, le script
+  `scripts/deploy-vercel.sh` le repointe désormais vers `revends.vercel.app` après chaque mise en
+  production.
 - `revends.vercel.app` **conservé** : il porte encore les callbacks OAuth (voir « Reste à faire »).
 
 ### Modifications

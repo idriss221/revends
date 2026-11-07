@@ -72,6 +72,16 @@ console.log('   routes :');
 echo "▸ 4/4 — déploiement de l'output pré-construit (production)…"
 vercel deploy --prebuilt --prod --yes
 
+# L'URL publique de la marque est `ranga-sn.vercel.app` (alias), mais le
+# domaine de PROJET reste `revends.vercel.app` — il porte encore les callbacks
+# OAuth configurés dans les consoles Google/Facebook. Un alias `.vercel.app`
+# ne suit pas automatiquement les déploiements : on le repointe donc ici vers
+# l'alias de production à chaque déploiement.
+echo
+echo "▸ Alias — ranga-sn.vercel.app → revends.vercel.app…"
+vercel alias set revends.vercel.app ranga-sn.vercel.app
+
 echo
 echo "✅ Déploiement terminé — https://ranga-sn.vercel.app"
+echo "   (domaine de projet conservé : https://revends.vercel.app)"
 echo "   Recette : /tmp/opencode/prove-prod.sh https://ranga-sn.vercel.app"
