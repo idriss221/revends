@@ -3739,3 +3739,8 @@ HTTP 200). Cette entrée corrige ces deux points.
 - **Test de l'URL active** (`Tester l'URL active` sur `https://ranga-senegal.vercel.app/`) : ✅ **réussi** — « Google a accès à cette URL », « La page peut être indexée », testé le 7 nov. 2026 à 16:22. La page est donc crawlable, sans blocage robots/HTTP.
 - **Nouvelle demande d'indexation** (« Demander une indexation ») : ❌ **quota quotidien toujours dépassé** (même message Google). Aucune action supplémentaire possible aujourd'hui côté demande manuelle.
 - Le sitemap reste la voie d'indexation automatique (31 URL découvertes le 7 nov.) ; la demande manuelle sera à relancer demain.
+
+### Vérification « la page est indexée ? » (7 nov. 2026, soir)
+
+- Inspection live de `https://ranga-senegal.vercel.app/` : Google écrit toujours **« Cette URL n'a pas été indexée par Google »** / **« La page n'est pas indexée : Détectée, actuellement non indexée »** (découverte via `sitemap.xml`, exploration en attente). Capture d'écran fournie à l'utilisateur.
+- Nouvelle tentative « Demander une indexation » : test d'URL active relancé, puis **« Petit problème… Une erreur s'est produite lors de l'envoi de votre demande d'indexation »** (après le quota dépassé précédent). L'indexation ne peut pas être forcée côté client : elle dépend de l'exploration Google via le sitemap.
