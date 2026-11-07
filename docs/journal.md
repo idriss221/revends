@@ -3652,7 +3652,7 @@ utilisateur, empreinte du secret) au lieu de comparer au `.env.local` local.
 
 ---
 
-## 2026-11-07 — Rebranding ReVends → Ranga + nouvelle URL `ranga-sn.vercel.app`
+## 2026-11-07 — Rebranding ReVends → Ranga + nouvelle URL `ranga-senegal.vercel.app`
 
 ### Contexte
 Reprise du rebranding laissé **incomplet** (77 fichiers modifiés non commités) : les commentaires
@@ -3664,7 +3664,7 @@ HTTP 200). Cette entrée corrige ces deux points.
 
 ### Décision d'URL
 - `ranga.vercel.app` : **indisponible** (autre projet Vercel).
-- `ranga-sn.vercel.app` : disponible (`404 DEPLOYMENT_NOT_FOUND` avant affectation) → aliasé au
+- `ranga-senegal.vercel.app` : disponible (`404 DEPLOYMENT_NOT_FOUND` avant affectation) → aliasé au
   déploiement de production. Un alias `.vercel.app` ne suivant pas les déploiements, le script
   `scripts/deploy-vercel.sh` le repointe désormais vers `revends.vercel.app` après chaque mise en
   production.
@@ -3677,7 +3677,7 @@ HTTP 200). Cette entrée corrige ces deux points.
   (`contact@ranga.ci`, ancrage `role-ranga`), `favicon.svg` (aria-label), titres d'images du
   sitemap, attente e2e `/register`.
 - **SEO** : `<title>`, description, OG/Twitter, JSON-LD (`alternateName`), `canonical`, sitemap
-  (31 URLs), `robots.txt`, script de déploiement → `https://ranga-sn.vercel.app`.
+  (31 URLs), `robots.txt`, script de déploiement → `https://ranga-senegal.vercel.app`.
 - **Binaires** : `web/public/logo.png` (512×512) et `web/public/og-cover.png` (1200×630)
   régénérés **depuis les originaux**. Anneau, tuile, palette et typographie inchangés —
   mesures conservées : logo centre `(256,256)`, rayon externe `166`, interne `124`, trait `42`,
@@ -3695,10 +3695,10 @@ HTTP 200). Cette entrée corrige ces deux points.
 - **Build** : `npm run build --prefix web` OK ; le bundle ne contient plus que 4 occurrences de
   `revends` (= clés localStorage volontairement conservées), **0 texte de marque**.
 - **E2E ciblé** : `/register` → `1 passed`, h1 « Rejoignez Ranga ».
-- **Production** (`https://ranga-sn.vercel.app`, alias de `depl_ErcuKYSZQEXZv7BAGknJp5gu25D5`) :
+- **Production** (`https://ranga-senegal.vercel.app`, alias de `depl_ErcuKYSZQEXZv7BAGknJp5gu25D5`) :
   titre « Ranga — Friperie en ligne & Articles d'occasion au Sénégal », canonical/OG/JSON-LD
-  `ranga-sn`, `logo.png` md5 `119993d1…`, `og-cover.png` md5 `7500d383…`, `/api/health`
-  `{"status":"ok"}`, sitemap et robots sur `ranga-sn`, CSRF same-host validé (login avec un
+  `ranga-senegal`, `logo.png` md5 `119993d1…`, `og-cover.png` md5 `7500d383…`, `/api/health`
+  `{"status":"ok"}`, sitemap et robots sur `ranga-senegal`, CSRF same-host validé (login avec un
   mauvais mot de passe → `401 INVALID_CREDENTIALS`, pas `403`).
 - **E2E complet** : 11 réussis / 3 échoués — échecs **hors rebranding** : `ADMIN_EMAIL` /
   `ADMIN_PASSWORD` absents dans l'environnement e2e (login admin → `/login`, approbation seed →
@@ -3707,9 +3707,9 @@ HTTP 200). Cette entrée corrige ces deux points.
 ### Reste à faire (action propriétaire)
 1. **OAuth** : `GOOGLE_CALLBACK_URL` et `FACEBOOK_CALLBACK_URL` pointent toujours sur
    `https://revends.vercel.app/api/auth/{google,facebook}/callback`. Pour basculer entièrement :
-   ajouter les callbacks `https://ranga-sn.vercel.app/api/auth/{google,facebook}/callback` dans les
+   ajouter les callbacks `https://ranga-senegal.vercel.app/api/auth/{google,facebook}/callback` dans les
    consoles Google/Facebook, puis mettre à jour ces 2 secrets **et** `SITE_URL`
-   (`https://ranga-sn.vercel.app`) sur Vercel. Tant que ce n'est pas fait, la connexion sociale
+   (`https://ranga-senegal.vercel.app`) sur Vercel. Tant que ce n'est pas fait, la connexion sociale
    aboutit sur l'ancien domaine (fonctionnelle, mais hors URL canonique).
 2. `contact@ranga.ci` est un **placeholder** (comme l'ancien `contact@revends.ci`) : fournir
    l'adresse réelle.
