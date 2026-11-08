@@ -191,7 +191,7 @@ export async function deliverNotification(input: NotifyInput): Promise<NotifyRes
 /** Messages WhatsApp standards (texte ou variables de template). */
 export function whatsappOrderCreated(orderNumber: string, amountFcfa: number): string {
   return [
-    `Ranga — commande ${orderNumber} enregistrée.`,
+    `ReVends — commande ${orderNumber} enregistrée.`,
     `Montant : ${amountFcfa.toLocaleString('fr-FR')} FCFA.`,
     'Paiement en attente : envoyez votre preuve de paiement depuis votre commande.',
     'La commande ne sera confirmée qu\'après validation du paiement.',
@@ -200,7 +200,7 @@ export function whatsappOrderCreated(orderNumber: string, amountFcfa: number): s
 
 export function whatsappPaymentConfirmed(orderNumber: string, amountFcfa: number): string {
   return [
-    `Ranga — paiement confirmé pour ${orderNumber}.`,
+    `ReVends — paiement confirmé pour ${orderNumber}.`,
     `Montant : ${amountFcfa.toLocaleString('fr-FR')} FCFA.`,
     'Le vendeur est prévenu et prépare votre article.',
   ].join('\n');
@@ -208,7 +208,7 @@ export function whatsappPaymentConfirmed(orderNumber: string, amountFcfa: number
 
 export function whatsappSellerNewOrder(orderNumber: string, productName: string, amountFcfa: number): string {
   return [
-    `Ranga — nouvelle commande PAYÉE : ${orderNumber}.`,
+    `ReVends — nouvelle commande PAYÉE : ${orderNumber}.`,
     `Article : ${productName}.`,
     `Montant vendeur : ${amountFcfa.toLocaleString('fr-FR')} FCFA.`,
     'Vous pouvez préparer l\'article. Aucune action avant validation du paiement.',
@@ -216,9 +216,9 @@ export function whatsappSellerNewOrder(orderNumber: string, productName: string,
 }
 
 export function whatsappProofReceived(orderNumber: string): string {
-  return `Ranga — preuve de paiement reçue pour ${orderNumber}. Vérification en cours, la commande n'est pas encore confirmée.`;
+  return `ReVends — preuve de paiement reçue pour ${orderNumber}. Vérification en cours, la commande n'est pas encore confirmée.`;
 }
 
 export function whatsappProofRejected(orderNumber: string, reason: string): string {
-  return `Ranga — preuve refusée pour ${orderNumber}. Motif : ${reason}. Renvoyez une preuve lisible depuis votre commande.`;
+  return `ReVends — preuve refusée pour ${orderNumber}. Motif : ${reason}. Renvoyez une preuve lisible depuis votre commande.`;
 }

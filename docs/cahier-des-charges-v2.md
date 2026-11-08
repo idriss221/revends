@@ -1,4 +1,4 @@
-# CAHIER DES CHARGES V2 — Plateforme de revente d'articles d'occasion « Ranga »
+# CAHIER DES CHARGES V2 — Plateforme de revente d'articles d'occasion « ReVends »
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ tel (voir §5. Décisions structurantes et §12. Points ouverts).
 
 ## 1. Contexte et objectifs
 
-Ranga est une plateforme web de revente d'articles d'occasion entre
+ReVends est une plateforme web de revente d'articles d'occasion entre
 particuliers (Côte d'Ivoire, prix en FCFA). La plateforme est un
 **intermédiaire obligatoire** :
 

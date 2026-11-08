@@ -6,48 +6,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- ==================================================================
-         SEO — Ranga (marketplace seconde main, Sénégal)
-         Objectif : être visible sur « ranga » et les requêtes
-         friperie / articles d'occasion. Canonical = URL publique de
-         production (ranga-senegal.vercel.app). Le domaine de projet
-         revends.vercel.app reste servi pour les callbacks OAuth.
+         SEO — ReVends / ReVendsen (marketplace seconde main, Sénégal)
+         Objectif : être visible sur « revends » et « revendsen » + les
+         requêtes friperie / articles d'occasion. On CONSERVE le canonical
+         de production (revends.vercel.app) : un canonical vers vercel.app
+         ferait indexer le domaine Vercel à la place du site.
          ================================================================== -->
-    <title>Ranga — Friperie en ligne & Articles d'occasion au Sénégal</title>
+    <title>ReVendsen (ReVends) — Friperie en ligne & Articles d'occasion au Sénégal</title>
     <meta
       name="description"
-      content="Ranga : la friperie en ligne sénégalaise. Achetez et vendez des articles d'occasion — vêtements, téléphones, chaussures — en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
+      content="ReVendsen (ReVends) : la friperie en ligne sénégalaise. Achetez et vendez des articles d'occasion — vêtements, téléphones, chaussures — en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
     />
     <meta
       name="keywords"
-      content="ranga, ranga sénégal, friperie en ligne, friperie sénégal, articles d'occasion, seconde main sénégal, marketplace sénégal, vendre en ligne sénégal, acheter pas cher sénégal"
+      content="revends, revendsen, re vends, revendsen sénégal, revends sénégal, friperie en ligne, friperie sénégal, articles d'occasion, seconde main sénégal, marketplace sénégal, vendre en ligne sénégal, acheter pas cher sénégal"
     />
     <meta name="robots" content="index, follow, max-image-preview:large" />
-    <meta name="author" content="Ranga" />
-    <link rel="canonical" href="https://ranga-senegal.vercel.app/" />
+    <meta name="author" content="ReVendsen" />
+    <link rel="canonical" href="https://revends.vercel.app/" />
 
     <!-- Open Graph (Facebook, X/Twitter, WhatsApp, LinkedIn) -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Ranga" />
+    <meta property="og:site_name" content="ReVendsen" />
     <meta property="og:locale" content="fr_SN" />
-    <meta property="og:url" content="https://ranga-senegal.vercel.app/" />
-    <meta property="og:title" content="Ranga — Friperie en ligne & Articles d'occasion au Sénégal" />
+    <meta property="og:url" content="https://revends.vercel.app/" />
+    <meta property="og:title" content="ReVendsen (ReVends) — Friperie en ligne & Articles d'occasion au Sénégal" />
     <meta
       property="og:description"
       content="La marketplace sénégalaise de la seconde main : achetez et vendez vos articles d'occasion en toute confiance. Paiement sécurisé, livraison suivie."
     />
-    <meta property="og:image" content="https://ranga-senegal.vercel.app/og-cover.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Ranga — marketplace seconde main au Sénégal" />
+    <meta property="og:image" content="https://revends.vercel.app/apple-touch-icon.png" />
+    <meta property="og:image:alt" content="ReVendsen — marketplace seconde main" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Ranga — Friperie en ligne & Articles d'occasion au Sénégal" />
+    <meta name="twitter:title" content="ReVendsen (ReVends) — Friperie en ligne & Articles d'occasion au Sénégal" />
     <meta
       name="twitter:description"
       content="Achetez et vendez vos articles d'occasion au Sénégal en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
     />
-    <meta name="twitter:image" content="https://ranga-senegal.vercel.app/og-cover.png" />
+    <meta name="twitter:image" content="https://revends.vercel.app/apple-touch-icon.png" />
 
     <!-- Données structurées : Organization + WebSite (search action) -->
     <script type="application/ld+json">
@@ -56,29 +54,27 @@
         "@graph": [
           {
             "@type": "Organization",
-            "@id": "https://ranga-senegal.vercel.app/#organization",
-            "name": "Ranga",
-            "alternateName": ["Ranga Sénégal"],
-            "url": "https://ranga-senegal.vercel.app/",
-            "logo": { "@type": "ImageObject", "contentUrl": "https://ranga-senegal.vercel.app/logo.png", "url": "https://ranga-senegal.vercel.app/logo.png", "width": 512, "height": 512 },
-            "image": "https://ranga-senegal.vercel.app/logo.png",
-            "slogan": "Donnez une seconde vie à ce qui vous ressemble.",
+            "@id": "https://revends.vercel.app/#organization",
+            "name": "ReVendsen",
+            "alternateName": ["ReVends", "revendsen"],
+            "url": "https://revends.vercel.app/",
+            "logo": "https://revends.vercel.app/apple-touch-icon.png",
             "areaServed": { "@type": "Country", "name": "Sénégal" },
             "description": "Marketplace sénégalaise de la seconde main : achat et vente d'articles d'occasion en toute confiance."
           },
           {
             "@type": "WebSite",
-            "@id": "https://ranga-senegal.vercel.app/#website",
-            "url": "https://ranga-senegal.vercel.app/",
-            "name": "Ranga",
-            "alternateName": "Ranga",
+            "@id": "https://revends.vercel.app/#website",
+            "url": "https://revends.vercel.app/",
+            "name": "ReVendsen",
+            "alternateName": "ReVends",
             "inLanguage": "fr",
-            "publisher": { "@id": "https://ranga-senegal.vercel.app/#organization" },
+            "publisher": { "@id": "https://revends.vercel.app/#organization" },
             "potentialAction": {
               "@type": "SearchAction",
               "target": {
                 "@type": "EntryPoint",
-                "urlTemplate": "https://ranga-senegal.vercel.app/shop?q={search_term_string}"
+                "urlTemplate": "https://revends.vercel.app/shop?q={search_term_string}"
               },
               "query-input": "required name=search_term_string"
             }
@@ -93,7 +89,7 @@
          "light" repasse en clair. Clé de persistance : "rv:theme". -->
     <script src="/theme-init.js"></script>
 
-    <!-- Favicons RANGA (DA §2) : SVG 32 prioritaire, ICO 16/32 en repli. -->
+    <!-- Favicons REVENDS (DA §2) : SVG 32 prioritaire, ICO 16/32 en repli. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />

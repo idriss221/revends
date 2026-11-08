@@ -1,4 +1,4 @@
-# Audit backend & base de données — Ranga
+# Audit backend & base de données — ReVends
 
 - **Date** : 2026-10-27
 - **Périmètre** : API Express 5, persistance PostgreSQL, pipeline média
@@ -61,7 +61,7 @@
 | --- | --- | --- | --- | --- |
 | `revends` | `127.0.0.1:5440` | `revends` / service `postgres` | `revends_api1..3` | **Base de dev live** (source de vérité) |
 | `revends_e2e` | `127.0.0.1:5440` | `revends` / service `postgres` | `revends_api_e2e` (`:4002`) | Base de recette / e2e |
-| `revends` | `127.0.0.1:5433` | `server` / `revends-postgres` | (aucune instance Ranga active) | **Base stale** — dérive d'environnement |
+| `revends` | `127.0.0.1:5433` | `server` / `revends-postgres` | (aucune instance ReVends active) | **Base stale** — dérive d'environnement |
 | `revends_test` | `127.0.0.1:5433` | `server` / `revends-postgres` | `npm test` local | Base des tests (transitoire) |
 
 Preuves :
@@ -466,7 +466,7 @@ d'articles (P2-2).
 - **Impact** : si une instance pointait par erreur sur cette base, « mot de passe
   oublié » échouerait (`relation "password_reset_tokens" does not exist`) et 8
   annonces s'afficheraient sans visuel. C'est aujourd'hui une dérive
-  d'environnement (aucune instance Ranga active ne l'utilise).
+  d'environnement (aucune instance ReVends active ne l'utilise).
 - **Correctif proposé** : documenter/décommissionner la base stale, ou la migrer
   (012) et la re-seeder si elle doit rester. Ajouter un contrôle de démarrage qui
   vérifie que toutes les migrations du dossier sont appliquées.

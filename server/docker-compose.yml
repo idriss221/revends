@@ -1,4 +1,4 @@
-# Base de données PostgreSQL locale pour le développement Ranga.
+# Base de données PostgreSQL locale pour le développement ReVends.
 # Démarrage :  docker compose up -d   (conteneur revends-postgres, port 127.0.0.1:5433)
 services:
   postgres:

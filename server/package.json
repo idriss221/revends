@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "API REST Ranga — plateforme de revente d'articles d'occasion",
+  "description": "API REST ReVends — plateforme de revente d'articles d'occasion",
   "engines": {
     "node": ">=22.12"
   },

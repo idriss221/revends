@@ -5,7 +5,7 @@ import { pool, closePool } from '../src/db/pool.js';
 
 /**
  * Applique le catalogue de démonstration (`scripts/seed-data/*.sql`) à la base
- * unique de Ranga (pool PostgreSQL), via le même mécanisme que `migrate()`.
+ * unique de ReVends (pool PostgreSQL), via le même mécanisme que `migrate()`.
  *
  * Pourquoi un script et pas une migration : `migrate()` rejoue tout
  * `migrations/`, y compris dans la base de TEST remise à zéro avant chaque

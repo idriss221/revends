@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Projet** | Ranga — marketplace de revente (Côte d'Ivoire) |
+| **Projet** | ReVends — marketplace de revente (Côte d'Ivoire) |
 | **Chantier** | Accueil V3 : refonte de l'accueil en page de découverte |
 | **Auteur** | @architecte |
 | **Version** | 1.0 — à valider par @chef-de-projet (écarts ouverts §10) |

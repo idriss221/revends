@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 010_cart_favorites.sql  (PostgreSQL 15+)
+-- ReVends — 010_cart_favorites.sql  (PostgreSQL 15+)
 -- Panier (cart) et Favoris (favorites) — DDL
 -- ============================================================
 

@@ -33,7 +33,7 @@ import type { Condition } from '../lib/types'
 
 const CONDITIONS: readonly Condition[] = ['Neuf', 'Très bon état', 'Bon état', 'Correct', 'À réparer'] as const
 
-/** Commission RANGA de la maquette (`RV.COMMISSION = 0.10`). */
+/** Commission REVENDS de la maquette (`RV.COMMISSION = 0.10`). */
 const COMMISSION = 0.1
 
 /* Contraintes réelles du backend (ancienne PhotoPicker / SellPage). */
@@ -333,7 +333,7 @@ export function SellView() {
       <SiteHead
         eyebrow="Espace vendeur"
         title="Publier un article"
-        sub="Six étapes simples, un aperçu fidèle avant publication. La commission RANGA est de 10 %."
+        sub="Six étapes simples, un aperçu fidèle avant publication. La commission REVENDS est de 10 %."
         level={1}
       />
 
@@ -652,14 +652,14 @@ export function SellView() {
           <div className="commission" style={{ marginTop: 18 }}>
             {priceValue > 0 ? (
               <>
-                Commission RANGA : <b>{fmt(priceValue * COMMISSION)}</b> (10 %).
+                Commission REVENDS : <b>{fmt(priceValue * COMMISSION)}</b> (10 %).
                 <span className="net">Vous recevrez {fmt(priceValue * (1 - COMMISSION))}</span>
                 <br />
                 <small>Estimation indicative, pas un paiement reçu.</small>
               </>
             ) : (
               <>
-                Commission RANGA : <b>10 %</b>. Saisissez un prix pour estimer le montant qui vous
+                Commission REVENDS : <b>10 %</b>. Saisissez un prix pour estimer le montant qui vous
                 reviendrait.
               </>
             )}

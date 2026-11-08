@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  Ranga — mise en ligne locale + exposition publique (Cloudflare Tunnel)
+#  ReVends — mise en ligne locale + exposition publique (Cloudflare Tunnel)
 # ============================================================================
 #  Aucune carte bancaire, aucun compte : le site est servi depuis cette
 #  machine et exposé en HTTPS via un tunnel Cloudflare « rapide ».
@@ -102,7 +102,7 @@ case "${1:-start}" in
     start_stack
     start_tunnel
     verify_public
-    printf '\n\033[1;32m══ Ranga est en ligne ══\033[0m\n  %s\n\n' "$(cat "$URL_FILE")"
+    printf '\n\033[1;32m══ ReVends est en ligne ══\033[0m\n  %s\n\n' "$(cat "$URL_FILE")"
     warn "URL éphémère : elle changera si le tunnel redémarre."
     warn "Pour une URL fixe, voir « Domaine fixe » dans $0"
     ;;

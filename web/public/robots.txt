@@ -24,4 +24,4 @@ Disallow: /confirmation
 Disallow: /api/
 
 # Sitemap canonique (les anciennes URLs publiques restent servies).
-Sitemap: https://ranga-senegal.vercel.app/sitemap.xml
+Sitemap: https://revends.vercel.app/sitemap.xml

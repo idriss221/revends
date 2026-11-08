@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 001_init.sql  (PostgreSQL 15+)
+-- ReVends — 001_init.sql  (PostgreSQL 15+)
 -- Source : docs/architecture.md §4 (DDL de référence)
 -- ============================================================
 

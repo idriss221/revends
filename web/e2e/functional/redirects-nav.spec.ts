@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { csrfHeaders, registerSeller, seedApprovedProduct } from '../lib/fixtures'
 
 /**
- * Verrouillage de TOUTES les redirections et de la navigation — web (Ranga).
+ * Verrouillage de TOUTES les redirections et de la navigation — web (ReVends).
  *
  * Couvre la **SPA React** (`src/App.tsx`, routes en chemin) : le front
  * ancien Bureau vanilla (`public/bureau/`) a été **supprimé**, toute la surface
@@ -89,7 +89,7 @@ test.describe('routes React publiques — CA-AUTH04', () => {
     await withContext(browser, async (page) => {
       await page.goto('/register')
       expect(loc(page)).toMatchObject({ pathname: '/register', search: '' })
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Rejoignez Ranga')
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Rejoignez Revends')
       await expect(page.locator('#aName')).toBeVisible()
       await expect(page.locator('#aMail')).toBeVisible()
     })

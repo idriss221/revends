@@ -271,7 +271,7 @@ export function ProductView() {
         <Gallery p={p} />
 
         <div className="buy">
-          <span className="micro-eyebrow">RANGA · Selected piece · 1 of 1</span>
+          <span className="micro-eyebrow">REVENDS · Selected piece · 1 of 1</span>
           <div className="buy-top">
             <span className="cat-lbl">{catLabel(p.category)}</span>
             <span className="tag">{text(p.condition)}</span>

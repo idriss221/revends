@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 003_order_events.sql  (PostgreSQL 15+)
+-- ReVends — 003_order_events.sql  (PostgreSQL 15+)
 -- ÉVOLUTION V3 : cycle de commande à 9 étapes + journal `order_events`.
 -- Source : docs/architecture.md §11 (Évolution V3).
 -- Prérequis : 001_init.sql + 002_seed_categories.sql déjà appliqués.

@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 007_order_shipped_cycle.sql  (PostgreSQL 15+)
+-- ReVends — 007_order_shipped_cycle.sql  (PostgreSQL 15+)
 -- ÉVOLUTION : cycle « SHIPPED » — recrée le trigger de matrice et les
 -- index partiels. Prérequis : 006 appliqué ET COMMITÉ (les valeurs
 -- SHIPPED / DUE / order_shipped sont utilisables ICI, pas dans 006).

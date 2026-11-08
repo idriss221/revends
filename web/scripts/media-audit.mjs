@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Harnais d'audit des images / médias — Ranga.
+ * Harnais d'audit des images / médias — ReVends.
  *
  * Objectif : inventorier TOUTES les images réellement rendues par la SPA
  * (publique + admin connecté), prouver lesquelles se chargent, repérer les
@@ -993,7 +993,7 @@ function buildReport(result) {
   const L = []
   const push = (...args) => L.push(...args)
 
-  push(`# Audit exhaustif des images & médias — Ranga`)
+  push(`# Audit exhaustif des images & médias — ReVends`)
   push('')
   push(`- **Cible** : \`${meta.base}`+'`')
   push(`- **Date** : ${meta.startedAt} → ${meta.finishedAt}`)

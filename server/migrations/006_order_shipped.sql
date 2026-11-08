@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 006_order_shipped.sql  (PostgreSQL 15+)
+-- ReVends — 006_order_shipped.sql  (PostgreSQL 15+)
 -- ÉVOLUTION : étape « SHIPPED » (Prête/Expédiée) + payout « DUE » (À payer).
 -- Source : décision produit « part sur les recommandations » + contrat api.md §3.6.
 -- Prérequis : 001..005 appliqués.

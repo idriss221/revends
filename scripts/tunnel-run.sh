@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  Ranga — wrapper de tunnel permanent (appelé par systemd)
+#  ReVends — wrapper de tunnel permanent (appelé par systemd)
 # ============================================================================
 #  Lance cloudflared vers la stack locale et publie l'URL courante dans
 #  ~/.local/state/revends/public-url.txt dès qu'elle est connue.

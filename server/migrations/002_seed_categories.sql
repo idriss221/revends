@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 002_seed_categories.sql  (D7 : 5 catégories + sous-catégories)
+-- ReVends — 002_seed_categories.sql  (D7 : 5 catégories + sous-catégories)
 -- IDs explicites pour stabilité des FK. Source : architecture.md §4.
 -- ============================================================
 

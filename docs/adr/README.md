@@ -1,4 +1,4 @@
-# ADR — Architecture Decision Records (backend Ranga)
+# ADR — Architecture Decision Records (backend ReVends)
 
 Décisions structurantes du backend `server/`, au format court
 (Contexte / Décision / Conséquences). Une décision par fichier, numérotée.

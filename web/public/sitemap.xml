@@ -1,173 +1,173 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
-    <loc>https://ranga-senegal.vercel.app/</loc>
+    <loc>https://revends.vercel.app/</loc>
     <image:image>
-      <image:loc>https://ranga-senegal.vercel.app/logo.png</image:loc>
-      <image:title>Ranga — Logo</image:title>
+      <image:loc>https://revends.vercel.app/logo.png</image:loc>
+      <image:title>ReVendsen — Logo</image:title>
     </image:image>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/shop</loc>
+    <loc>https://revends.vercel.app/shop</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/catalogue</loc>
+    <loc>https://revends.vercel.app/catalogue</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category</loc>
+    <loc>https://revends.vercel.app/category</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/mode</loc>
+    <loc>https://revends.vercel.app/category/mode</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/mode-vetements</loc>
+    <loc>https://revends.vercel.app/category/mode-vetements</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/mode-chaussures</loc>
+    <loc>https://revends.vercel.app/category/mode-chaussures</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/mode-sacs</loc>
+    <loc>https://revends.vercel.app/category/mode-sacs</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/mode-montres</loc>
+    <loc>https://revends.vercel.app/category/mode-montres</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/maison</loc>
+    <loc>https://revends.vercel.app/category/maison</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/maison-mobilier</loc>
+    <loc>https://revends.vercel.app/category/maison-mobilier</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/maison-decoration</loc>
+    <loc>https://revends.vercel.app/category/maison-decoration</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/maison-cuisine</loc>
+    <loc>https://revends.vercel.app/category/maison-cuisine</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electronique</loc>
+    <loc>https://revends.vercel.app/category/electronique</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electronique-telephones</loc>
+    <loc>https://revends.vercel.app/category/electronique-telephones</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electronique-ordinateurs</loc>
+    <loc>https://revends.vercel.app/category/electronique-ordinateurs</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electronique-audio</loc>
+    <loc>https://revends.vercel.app/category/electronique-audio</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electronique-photo</loc>
+    <loc>https://revends.vercel.app/category/electronique-photo</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electromenager</loc>
+    <loc>https://revends.vercel.app/category/electromenager</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electromenager-gros</loc>
+    <loc>https://revends.vercel.app/category/electromenager-gros</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/electromenager-petit</loc>
+    <loc>https://revends.vercel.app/category/electromenager-petit</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/loisirs</loc>
+    <loc>https://revends.vercel.app/category/loisirs</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/loisirs-livres</loc>
+    <loc>https://revends.vercel.app/category/loisirs-livres</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/loisirs-jeux</loc>
+    <loc>https://revends.vercel.app/category/loisirs-jeux</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/loisirs-sport</loc>
+    <loc>https://revends.vercel.app/category/loisirs-sport</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/category/loisirs-instruments</loc>
+    <loc>https://revends.vercel.app/category/loisirs-instruments</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/catalogue/t-shirt-teggin-collection-signature-3</loc>
+    <loc>https://revends.vercel.app/catalogue/t-shirt-teggin-collection-signature-3</loc>
     <image:image>
       <image:loc>https://nlsdt7yanfn9ojxo.public.blob.vercel-storage.com/uploads/products/caac9054-b6de-4f13-8d8e-64a17bb56ab7.jpg</image:loc>
-      <image:title>T-shirt TËGGIN – Collection Signature — Ranga Sénégal</image:title>
+      <image:title>T-shirt TËGGIN – Collection Signature — ReVendsen</image:title>
     </image:image>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/catalogue/t-shirt-teggin-collection-signature-2</loc>
+    <loc>https://revends.vercel.app/catalogue/t-shirt-teggin-collection-signature-2</loc>
     <image:image>
       <image:loc>https://nlsdt7yanfn9ojxo.public.blob.vercel-storage.com/uploads/products/8f3857eb-cd65-46bd-8196-7b146e47bcb9.jpg</image:loc>
-      <image:title>T-shirt TËGGIN – Collection Signature — Ranga Sénégal</image:title>
+      <image:title>T-shirt TËGGIN – Collection Signature — ReVendsen</image:title>
     </image:image>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/catalogue/t-shirt-teggin-collection-signature</loc>
+    <loc>https://revends.vercel.app/catalogue/t-shirt-teggin-collection-signature</loc>
     <image:image>
       <image:loc>https://nlsdt7yanfn9ojxo.public.blob.vercel-storage.com/uploads/products/430f2a2f-9ede-4475-94ca-2730e3df12bd.jpg</image:loc>
-      <image:title>T-shirt TËGGIN – Collection Signature — Ranga Sénégal</image:title>
+      <image:title>T-shirt TËGGIN – Collection Signature — ReVendsen</image:title>
     </image:image>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/conditions</loc>
+    <loc>https://revends.vercel.app/conditions</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://ranga-senegal.vercel.app/confidentialite</loc>
+    <loc>https://revends.vercel.app/confidentialite</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>

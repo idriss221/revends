@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 005_order_quantity.sql  (PostgreSQL 15+)
+-- ReVends — 005_order_quantity.sql  (PostgreSQL 15+)
 -- PANIER +/− (backend) : quantité par produit portée par la commande.
 -- Source : exigence produit « panier avec +/− ».
 -- Prérequis : 001..004 appliqués.

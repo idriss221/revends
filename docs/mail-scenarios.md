@@ -1,4 +1,4 @@
-# Ranga — Scénarios d'envoi d'e-mail (transactionnels)
+# ReVends — Scénarios d'envoi d'e-mail (transactionnels)
 
 Source de vérité : `server/src/mail/{mailer,queue,templates}.ts` + appelants
 (`users`, `oauth`, `password-reset`, `orders`, `admin`, `expiry` services).
@@ -26,8 +26,8 @@ Spec : C1 / US-V5-01, CA-V5-001 → CA-V5-018 (api.md §V5).
 
 | # | Déclencheur | Destinataire | Événement | Sujet |
 |---|---|---|---|---|
-| 1 | Inscription classique (e-mail + mot de passe) | nouvel utilisateur | `welcome` | Bienvenue sur Ranga |
-| 2 | Inscription via Google/Facebook (1ʳᵉ connexion) | nouvel utilisateur | `welcome` | Bienvenue sur Ranga |
+| 1 | Inscription classique (e-mail + mot de passe) | nouvel utilisateur | `welcome` | Bienvenue sur ReVends |
+| 2 | Inscription via Google/Facebook (1ʳᵉ connexion) | nouvel utilisateur | `welcome` | Bienvenue sur ReVends |
 | 3 | Demande « Mot de passe oublié » | le compte (si existant) | `password_reset` | Réinitialisation de votre mot de passe |
 | 4 | Admin **approuve** un article | vendeur | `product_approved` | Votre article est approuvé |
 | 5 | Admin **refuse** un article | vendeur | `product_rejected` | Votre article a été refusé |
@@ -123,7 +123,7 @@ Soit **13 déclencheurs métier → 17 envois** (les scénarios 7, 9, 11 envoien
 | `MAIL_ENABLED` | Interrupteur global (`true` = SMTP réel en prod) |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_SECURE` | Transport SMTP (587 STARTTLS / 465 TLS) |
 | `MAIL_USER` / `MAIL_PASSWORD` | Identifiants SMTP |
-| `MAIL_FROM` | Adresse d'expédition (`Ranga <revendsen@gmail.com>`) |
+| `MAIL_FROM` | Adresse d'expédition (`ReVends <revendsen@gmail.com>`) |
 | `SITE_URL` | Base des liens internes des e-mails |
 | `RESET_TOKEN_TTL` | Durée de validité du lien de réinitialisation (1 h) |
 | `RESERVATION_DAYS` | Durée de réservation avant expiration (défaut **5**) |

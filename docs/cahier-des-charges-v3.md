@@ -1,4 +1,4 @@
-# CAHIER DES CHARGES V3 — Plateforme de revente d'articles d'occasion « Ranga »
+# CAHIER DES CHARGES V3 — Plateforme de revente d'articles d'occasion « ReVends »
 
 | | |
 |---|---|

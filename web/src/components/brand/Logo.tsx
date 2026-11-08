@@ -2,11 +2,11 @@ import { Link } from 'react-router'
 import { Boucle } from './Boucle'
 
 /**
- * Logo Ranga 2026 — docs/design-system-revends-v5.md §2.
+ * Logo REVENDS 2026 — docs/design-system-revends-v5.md §2.
  *
  * Le logotype est du **texte stylé par tokens** (net à toute densité,
- * accessible, localisable) ; seul le symbole est un SVG. Le « R » de
- * « Ranga » est la **seule** couleur du logotype.
+ * accessible, localisable) ; seul le symbole est un SVG. Le « V » de
+ * « ReVends » est la **seule** couleur du logotype.
  *
  * 4 compositions (§2) × 2 variantes de surface :
  *
@@ -16,7 +16,7 @@ import { Boucle } from './Boucle'
  * │ `navbar`   │ symbole 32 (28 mobile) +     │ ink          │ terracotta            │
  * │            │ wordmark font-display 24/19px │              │                       │
  * │ `footer`   │ symbole 40 + wordmark 28px    │ champagne    │ on-dark-accent        │
- * │ `sidebar`  │ symbole 32 + « RANGA » sans   │ champagne    │ on-dark-accent        │
+ * │ `sidebar`  │ symbole 32 + « REVENDS » sans │ champagne    │ on-dark-accent        │
  * │            │ 800 tracking 0.14em 20px      │              │                       │
  * │ `auth`     │ symbole 56 centré + wordmark │ ink          │ terracotta            │
  * │            │ 34px                          │              │                       │
@@ -51,7 +51,7 @@ const SYMBOL: Record<LogoVariant, string> = {
 const WORDMARK: Record<LogoVariant, string> = {
   navbar: 'text-[19px] md:text-2xl',                       // 19 px mobile → 24 px desktop
   footer: 'text-[28px]',
-  sidebar: 'text-xl font-extrabold tracking-[0.14em] uppercase', // RANGA sans 800, 20 px
+  sidebar: 'text-xl font-extrabold tracking-[0.14em] uppercase', // REVENDS sans 800, 20 px
   auth: 'text-[34px]',
 }
 
@@ -61,16 +61,16 @@ export function Logo({ variant = 'navbar', surface = 'light', linked = true, cla
   const vColor = dark ? 'text-on-dark-accent' : 'text-terracotta'
   const ring = dark ? 'on-dark' : ''
 
-  // « Ranga » : le R capital est la seule couleur du logotype.
-  // Sidebar : « RANGA » en capitales, gras + interlettrage (pas de serif).
+  // « ReVends » : le V capital est la seule couleur du logotype.
+  // Sidebar : « REVENDS » en capitales, gras + interlettrage (pas de serif).
   const wordmark =
     variant === 'sidebar' ? (
       <>
-        <span className={vColor}>R</span>ANGA
+        RE<span className={vColor}>V</span>ENDS
       </>
     ) : (
       <>
-        <span className={vColor}>R</span>anga
+        Re<span className={vColor}>V</span>ends
       </>
     )
 
@@ -105,7 +105,7 @@ export function Logo({ variant = 'navbar', surface = 'light', linked = true, cla
   return (
     <Link
       to="/"
-      aria-label="Ranga — retour à l'accueil"
+      aria-label="ReVends — retour à l'accueil"
       className={`inline-flex rounded-md ${ring} transition-opacity duration-200 hover:opacity-80`}
     >
       {body}

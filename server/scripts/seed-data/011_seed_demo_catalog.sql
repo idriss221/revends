@@ -1,5 +1,5 @@
 /* =====================================================================
-   Ranga — seed catalogue de démonstration (script manuel)
+   ReVends — seed catalogue de démonstration (script manuel)
 
    ⚠️ PAS une migration : ce fichier n'est pas dans `migrations/` parce que
    `migrate()` rejoue tout ce répertoire, y compris dans la base de TEST
@@ -15,7 +15,7 @@
    ===================================================================== */
 
 -- ============================================================================
--- Ranga — 011_seed_demo_catalog.sql
+-- ReVends — 011_seed_demo_catalog.sql
 --
 -- Catalogue de démonstration : vendeurs + articles publiés (status AVAILABLE)
 -- afin que l'accueil affiche de vraies cards dans « Les nouveautés » et

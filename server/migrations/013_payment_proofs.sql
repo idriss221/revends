@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 013_payment_proofs.sql  (PostgreSQL 15+)
+-- ReVends — 013_payment_proofs.sql  (PostgreSQL 15+)
 -- Preuve de paiement + journal d'idempotence des notifications.
 --
 -- RÈGLE ABSOLUE : une commande non payée n'est PAS valide. Une preuve reçue

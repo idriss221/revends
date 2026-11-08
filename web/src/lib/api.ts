@@ -1,5 +1,5 @@
 /**
- * Client API — parle au backend Ranga (docs/api.md).
+ * Client API — parle au backend ReVends (docs/api.md).
  *
  * - Base : `VITE_API_URL` si défini (prod = même origine → relatif), sinon
  *   chemin relatif `/api/...` (proxy Vite en dev vers localhost:4001).
@@ -173,7 +173,7 @@ function buildCatalogQuery(params: ProductListParams): string {
 }
 
 /**
- * Client API Ranga. Toutes les méthodes renvoient la donnée utile (déjà
+ * Client API ReVends. Toutes les méthodes renvoient la donnée utile (déjà
  * désenveloppée) ou lèvent une `ApiError`.
  */
 export class ApiClient {

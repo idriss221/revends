@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Ranga — déploiement production Vercel (gratuit, sans carte bancaire)
+# ReVends — déploiement production Vercel (gratuit, sans carte bancaire)
 # ============================================================================
 #
 # POURQUOI UN BUILD LOCAL + `--prebuilt` ?
@@ -72,16 +72,9 @@ console.log('   routes :');
 echo "▸ 4/4 — déploiement de l'output pré-construit (production)…"
 vercel deploy --prebuilt --prod --yes
 
-# L'URL publique de la marque est `ranga-senegal.vercel.app` (alias), mais le
-# domaine de PROJET reste `revends.vercel.app` — il porte encore les callbacks
-# OAuth configurés dans les consoles Google/Facebook. Un alias `.vercel.app`
-# ne suit pas automatiquement les déploiements : on le repointe donc ici vers
-# l'alias de production à chaque déploiement.
+# Le domaine public est `revends.vercel.app` (domaine de projet Vercel) :
+# il porte les callbacks OAuth configurés dans les consoles Google/Facebook
+# et c'est l'URL indexée par Google. Aucun alias à repointer.
 echo
-echo "▸ Alias — ranga-senegal.vercel.app → revends.vercel.app…"
-vercel alias set revends.vercel.app ranga-senegal.vercel.app
-
-echo
-echo "✅ Déploiement terminé — https://ranga-senegal.vercel.app"
-echo "   (domaine de projet conservé : https://revends.vercel.app)"
-echo "   Recette : /tmp/opencode/prove-prod.sh https://ranga-senegal.vercel.app"
+echo "✅ Déploiement terminé — https://revends.vercel.app"
+echo "   Recette : /tmp/opencode/prove-prod.sh https://revends.vercel.app"

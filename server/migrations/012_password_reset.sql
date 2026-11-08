@@ -1,5 +1,5 @@
 -- ============================================================================
--- Ranga — 012_password_reset.sql
+-- ReVends — 012_password_reset.sql
 --
 -- Réinitialisation de mot de passe (parcours « mot de passe oublié »).
 --

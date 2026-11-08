@@ -236,7 +236,7 @@ function subjectOf(event: MailEvent): string {
   // Sujet affiché dans le journal d'un envoi désactivé : on ne construit pas
   // le HTML complet pour ça (coût inutile sur un chemin non fonctionnel).
   const map: Record<MailEvent, string> = {
-    welcome: 'Bienvenue sur Ranga',
+    welcome: 'Bienvenue sur ReVends',
     product_approved: 'Votre article est approuvé',
     product_rejected: 'Votre article a été refusé',
     order_created_buyer: 'Votre commande est enregistrée',
@@ -252,7 +252,7 @@ function subjectOf(event: MailEvent): string {
     order_cancelled: 'Votre commande a été annulée',
     order_completed_buyer: 'Votre commande est terminée',
     password_reset: 'Réinitialisation de votre mot de passe',
-    payment_instructions_buyer: 'Instructions de paiement — Ranga',
+    payment_instructions_buyer: 'Instructions de paiement — ReVends',
     payment_proof_received_buyer: 'Preuve de paiement reçue — vérification en cours',
     payment_proof_rejected_buyer: 'Preuve de paiement refusée — action requise',
     payment_proof_submitted_admin: 'Nouvelle preuve de paiement à vérifier',

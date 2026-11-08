@@ -2,7 +2,7 @@
 >
 > Le sharding (FNV-1a, cluster.ts, shardRouter.ts, répliques) a été abandonné au profit d'un **pool unique** (`server/src/db/pool.ts`). Ce document est conservé à titre historique ; la source de vérité technique est désormais `docs/architecture-v5.md` et `docs/architecture.md`.
 
-# Architecture distribuée Ranga — backend scalable (LB → API ×3 sans état → Redis → 2 shards Postgres)
+# Architecture distribuée ReVends — backend scalable (LB → API ×3 sans état → Redis → 2 shards Postgres)
 
 **Auteur** : @architecte · **Date** : 2026-10-11 · **Statut** : **contrats figés** — prêt pour implémentation par @backend + @devops, sans re-discussion.
 **Cible** : version distribuée du backend existant (`server/`). On **garde** Express 5.2 + TypeScript + `pg` + `zod` + `multer` + `node-cron` + `nodemailer` + `helmet` + `express-session`. On **remplace uniquement** les 3 points non scalables : store de session, rate-limit, accès à la base.

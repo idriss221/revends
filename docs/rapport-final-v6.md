@@ -1,7 +1,7 @@
-# Rapport final — Ranga V6 (WhatsApp, preuve de paiement, +221, SEO)
+# Rapport final — ReVends V6 (WhatsApp, preuve de paiement, +221, SEO)
 
 **Date** : 5 novembre 2026
-**Production** : https://ranga.vercel.app
+**Production** : https://revends.vercel.app
 **Déploiement** : `revends-6biamthh7` (READY, alias production) — correctifs images + e-mail
 **Branche** : `fix/v6-on-799a7ab` — version **dérivée de `799a7ab`** (déploiement valide du 31/10),
 commits `323ebb7` puis `f119b0b`
@@ -10,7 +10,7 @@ commits `323ebb7` puis `f119b0b`
 
 ## 1. Contexte et objectif
 
-Finaliser Ranga sans jamais remplacer la version en production par une version locale ou
+Finaliser ReVends sans jamais remplacer la version en production par une version locale ou
 ancienne : la production reste la référence fonctionnelle et visuelle. Objectifs : notifications
 WhatsApp Business **officielles** + e-mail, workflow « commande non payée = invalide » avec preuve
 de paiement **validée côté serveur**, numéros sénégalais **+221** par défaut, SEO consolidé pour
@@ -126,7 +126,7 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 
 ## 12. SEO
 
-- `web/index.html` : title « Ranga — Marketplace seconde main au Sénégal | Ranga »,
+- `web/index.html` : title « ReVendsen — Marketplace seconde main au Sénégal | ReVends »,
   description ciblée, keywords, canonical, OG complet, Twitter Card, JSON-LD Organization + WebSite
   (SearchAction), `robots: index, follow`.
 - `robots.txt` : pages privées exclues (`/admin`, `/login`, `/panier`, `/mes-commandes`, `/api/`, …),
@@ -159,7 +159,7 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 
 - `scripts/deploy-vercel.sh` : garde-fou `.env*`, build web, copie `web/dist` → `public/` +
   `server/public/`, `vercel build --prod`, `vercel deploy --prebuilt --prod`.
-- Résultat : **READY**, alias `https://ranga.vercel.app` (`revends-6biamthh7`).
+- Résultat : **READY**, alias `https://revends.vercel.app` (`revends-6biamthh7`).
 - Contrôles post-déploiement : `/`, `/shop`, `/catalogue`, `/category`, `/login`, `/register`,
   `/panier`, `/vendre`, `/api/health` → **200**.
 - Images (sonde navigateur) : `/` 5/5, `/shop` 3/3, `/catalogue` 3/3, fiche produit 5/5 —
@@ -188,7 +188,7 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 | 3 | `RUN_MIGRATIONS=false` en production | Assumé | Appliquer toute nouvelle migration manuellement (sauvegarde + audit) |
 | 4 | ~~`013_product_image_repair.sql` absent du dépôt~~ | **Résolu** | Fichier rapatrié, idempotent, dry-run prod `UPDATE 0` |
 | 5 | Test WhatsApp réel de bout en bout | **BLOCKED** (secrets) | À rejouer après fourniture du token |
-| 6 | Validation Search Console | Manuel | Soumettre `https://ranga.vercel.app/sitemap.xml` |
+| 6 | Validation Search Console | Manuel | Soumettre `https://revends.vercel.app/sitemap.xml` |
 | 7 | Confiance e-mail (`SPF`/`DKIM` Gmail) | Mineur | Envoi via Gmail : délivrabilité correcte mais sans domaine authentifié ; envisager un domaine + Brevo/Resend à terme |
 | 8 | Mot de passe d'application Gmail passé par la conversation | À traiter | Révoquer/régénérer après validation, mettre à jour `MAIL_PASSWORD`, redéployer |
 
@@ -210,7 +210,7 @@ de paiement **validée côté serveur**, numéros sénégalais **+221** par déf
 - [x] Design, identité, navigation, auth, panier, commandes, administration préservés.
 - [x] Tests serveur 514/514, web 235/235, 0 échec (résultats réels).
 - [x] Typecheck et builds serveur/web OK.
-- [x] Déploiement READY + alias `ranga.vercel.app`.
+- [x] Déploiement READY + alias `revends.vercel.app`.
 - [x] `/api/health` 200, `/robots.txt` 200, `/sitemap.xml` 200.
 - [x] Images production : 16/16 chargées (accueil, shop, catalogue, fiche produit), 0 cassée.
 - [x] CSP images versionnée (`blob:` + `*.public.blob.vercel-storage.com`) + test de non-régression.

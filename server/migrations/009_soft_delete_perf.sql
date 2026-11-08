@@ -1,5 +1,5 @@
 -- ============================================================
--- Ranga — 009_soft_delete_perf.sql  (PostgreSQL 15+)
+-- ReVends — 009_soft_delete_perf.sql  (PostgreSQL 15+)
 -- Chantier V5 « Sprint Performance & Pro » (docs/cahier-des-charges-v5.md) :
 --   1. products.deleted_at — suppression logique (C4, ARB-V5-04/06, D1)
 --   2. notification_type 'article_deleted' (D5)

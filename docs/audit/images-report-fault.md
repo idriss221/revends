@@ -1,4 +1,4 @@
-# Audit exhaustif des images & médias — Ranga
+# Audit exhaustif des images & médias — ReVends
 
 - **Cible** : `http://127.0.0.1:8080`
 - **Date** : 2026-10-27T00:06:59.749Z → 2026-10-27T00:07:37.196Z

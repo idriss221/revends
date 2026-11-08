@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Projet** | Ranga — marketplace de revente d'articles d'occasion (Côte d'Ivoire) |
+| **Projet** | ReVends — marketplace de revente d'articles d'occasion (Côte d'Ivoire) |
 | **Version document** | 0.9 (à valider par le chef de projet — sections 9 et 10 ouvertes) |
 | **Statut** | Ébauche contrat de recette |
 | **Cible** | Web (React + Vite `revends/web`) — responsive mobile-first ; API Node + Express + Postgres `revends/server` |

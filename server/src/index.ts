@@ -28,7 +28,7 @@ const app = createApp();
 startScheduler();
 
 const server = app.listen(config.port, () => {
-  logger.info('Ranga API démarrée', {
+  logger.info('ReVends API démarrée', {
     url: `http://localhost:${config.port}`,
     env: config.nodeEnv,
     instance: config.instanceId,

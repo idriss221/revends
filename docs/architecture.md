@@ -1,4 +1,4 @@
-# ARCHITECTURE TECHNIQUE — Ranga (V2)
+# ARCHITECTURE TECHNIQUE — ReVends (V2)
 
 | | |
 |---|---|
@@ -142,7 +142,7 @@ PostgreSQL 15+ (Railway livre PG 16/17). Fichier cible : `server/src/db/migratio
 
 ```sql
 -- ============================================================
--- Ranga — 001_init.sql  (PostgreSQL 15+)
+-- ReVends — 001_init.sql  (PostgreSQL 15+)
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;   -- recherche ILIKE %mot% (D12)
@@ -393,7 +393,7 @@ SELECT setval('categories_id_seq', GREATEST((SELECT MAX(id) FROM categories), 1)
 Le mot de passe admin doit être haché (bcryptjs) — impossible en SQL brut. Script idempotent exécuté à la première mise en service :
 
 - Lire `ADMIN_EMAIL` / `ADMIN_PASSWORD` (env, jamais hardcodé).
-- `INSERT INTO users (display_name, name, email, phone, password_hash, role, accepted_cgu) VALUES ('Administrateur', 'Ranga Admin', $1, '+225 00000000', $2, 'admin', TRUE) ON CONFLICT (email) DO NOTHING;`
+- `INSERT INTO users (display_name, name, email, phone, password_hash, role, accepted_cgu) VALUES ('Administrateur', 'ReVends Admin', $1, '+225 00000000', $2, 'admin', TRUE) ON CONFLICT (email) DO NOTHING;`
 - Affichage du login admin dans le README déploiement.
 
 ---
@@ -719,7 +719,7 @@ CREATED → PAYMENT_PENDING → PAID → PRODUCT_WAITING → PRODUCT_RECEIVED �
 
 ```sql
 -- ============================================================
--- Ranga — 003_order_events.sql  (PostgreSQL 15+)
+-- ReVends — 003_order_events.sql  (PostgreSQL 15+)
 -- ÉVOLUTION V3 : cycle de commande à 9 étapes + journal `order_events`.
 -- Source : docs/architecture.md §11 (Évolution V3).
 -- Prérequis : 001_init.sql + 002_seed_categories.sql déjà appliqués.

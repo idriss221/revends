@@ -20,7 +20,7 @@ import { suggestionsLoader } from './suggestions'
  *   ouvre le menu plein écran `.mmenu` ;
  * · l'icône compte vaut `i-login` pour un visiteur et `i-user-check` pour un
  *   membre (comme `syncAccountBtn()` de la maquette).
- * · Marque : « Ranga » (capital V unique), pas « REVENDS » ni « Le Cœur couture ».
+ * · Marque : « ReVends » (capital V unique), pas « REVENDS » ni « Le Cœur couture ».
  * · Cibles tactiles ≥ 44×44 px (DA §8).
  */
 
@@ -106,8 +106,8 @@ export function Navbar() {
     <>
       <header className="site">
         <div className="wrap bar">
-          <Link className="logo" to="/" aria-label="Ranga, accueil">
-            <span className="text-terracotta-ink">R</span>anga<b>.</b>
+          <Link className="logo" to="/" aria-label="ReVends, accueil">
+            Re<span className="text-terracotta-ink">V</span>ends<b>.</b>
           </Link>
 
           <nav className="cats" aria-label="Univers">
@@ -189,8 +189,8 @@ export function Navbar() {
           inert={!menuOpen ? true : undefined}
         >
           <div className="mhead">
-            <Link className="logo" to="/" aria-label="Ranga, accueil">
-              <span className="text-terracotta-ink">R</span>anga<b>.</b>
+            <Link className="logo" to="/" aria-label="ReVends, accueil">
+              Re<span className="text-terracotta-ink">V</span>ends<b>.</b>
             </Link>
             <button className="mclose" type="button" onClick={closeMenu} aria-label="Fermer le menu">
               <Ico name="x" />
