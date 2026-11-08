@@ -3831,3 +3831,35 @@ avec l'utilisateur. Le code Ranga reste dans l'historique git (`fe05bfe`).
   (la connexion de l'utilisateur se fait dans un autre navigateur) ; un onglet
   de connexion a été ouvert pour que l'utilisateur s'authentifie dans le
   panneau. Envoi du sitemap + inspection d'URL restent à faire après connexion.
+
+### Search Console — indexation confirmée (8 nov. 2026, 16:12 UTC)
+
+Connexion Google de l'utilisateur active dans le navigateur d'automatisation.
+Propriété `https://revends.vercel.app/` (vérifiée par balise HTML).
+
+- **Sitemaps** : `/sitemap.xml`, envoyé le 6 nov. 2026, **dernière lecture
+  8 nov. 2026**, état **« Opération effectuée »**, **31 pages découvertes**,
+  0 vidéo. Aucun renvoi nécessaire (Google relit déjà le fichier).
+- **Inspection de l'URL** `https://revends.vercel.app/` → verdict :
+  - « **Cette URL est sur Google** »
+  - « **Indexation des pages : La page est indexée** »
+  - « HTTPS : La page est diffusée via HTTPS »
+  - Bouton « DEMANDER UNE INDEXATION » disponible (non nécessaire, page déjà
+    indexée) ; bouton « TESTER L'URL ACTIVE » disponible.
+- **Performances** : total **9 clics** sur les pages de recherche Web
+  (26 oct. → 5 nov. 2026), historique conservé après le retour ReVendsen.
+- Capture d'écran de preuve : `docs/preuves/search-console-revends-indexed-2026-11-08.png`.
+
+Conclusion : les deux actions demandées sont faites — sitemap lu (31 pages) et
+page d'accueil **indexée**. La marque ReVendsen est donc celle que Google
+associe à `revends.vercel.app`.
+
+### Reste à faire (non bloquant pour l'indexation)
+- Si l'on veut réutiliser l'adresse `revendsen@gmail.com` comme expéditeur :
+  se connecter à ce Gmail et générer un **nouveau mot de passe d'application**
+  (l'ancien est révoqué : `535-5.7.8`). En attendant, l'expéditeur
+  `rangasenegal@gmail.com` fonctionne (test SMTP réel OK).
+- Rotation des secrets collés dans le chat (app password Gmail, token Whapi).
+- Console Facebook Developers : mise à jour de l'URL de callback
+  (`FACEBOOK_CALLBACK_URL` déjà sur `revends.vercel.app`).
+- Backlinks / annuaires / réseaux sociaux pour renforcer « revendsen ».
