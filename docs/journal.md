@@ -3744,3 +3744,76 @@ HTTP 200). Cette entrée corrige ces deux points.
 
 - Inspection live de `https://ranga-senegal.vercel.app/` : Google écrit toujours **« Cette URL n'a pas été indexée par Google »** / **« La page n'est pas indexée : Détectée, actuellement non indexée »** (découverte via `sitemap.xml`, exploration en attente). Capture d'écran fournie à l'utilisateur.
 - Nouvelle tentative « Demander une indexation » : test d'URL active relancé, puis **« Petit problème… Une erreur s'est produite lors de l'envoi de votre demande d'indexation »** (après le quota dépassé précédent). L'indexation ne peut pas être forcée côté client : elle dépend de l'exploration Google via le sitemap.
+
+## Retour à ReVendsen + revends.vercel.app (8 nov. 2026)
+
+### Décision
+Le domaine `revends.vercel.app` est **déjà indexé par Google** sur la requête
+« revendsen » (historique Search Console : clics enregistrés). Depuis le
+rebrand, ce domaine servait une page **Ranga** dont le canonical pointait vers
+`ranga-senegal.vercel.app` : signal contradictoire pour Google sur une URL
+déjà indexée. Retour à la version ReVendsen sur son domaine d'origine, décidé
+avec l'utilisateur. Le code Ranga reste dans l'historique git (`fe05bfe`).
+
+### Ce qui a été fait
+- `git revert fe05bfe` (brand, 84 fichiers) → commit **`dc8b72e`**
+  (`revert(brand): retour à ReVendsen + revends.vercel.app`).
+- `web/index.html` restauré depuis `7076f62` : title `ReVendsen (ReVends) — …`,
+  canonical/OG/JSON-LD `https://revends.vercel.app/`, mots-clés « revends,
+  revendsen », balise `google-site-verification` inchangée.
+- `web/public/sitemap.xml` + `robots.txt` **conservés** (ajoutés par le rebrand)
+  mais réécrits sur `https://revends.vercel.app` — 31 URL, 0 occurrence de
+  « ranga ».
+- Logo/favicon restaurés (les `logo.png` / `og-cover.png` Ranga, ajoutés par le
+  rebrand, sont supprimés ; retour à `apple-touch-icon.png` comme image OG).
+- `scripts/deploy-vercel.sh` : suppression de l'alias `ranga-senegal` ;
+  déploiement direct sur `revends.vercel.app`.
+- E-mail de contact **conservé** : `rangasenegal@gmail.com` (voir ci-dessous).
+- Vercel (production) : `SITE_URL=https://revends.vercel.app`,
+  `GOOGLE_CALLBACK_URL=https://revends.vercel.app/api/auth/google/callback`,
+  `CORS_ORIGINS=https://revends.vercel.app,https://ranga-senegal.vercel.app`,
+  `MAIL_FROM="ReVends <rangasenegal@gmail.com>"`.
+
+### Identifiants ReVendsen d'avant le rebrand — vérifiés, non réutilisables
+- `.env.local` (30 oct.) contenait bien `MAIL_USER=revendsen@gmail.com` et son
+  mot de passe d'application Gmail. **Test SMTP réel : `535-5.7.8 Username and
+  Password not accepted` (EAUTH)** — l'app password a été révoquée/expirée.
+  Les deux variantes (avec/sans espaces) échouent → impossible de réutiliser
+  ce compte sans se reconnecter à Google et générer un nouveau mot de passe
+  d'application.
+- Le token Whapi historique n'existe plus en clair : il est stocké en
+  « Secret » chiffré chez Vercel (illisible par `vercel env pull`). Le token
+  Whapi actuel est conservé : il est lié à l'instance WhatsApp, pas au nom du
+  site.
+- `.env.local` a été déplacé hors du dépôt → `~/.revends-secrets/revends.env.local`
+  (le script de déploiement refuse les `.env*` à la racine).
+
+### Preuves (8 nov. 2026)
+- Web : `tsc -b` 0 erreur ; `vitest` **235/235** ; `vite build` OK.
+- Serveur : `tsc --noEmit` 0 erreur ; `npm test` → **✅ ALL SUITES GREEN**.
+- Production `https://revends.vercel.app/` : HTTP 200,
+  `<title>ReVendsen (ReVends) — Friperie en ligne & Articles d'occasion au Sénégal</title>`,
+  `canonical`/`og:url` = `https://revends.vercel.app/`, **0 occurrence de
+  « Ranga »** dans le HTML.
+- Assets : `/apple-touch-icon.png`, `/favicon.ico`, `/robots.txt`,
+  `/sitemap.xml` → **200** ; sitemap = **31 URL** sur `revends.vercel.app`.
+- API : `GET /api/health` → `{"status":"ok"}`.
+- Google OAuth : `GET /api/auth/google` → 302 avec
+  `redirect_uri=https://revends.vercel.app/api/auth/google/callback`.
+- E-mail production : `POST /api/auth/forgot-password` → **202**, log runtime
+  `{"msg":"email envoyé","event":"password_reset","transport":"smtp"}`,
+  aucun `EAUTH` (expéditeur `rangasenegal@gmail.com`).
+- Bundle client : 0 `smtp.gmail`, 0 `revendsen@gmail`, 0 `postgres://`,
+  0 `SESSION_SECRET` ; seules occurrences de « ranga » = l'adresse
+  `rangasenegal@gmail.com`.
+- `ranga-senegal.vercel.app` continue de servir l'ancien déploiement Ranga
+  (title « Ranga… », canonical `ranga-senegal`) : les deux marques restent
+  cohérentes sur leur domaine respectif.
+
+### En attente
+- Search Console : la session Google du navigateur est **déconnectée** —
+  reconnexion nécessaire pour renvoyer le sitemap et inspecter
+  `https://revends.vercel.app/`. La propriété reste vérifiée (même balise
+  `google-site-verification`).
+- Rotation des secrets collés dans le chat (mot de passe d'application Gmail
+  `rangasenegal`, token Whapi) toujours à faire.
