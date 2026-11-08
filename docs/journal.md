@@ -3863,3 +3863,47 @@ associe à `revends.vercel.app`.
 - Console Facebook Developers : mise à jour de l'URL de callback
   (`FACEBOOK_CALLBACK_URL` déjà sur `revends.vercel.app`).
 - Backlinks / annuaires / réseaux sociaux pour renforcer « revendsen ».
+
+### Reprise des identifiants ReVendsen — e-mail + WhatsApp (8 nov. 2026, 16:30 UTC)
+
+Les identifiants fournis par le propriétaire ont été **testés réellement**, puis
+posés dans les variables d'environnement Vercel de production. Aucun secret
+n'est écrit dans le dépôt ni dans ce journal.
+
+**E-mail `revendsen@gmail.com`**
+- Test SMTP direct (Nodemailer, `smtp.gmail.com:587`, STARTTLS) :
+  `verify()` **OK**, envoi **250 2.0.0 OK** (message id
+  `<506cc02b-…@gmail.com>`), e-mail de test reçu sur la boîte
+  `revendsen@gmail.com`.
+- Variables mises à jour : `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM`
+  (`ReVends <revendsen@gmail.com>`).
+- Preuve en production (déploiement `dpl_6baHqvk6TCtM13q1UruVpGYgNW89`) :
+  inscription réelle → log
+  `{"msg":"email envoyé","event":"welcome","userId":48,"transport":"smtp","attempt":1,"durationMs":929}` ;
+  un événement métier réel (`product_rejected`, userId 15) est aussi parti en
+  `transport:"smtp"` — **aucun `EAUTH`**.
+- Les comptes de test créés pour la preuve (ids 47 et 48,
+  `revendsen+prodtest*@gmail.com`) ont été **supprimés** : retour à 33 comptes.
+
+**WhatsApp / Whapi (`https://gate.whapi.cloud/`)**
+- `GET /health` → canal connecté (`user.id 221770673233`, `is_business:true`) ;
+  `GET /settings` → 200.
+- `POST /messages/text` (même endpoint/entête que
+  `server/src/whatsapp/whatsapp.service.ts`) → **`"sent":true`**,
+  message id `PsppxAWr8B7BUgU-wLUzoo_sUQ`, `from_me:true`, statut `pending`.
+- Variable mise à jour : `WHAPI_TOKEN` (API URL et `WHATSAPP_ENABLED`
+  inchangés).
+
+**Recette production après redéploiement**
+- `GET /` → 200, titre ReVendsen, canonical `https://revends.vercel.app/`,
+  0 occurrence de « Ranga ».
+- `/api/health` → `{"status":"ok"}` ; `robots.txt` et `sitemap.xml` → 200
+  (31 `<loc>`) ; `POST /api/auth/forgot-password` → 202.
+- Note : `revendsen@gmail.com` n'est pas un compte utilisateur du site ;
+  `forgot-password` répond donc 202 sans envoyer d'e-mail (anti-énumération,
+  comportement attendu).
+
+**Risque à traiter**
+- Ces identifiants ont été transmis dans la conversation : à faire tourner
+  (nouveau mot de passe d'application Gmail + nouveau jeton Whapi) dès que
+  possible, puis mettre à jour les variables Vercel et redéployer.
