@@ -3817,3 +3817,17 @@ avec l'utilisateur. Le code Ranga reste dans l'historique git (`fe05bfe`).
   `google-site-verification`).
 - Rotation des secrets collés dans le chat (mot de passe d'application Gmail
   `rangasenegal`, token Whapi) toujours à faire.
+
+### Vérification indexation après retour ReVendsen (8 nov. 2026, 16:07 UTC)
+
+- Recherche Google `site:revends.vercel.app` : **le site est indexé** et les
+  résultats renvoient déjà le **titre ReVendsen** :
+  `ReVendsen (ReVends) — Friperie en ligne & Articles d'occasion au Sénégal`
+  (accueil + `/category/maison` + `/category/electronique`). Google a donc
+  re-exploré la page après le redéploiement et l'instantané indexé est à jour.
+- Recherche `revendsen` : `https://revends.vercel.app/` **apparaît dans les
+  résultats** avec le titre ReVendsen (aux côtés de résultats « Svendsen »).
+- Search Console : le navigateur d'automatisation est **déconnecté** de Google
+  (la connexion de l'utilisateur se fait dans un autre navigateur) ; un onglet
+  de connexion a été ouvert pour que l'utilisateur s'authentifie dans le
+  panneau. Envoi du sitemap + inspection d'URL restent à faire après connexion.
