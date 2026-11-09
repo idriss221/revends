@@ -264,7 +264,7 @@ describe('E0 — Commande enregistrée (POST /api/orders) → acheteur connecté
         productId: product.id,
         paymentMethod: 'MOBILE_MONEY',
         note: 'E-mail de contact : pirate@example.com',
-        shipping: { name: 'Destinataire Test', phone: '+225 07 00 00 00 00', city: 'Dakar', address: 'Rue 1' },
+        shipping: { name: 'Destinataire Test', phone: '+221700000000', city: 'Dakar', address: 'Rue 1' },
       },
     });
     assert.equal(res.status, 201, `commande refusée : ${JSON.stringify(res.body)}`);

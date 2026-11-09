@@ -60,7 +60,7 @@ describe('Validation serveur — register (CA-AUTH01-01)', () => {
     displayName: 'Aicha123',
     name: 'Aïcha Koné',
     email: 'AICHA@Example.com',
-    phone: '+225 07 00 00 00 00',
+    phone: '+221700000000',
     password: 'motdepasse123',
     acceptedCgu: true,
   };

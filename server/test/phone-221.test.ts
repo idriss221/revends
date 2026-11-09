@@ -1,6 +1,6 @@
 /**
- * NUMÉROS WHATSAPP — indicatif +221 par défaut, jamais d'écrasement d'un
- * indicatif étranger explicite. Tests unitaires purs (sans BDD/HTTP).
+ * NUMÉROS WHATSAPP — règles strictes Sénégal : indicatif +221, 9 chiffres
+ * après, 1er chiffre 7 (`+2217…`). Tests unitaires purs (sans BDD/HTTP).
  */
 import './env.js';
 import { describe, it } from 'node:test';
@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { normalizePhone, isSenegalMobile, countryCode } from '../src/utils/phone.js';
 import { registerSchema, shippingSchema } from '../src/utils/validation.js';
 
-describe('normalizePhone — Sénégal par défaut', () => {
+describe('normalizePhone — Sénégal strict (+221, 9 chiffres, 7…)', () => {
   it('préfixe un mobile local à 9 chiffres par +221', () => {
     assert.equal(normalizePhone('77 123 45 67'), '+221771234567');
     assert.equal(normalizePhone('771234567'), '+221771234567');
@@ -25,21 +25,32 @@ describe('normalizePhone — Sénégal par défaut', () => {
   it('accepte un numéro déjà composé sans + (221…)', () => {
     assert.equal(normalizePhone('221771234567'), '+221771234567');
   });
+
+  it('accepte un +2217 déjà conforme', () => {
+    assert.equal(normalizePhone('+221 77 123 45 67'), '+221771234567');
+  });
 });
 
-describe('normalizePhone — indicatifs étrangers préservés', () => {
-  it('ne touche JAMAIS à un +225 ivoirien explicite', () => {
-    assert.equal(normalizePhone('+225 07 00 00 00 00'), '+2250700000000');
+describe('normalizePhone — rejets stricts (numéros sensibles, jamais inventés)', () => {
+  it('rejette un autre indicatif que +221', () => {
+    assert.equal(normalizePhone('+225 07 00 00 00 00'), null);
+    assert.equal(normalizePhone('+33 6 12 34 56 78'), null);
   });
 
-  it('préserve un +33 français', () => {
-    assert.equal(normalizePhone('+33 6 12 34 56 78'), '+33612345678');
+  it('rejette une longueur ≠ 9 après l’indicatif', () => {
+    assert.equal(normalizePhone('+22140721715'), null); // 8 chiffres
+    assert.equal(normalizePhone('+2210792673165'), null); // 10 chiffres / 0
+    assert.equal(normalizePhone('2250700000000'), null);
   });
 
-  it('ne transforme pas un numéro ivoirien à 10 chiffres après 225', () => {
-    const normalized = normalizePhone('2250700000000');
-    assert.equal(normalized, '+2250700000000');
-    assert.equal(countryCode(normalized!), '225');
+  it('rejette un 1er chiffre différent de 7', () => {
+    assert.equal(normalizePhone('33 123 45 67'), null); // fixe 33…
+    assert.equal(normalizePhone('+221331234567'), null);
+    assert.equal(normalizePhone('072400090'), null); // 9 chiffres commençant par 0
+  });
+
+  it('countryCode reste utilisable pour l’audit des anciennes données', () => {
+    assert.equal(countryCode('+221771234567'), '221');
   });
 });
 
@@ -78,13 +89,25 @@ describe('Schémas — messages « Numéro WhatsApp »', () => {
     }
   });
 
-  it('shippingSchema conserve un +225 explicite', () => {
+  it('registerSchema refuse un +225 (indicatif Sénégal uniquement)', () => {
+    const result = registerSchema.safeParse({ ...base, phone: '+225 07 00 00 00 00' });
+    assert.equal(result.success, false);
+  });
+
+  it('shippingSchema exige +221 + 9 chiffres / 7', () => {
     const parsed = shippingSchema.parse({
       name: 'Destinataire',
-      phone: '+225 07 00 00 00 00',
-      city: 'Abidjan',
-      address: 'Cocody, rue 1',
+      phone: '77 123 45 67',
+      city: 'Dakar',
+      address: 'Rue 1',
     });
-    assert.equal(parsed.phone, '+2250700000000');
+    assert.equal(parsed.phone, '+221771234567');
+    const bad = shippingSchema.safeParse({
+      name: 'Destinataire',
+      phone: '+225 07 00 00 00 00',
+      city: 'Dakar',
+      address: 'Rue 1',
+    });
+    assert.equal(bad.success, false);
   });
 });

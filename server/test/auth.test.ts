@@ -25,7 +25,7 @@ describe('POST /api/auth/register', () => {
         displayName: 'Aicha123',
         name: 'Aïcha Koné',
         email: 'aicha@example.com',
-        phone: '+225 07 00 00 00 00',
+        phone: '+221700000099',
         password: 'motdepasse123',
         acceptedCgu: true,
       },
@@ -52,7 +52,7 @@ describe('POST /api/auth/register', () => {
         displayName: 'Pseudo1',
         name: 'Nom Un',
         email: 'dup@example.com',
-        phone: '+225 07 00 00 00 01',
+        phone: '+221700000001',
         password: 'motdepasse123',
         acceptedCgu: true,
       },
@@ -62,7 +62,7 @@ describe('POST /api/auth/register', () => {
         displayName: 'Pseudo2',
         name: 'Nom Deux',
         email: 'DUP@example.com', // insensible à la casse (normalisé)
-        phone: '+225 07 00 00 00 02',
+        phone: '+221700000002',
         password: 'motdepasse123',
         acceptedCgu: true,
       },
@@ -73,7 +73,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('téléphone déjà utilisé → 409 PHONE_TAKEN', async () => {
-    const phone = '+225 07 11 22 33 44';
+    const phone = '+221711223344';
     await server.newClient().request('/api/auth/register', 'POST', {
       json: {
         displayName: 'U1',
@@ -104,7 +104,7 @@ describe('POST /api/auth/register', () => {
         displayName: 'SansCgu',
         name: 'X',
         email: 'nocgu@example.com',
-        phone: '+225 07 00 00 00 09',
+        phone: '+221700000009',
         password: 'motdepasse123',
         acceptedCgu: false,
       },
@@ -120,7 +120,7 @@ describe('POST /api/auth/register', () => {
         displayName: 'HashTest',
         name: 'H',
         email: 'hashtest@example.com',
-        phone: '+225 07 00 00 00 10',
+        phone: '+221700000010',
         password: 'clair-comme-de-l-eau',
         acceptedCgu: true,
       },
@@ -195,7 +195,7 @@ describe('GET /api/auth/me & logout (CA-AUTH02-02/03)', () => {
       displayName: 'LogoutUser',
       name: 'L',
       email: 'logout@example.com',
-      phone: '+225 07 00 00 00 11',
+      phone: '+221700000011',
       password: 'motdepasse123',
       acceptedCgu: true,
     } as any);

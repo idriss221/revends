@@ -59,7 +59,7 @@ function uniqEmail(): string {
 }
 function uniqPhone(): string {
   const part = () => String(Math.floor(Math.random() * 9000) + 1000);
-  return `+225 07 ${part()} ${part()}`;
+  return `+2217${part()}${part()}`;
 }
 
 /**

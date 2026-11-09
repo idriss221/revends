@@ -21,16 +21,16 @@ let admin: ApiClient;
 
 const SHIPPING = {
   name: 'Idriss Diouf',
-  phone: '+225 07 07 07 07 07',
+  phone: '+221707070707',
   city: 'Abidjan, Cocody',
   address: 'Rue des Jardins, Immeuble Palmier, Appt 12',
 };
 /**
  * Le serveur NORMALISE désormais le téléphone (`shippingSchema` → format
- * E.164-ish, ex. `+2250707070707`) : les vues et la BDD renvoient la forme
- * normalisée, jamais la saisie brute. L'indicatif étranger reste préservé.
+ * E.164-ish, ex. `+221707070707`) : les vues et la BDD renvoient la forme
+ * normalisée, jamais la saisie brute. Chiffres stricts : +221 + 9 chiffres / 7.
  */
-const SHIPPING_NORMALIZED = { ...SHIPPING, phone: '+2250707070707' };
+const SHIPPING_NORMALIZED = { ...SHIPPING, phone: '+221707070707' };
 const NOTE = 'Livrer de préférence en semaine';
 
 before(async () => {

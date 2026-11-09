@@ -36,7 +36,7 @@ function registerPayload(email: string, displayName: string, phone: string, over
 describe('Longueurs / valeurs saisie (validation NON-auth d’abord)', () => {
   it("email > 255 caractères → 400 VALIDATION_ERROR (validation zod stricte)", async () => {
     const res = await server.newClient().request('/api/auth/register', 'POST', {
-      json: registerPayload(`${'a'.repeat(250)}@test.revends`, 'LongEmail', '+225 07 00 00 00 42'),
+      json: registerPayload(`${'a'.repeat(250)}@test.revends`, 'LongEmail', '+221700000042'),
     });
     assert.equal(res.status, 400);
     assert.equal(errorCode(res.body), 'VALIDATION_ERROR');
@@ -70,7 +70,7 @@ describe('CA-AUTH02-05 — rate limit auth (en DERNIER)', () => {
   it('20 inscriptions consécutives acceptées — le quota /IP supporte une suite entière', async () => {
     for (let i = 1; i <= 20; i++) {
       const res = await server.newClient().request('/api/auth/register', 'POST', {
-        json: registerPayload(`rl${i}@test.revends`, `Ratelimit${i}`, `+225 07 00 ${String(i).padStart(5, '0')}`),
+        json: registerPayload(`rl${i}@test.revends`, `Ratelimit${i}`, `+2217000${String(i).padStart(5, '0')}`),
       });
       assert.equal(res.status, 201, `req #${i} doit passer`);
     }

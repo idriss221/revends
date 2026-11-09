@@ -3956,3 +3956,67 @@ de l'interface admin.
   `any_225=False`, `all_221=True`** (ex. id 52 `+22178069669`,
   id 7 `+22100000000`). L'interface admin affiche donc désormais
   uniquement des numéros `+221`.
+
+### Règles strictes +221 / 9 chiffres / 7… — audit + normalisation (9 nov. 2026)
+
+Règles demandées :
+1. indicatif obligatoire `+221` ;
+2. exactement **09 chiffres** après l'indicatif ;
+3. 1er chiffre après l'indicatif = **`7`** (`+2217…`).
+
+Consignes : `00221` → `+221` ; numéro nu 9 chiffres / 7 → `+221` devant.
+**Chiffres sensibles : ne jamais inventer ni déformer un numéro d'abonné.**
+
+**Audit avant correction stricte (aprèsconversion +225→+221 + nus)**
+- Total `users.phone` = **36** ; conformes stricts (`^\+2217[0-9]{8}$`) = **9** ;
+  non-conformes = **27** (longueur nationale : 7ch×1, 8ch×15, 9ch×12, 10ch×8).
+- `orders.shipping_phone` : 0 `+225`, 0 non conforme.
+- `00221…` : 0 ; numéros sans `+` : 0 (déjà préfixés dans le lot précédent).
+
+**Corrections sûres appliquées (sans inventer de chiffre)**
+- 7 numéros à 10 chiffres dont **0 de tronc** (`+2210 7…`) → retrait du 0,
+  suffixe 9 chiffres / 7 préservé, 0 doublon, audit `corrected` :
+  id 9 `+2210792673165 → +221792673165`, id 10 `→ +221792673183`,
+  id 11 `→ +221792675365`, id 12 `→ +221792697085`,
+  id 13 `→ +221792697901`, id 24 `→ +221700000000`,
+  id 28 `→ +221721297131`.
+- Migration versionnée : `016_phone_strict_9_chiffres.sql`.
+
+**État après : 16 conformes / 20 à valider manuellement**
+- Conformes (16) : id 9, 10, 11, 12, 13, 16, 18, 22, 24, 28, 32, 37, 40, 41, 43, 51.
+- À valider avec l'abonné (20, non modifiés car sensibles) :
+  - 9 chiffres mais 1er chiffre ≠ 7 (3) : id 26 `+221072400090`,
+    id 27 `+221072861067`, id 29 `+221072351793`.
+  - Longueur ≠ 9 (17) : id 7 `+22100000000` (admin placeholder 8z),
+    id 14 `+22101284093`, id 15 `+22140721715`, id 17 `+2217788888888`
+    (10 chiffres / 7), id 19 `+22141575673`, id 23 `+22168720570`,
+    id 31 `+22153058329`, id 33 `+22122703036`, id 34 `+22196835632`,
+    id 35 `+22194302134`, id 36 `+22100371804`, id 38 `+22122452764`,
+    id 39 `+22198748777`, id 44 `+2217735401` (7 chiffres),
+    id 45 `+22143183987`, id 50 `+22139510892`, id 52 `+22178069669`.
+  - La plupart des 8-chiffres sont des placeholders OAuth synthétiques
+    (`+225`+8 chiffres d'origine) : à régénérer en `+2217…` conforme
+    seulement après confirmation, jamais en ajoutant un chiffre au hasard.
+
+**Code (validation stricte pour les nouvelles inscriptions)**
+- `phone.ts` : `normalizePhone` ne retourne que `+2217`+8 chiffres
+  (`^\+2217[0-9]{8}$`) ; accepte `00221…`, 9 chiffres / 7 nus,
+  10 chiffres `07…` → `+221…`, `2217…` sans `+` ; tout le reste → `null`
+  + message « 9 chiffres commençant par 7 avec +221 ».
+- `oauth.service.ts` : placeholder OAuth `+221`+8 → **`+2217`+8** (strict).
+- `seed.ts` : admin `+221 00000000` → `+221700000000`.
+- Tests : fixtures `+225…` → `+2217…` conformes ; `phone-221.test.ts`
+  requalifié en rejets stricts (+225/+33/8ch/0… → `null`).
+
+**Preuves**
+- Server : `tsc --noEmit` 0 erreur ; `npm test` → **✅ ALL SUITES GREEN**
+  (38/38) ; Web : `vitest` **235/235**, `vite build` OK.
+- Prod `https://revends.vercel.app/` redéployé (`revends-r6ruerd41…`) :
+  200, titre ReVendsen, `/api/health` OK, 0 « Ranga ».
+- API admin réelle : `GET /api/admin/users` → **200, 35 éléments,
+  16 conformes, 19 à valider, `any_225=False`** — l'interface admin
+  affiche donc les numéros +221 et permet la revue manuelle.
+
+Risque ouvert : les 20 numéros flagués ne doivent pas être corrigés
+sans revalidation du propriétaire ; le plan B est de les régénérer
+(placeholders) ou de les corriger avec confirmation pour les vrais abonnés.

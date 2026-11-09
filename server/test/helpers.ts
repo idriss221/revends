@@ -165,11 +165,11 @@ export async function registerUser(server: { baseUrl: string }, prefix = 'user')
     client,
     displayName: `${label}${n}`,
     email: `${prefix}${n}@test.revends`,
-    // Bloc de numéros dédié aux comptes de test : `+225 05 55 00 NNNN`.
+    // Bloc de numéros dédié aux comptes de test : `+221 77 55 0 NNNN` (+2217…, 9 chiffres).
     // ⚠️ Ne PAS réutiliser `07 00 00 NNNN` : plusieurs suites créent des
-    // comptes réels avec ces numéros (ex. `+225 07 00 00 00 01`) et l'unicité
+    // comptes réels avec ces numéros (ex. `+221700000001`) et l'unicité
     // `phone` provoquerait un 409 PHONE_TAKEN sur le compte de test.
-    phone: `+225 05 55 00 ${String(n).padStart(4, '0')}`,
+    phone: `+221 77 55 0 ${String(n).padStart(4, '0')}`,
     password: `motdepasse${n}!`,
   };
   const res = await client.request('/api/auth/register', 'POST', {
