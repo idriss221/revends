@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
-import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from '../utils/validation.js';
+import { forgotPasswordSchema, loginSchema, phoneResetSchema, registerSchema, resetPasswordSchema } from '../utils/validation.js';
 import { requestPasswordReset, resetPassword } from '../services/password-reset.service.js';
+import { requestPhoneReset, updatePhoneWithToken } from '../services/phone-reset.service.js';
 import { loginUser, mePayload, registerUser } from '../services/users.service.js';
 import { requireAuth, currentUser } from '../middleware/auth.js';
 import { config } from '../config.js';
@@ -109,6 +110,25 @@ authRouter.post('/reset-password', async (req, res) => {
   await resetPassword(input.token, input.password);
   res.json({
     message: 'Votre mot de passe a été modifié. Vous pouvez vous connecter avec vos nouveaux identifiants.',
+  });
+});
+
+/** POST /api/auth/request-phone-reset — 202 TOUJOURS (anti-énumération) */
+authRouter.post('/request-phone-reset', async (req, res) => {
+  const input = forgotPasswordSchema.parse(req.body);
+  await requestPhoneReset(input.email);
+  res.status(202).json({
+    message: 'Si un compte existe pour cette adresse, un lien de mise à jour du numéro a été envoyé.',
+  });
+});
+
+/** POST /api/auth/phone-reset — 200 (jeton consommé, l'ancien numéro est écrasé) / 410 / 409 PHONE_TAKEN */
+authRouter.post('/phone-reset', async (req, res) => {
+  const input = phoneResetSchema.parse(req.body);
+  const { phone } = await updatePhoneWithToken(input.token, input.phone);
+  res.json({
+    message: 'Votre numéro WhatsApp a été mis à jour et remplace l\'ancien.',
+    phone,
   });
 });
 

@@ -167,6 +167,8 @@ export function createApp(): express.Express {
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/forgot-password', authLimiter);
   app.use('/api/auth/reset-password', authLimiter);
+  app.use('/api/auth/request-phone-reset', authLimiter);
+  app.use('/api/auth/phone-reset', authLimiter);
   app.use('/api/auth', authRouter);
 
   // Rate limit GLOBAL (V5/CA-V5-084) : 300 req/min/IP, fenêtre fixe, monté sur

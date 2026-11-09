@@ -256,6 +256,7 @@ function subjectOf(event: MailEvent): string {
     payment_proof_received_buyer: 'Preuve de paiement reçue — vérification en cours',
     payment_proof_rejected_buyer: 'Preuve de paiement refusée — action requise',
     payment_proof_submitted_admin: 'Nouvelle preuve de paiement à vérifier',
+    phone_reset: 'Mettez à jour votre numéro WhatsApp',
     reservation_expired_seller: 'La réservation d\'un de vos articles a expiré',
   };
   return map[event];

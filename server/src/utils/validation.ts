@@ -63,6 +63,18 @@ export const resetPasswordSchema = z.object({
     .max(72),
 });
 
+export const phoneResetSchema = z.object({
+  token: z
+    .string({ error: 'Jeton requis' })
+    .min(20, { error: 'Jeton invalide' })
+    .max(512),
+  phone: z
+    .string({ error: PHONE_REQUIRED_MESSAGE })
+    .trim()
+    .transform((value) => normalizePhone(value))
+    .refine((value): value is string => value !== null, { error: PHONE_ERROR_MESSAGE }),
+});
+
 export const productConditions = ['Neuf', 'Très bon état', 'Bon état', 'Correct', 'À réparer'] as const;
 export const paymentMethods = ['MOBILE_MONEY', 'CASH', 'BANK_TRANSFER', 'OTHER'] as const;
 export const rejectionReasons = [

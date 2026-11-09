@@ -11,6 +11,7 @@ import { CartView } from './views/CartView'
 import { CheckoutView } from './views/CheckoutView'
 import { SellView } from './views/SellView'
 import { AuthView } from './views/AuthView'
+import { UpdatePhoneView } from './views/UpdatePhoneView'
 import { AccountView } from './views/AccountView'
 import { NotFoundView } from './views/NotFoundView'
 
@@ -99,6 +100,7 @@ export function App() {
         <Route path="/login" element={<AuthView mode="login" />} />
         <Route path="/register" element={<AuthView mode="register" />} />
         <Route path="/reset-password" element={<AuthView mode="reset" />} />
+        <Route path="/update-phone" element={<UpdatePhoneView />} />
 
         {/* ── Vente — réservé aux utilisateurs connectés ────────────── */}
         <Route path="/vendre" element={<RequireUser><Navigate to="/sell" replace /></RequireUser>} />

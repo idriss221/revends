@@ -71,7 +71,8 @@ export type MailEvent =
   | 'payment_instructions_buyer'
   | 'payment_proof_received_buyer'
   | 'payment_proof_rejected_buyer'
-  | 'payment_proof_submitted_admin';
+  | 'payment_proof_submitted_admin'
+  | 'phone_reset';
 
 export interface TemplateVars {
   /**
@@ -214,6 +215,19 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         link ?? internalLink('/'),
       );
       return { subject: 'Réinitialisation de votre mot de passe', html, text };
+    }
+
+    case 'phone_reset': {
+      const { html, text } = layout(
+        'Mettez à jour votre numéro WhatsApp',
+        [
+          para('ReVends est au Sénégal : votre numéro doit être au format +221, 9 chiffres commençant par 7 (ex. +221 77 123 45 67). Nous mettons à jour nos règles et nous vous demandons de ressaisir votre numéro.'),
+          para('Cliquez sur le bouton ci-dessous, saisissez votre numéro WhatsApp actuel, puis enregistrez : le nouveau numéro remplacera l\'ancien.'),
+          para('Ce lien est valable 7 jours et ne peut être utilisé qu\'une seule fois. Si vous n\'êtes pas à l\'origine de ce compte, ignorez ce message.'),
+        ],
+        link ?? internalLink('/'),
+      );
+      return { subject: 'Mettez à jour votre numéro WhatsApp', html, text };
     }
 
     case 'welcome': {

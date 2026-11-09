@@ -4020,3 +4020,53 @@ Consignes : `00221` → `+221` ; numéro nu 9 chiffres / 7 → `+221` devant.
 Risque ouvert : les 20 numéros flagués ne doivent pas être corrigés
 sans revalidation du propriétaire ; le plan B est de les régénérer
 (placeholders) ou de les corriger avec confirmation pour les vrais abonnés.
+
+### Campagne e-mail de ressaisie du numéro (9 nov. 2026)
+
+Demande : « envoyer un mail de réinitialisation de numéros avec un lien qui
+les redirige vers un champ où ils mettent leur numéro et enregistrent,
+l'ancien est écrasé — ne pas oublier les contraintes — envoyer à tous ».
+
+**Implémentation**
+- Table `phone_reset_tokens` (migration `017`, jeton haché SHA-256,
+  **7 jours**, usage unique, révoque les jetons précédents du compte).
+- `phone-resets.repository.ts` + `phone-reset.service.ts` :
+  `requestPhoneReset` (anti-énumération, 202), `sendPhoneResetToUser`
+  (campagne), `updatePhoneWithToken` (jeton valide → numéro STRICT
+  `+221`+9 chiffres/7 via `normalizePhone` → unicité `409 PHONE_TAKEN`
+  → jeton consommé → `UPDATE users.phone` = **écrasement de l'ancien**).
+- Mail `phone_reset` : sujet « Mettez à jour votre numéro WhatsApp »,
+  lien interne `/update-phone?token=…` (chaîne `SITE_URL`, jamais absolue),
+  sans aucun numéro dans le corps.
+- API : `POST /api/auth/request-phone-reset` (202 toujours),
+  `POST /api/auth/phone-reset` (200 / 400 strict / 409 / 410), rate-limit
+  `auth` comme le mot de passe oublié.
+- Front : `UpdatePhoneView.tsx` (`/update-phone`) — champ « Nouveau numéro
+  WhatsApp », défaut `+221 `, règles +221/9/7, bouton « Enregistrer mon
+  numéro », reçu « Numéro enregistré ». Route + `api.updatePhoneReset`.
+- Script `server/scripts/send-phone-reset-campaign.mts` (`--dry-run`,
+  `--limit`, délai 500 ms, exclut `@revends.test`).
+
+**Campagne envoyée (SMTP réel `revendsen@gmail.com`)**
+- Dry-run : 36 comptes connus, **31 cibles** (5 `@revends.test` exclus).
+- Envoi réel : **31 SENT / 0 FAIL**, `transport:smtp`,
+  sujet « Mettez à jour votre numéro WhatsApp », attempt 1, ~2–3 s/mail.
+- Jetons en base : 31 campagne (+1 jeton de test = 32), 0 utilisés au départ.
+
+**Preuves de bout en bout (production)**
+- `GET /update-phone?token=…` → **200** ; `POST /phone-reset` jeton
+  invalide → **410 INVALID_OR_EXPIRED_RESET_TOKEN**.
+- Jeton réel (id 36, `+22100371804` non conforme) :
+  `POST phone-reset` nouveau `+221700000099` → **200**
+  « Votre numéro WhatsApp a été mis à jour et remplace l'ancien. »
+  → BDD : id 36 = `+221700000099` (conforme), conformes **16 → 17**.
+- Même jeton rejoué → **410** (usage unique).
+- Numéro 8 chiffres → **400** message strict
+  « Numéro WhatsApp invalide. Saisissez 9 chiffres commençant par 7… ».
+- Tests : server `tsc --noEmit` 0 erreur, `npm test` **✅ ALL SUITES GREEN**
+  (38/38) ; web `vitest` **235/235**, `vite build` OK.
+- Prod redéployé (`revends-f3jyapsvu…`) : 200, `/api/health` OK, 0 Ranga.
+
+Restes : 19 numéros encore flagués (non conformes) en attente de la
+saisie par les abonnés via le lien (7 jours) ; relance possible par
+`POST /api/auth/request-phone-reset` (e-mail seul, 202).

@@ -212,6 +212,15 @@ export class ApiClient {
     )
   }
 
+  /** Mise à jour du numéro via lien e-mail — `POST /api/auth/phone-reset`. Écrase l'ancien numéro. */
+  updatePhoneReset(token: string, phone: string): Promise<{ message: string; phone: string }> {
+    return request<{ message: string; phone: string }>(
+      '/api/auth/phone-reset',
+      { method: 'POST', body: JSON.stringify({ token, phone }) },
+      TIMEOUTS.auth,
+    )
+  }
+
   /* --- Catalogue (§3.2) --- */
 
   categories(): Promise<CategoriesResponse> {
