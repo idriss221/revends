@@ -3907,3 +3907,52 @@ n'est écrit dans le dépôt ni dans ce journal.
 - Ces identifiants ont été transmis dans la conversation : à faire tourner
   (nouveau mot de passe d'application Gmail + nouveau jeton Whapi) dès que
   possible, puis mettre à jour les variables Vercel et redéployer.
+
+### Correction indicatifs +225 → +221 (9 nov. 2026)
+
+Demande : « tous les numéros dont l'indicatif est +225 faut les remplacer
+par +221, par défaut c'est +221 pas +225, on est au Sénégal » + vérification
+de l'interface admin.
+
+**Constat (avant)**
+- `users.phone` : **25** numéros en `+225` (22 déjà journalisés
+  `skipped_foreign` par la migration 014, qui ne convertissait que les
+  mobiles sénégalais 9 chiffres en 7…), **7** en `+221`, **4** numéros nus
+  sans préfixe (`782052754`, `7788888888`, `777777777`, `770973385`).
+- `orders.shipping_phone` : 0 numéro en `+225`.
+- Code : `oauth.service.generateSyntheticPhone()` générait `+225…`,
+  `seed.ts` semait l'admin en `+225 00000000`, message d'erreur
+  `PHONE_ERROR_MESSAGE` citait `+225…` en exemple.
+- Front : `AuthView` et `CheckoutView` préfixaient déjà `+221` par défaut ;
+  l'interface admin (`AdminUsersPage`) affiche `users.phone` tel quel, donc
+  la correction base suffit à la rectifier.
+
+**Conversion en production**
+- Migration `015_phone_225_to_221.sql` (chiffres seuls, préserve la partie
+  nationale) + exécution immédiate en base :
+  `+225 07 92673165 → +2210792673165`, `+22540721715 → +22140721715`, etc.
+  Garantie `users_phone_key` : 0 doublon (plus petit id corrigé,
+  autres journalisés `skipped_duplicate`), journal `phone_migration_audit`
+  (`corrected`).
+- Ajout du préfixe aux 4 numéros nus : `782052754 → +221782052754`, etc.
+- **Après** : `+225 = 0`, `+221 = 36/36` (35 comptes + synchronisation de
+  test), `sans_plus = 0`, `orders.shipping_phone` sans `+225`.
+
+**Code**
+- `oauth.service.ts` : génération synthétique `+225…` → `+221…`.
+- `seed.ts` : admin `+225 00000000` → `+221 00000000`.
+- `phone.ts` : message d'erreur en `+221 77 123 45 67`, exemples `+225`
+  retirés (la fonction conserve la reconnaissance historique `+225`
+  uniquement pour l'audit des anciennes données).
+- `AuthView.tsx` : commentaire `+225…` → `+221`.
+
+**Preuves**
+- Server : `tsc --noEmit` 0 erreur ; `npm test` → **✅ ALL SUITES GREEN**
+  (38/38) ; Web : `vitest` **235/235**, `vite build` OK.
+- Prod `https://revends.vercel.app/` : 200, canonical
+  `https://revends.vercel.app/`, 0 « Ranga », 0 `+225` dans le bundle JS.
+- API admin connectée en session réelle :
+  `GET /api/admin/users?per_page=40` → **200, 35 éléments,
+  `any_225=False`, `all_221=True`** (ex. id 52 `+22178069669`,
+  id 7 `+22100000000`). L'interface admin affiche donc désormais
+  uniquement des numéros `+221`.

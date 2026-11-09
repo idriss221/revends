@@ -186,8 +186,8 @@ export function AuthView({ mode }: { mode: AuthMode }) {
   const confirmNeeded = up || resetting
 
   const [name, setName] = useState('')
-  // Marché principal : Sénégal. On préfixe par défaut, sans jamais écraser un
-  // indicatif étranger saisi explicitement (`+225…`, `+33…`).
+  // Marché principal : Sénégal. On préfixe par défaut (+221), sans jamais écraser un
+  // indicatif étranger saisi explicitement (`+33…`).
   const [phone, setPhone] = useState(up ? '+221 ' : '')
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')

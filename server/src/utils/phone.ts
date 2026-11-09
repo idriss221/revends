@@ -30,7 +30,7 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   const value = compact(raw);
   if (value === '') return null;
 
-  // 1. International explicite : +221… / +225… / +33… — on ne touche à rien.
+  // 1. International explicite : +221… / +33… — on ne touche à rien.
   if (value.startsWith('+')) {
     return E164.test(value) ? value : null;
   }
@@ -47,7 +47,8 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   // 4. Numéro local sénégalais avec le 0 initial (10 chiffres).
   if (/^0[37]\d{8}$/.test(value)) return `+221${value.slice(1)}`;
 
-  // 5. Numéro déjà composé sans `+` mais avec un indicatif (225 07…, 221 77…).
+  // 5. Numéro déjà composé sans `+` mais avec un indicatif (221 77…). ReVends est
+  //    sénégalais : l'indicatif par défaut est +221, jamais +225.
   //    12 à 15 chiffres : on suppose un indicatif pays en tête.
   if (/^\d{12,15}$/.test(value)) return `+${value}`;
 
@@ -79,6 +80,6 @@ export function isSenegalMobile(value: string): boolean {
 }
 
 export const PHONE_ERROR_MESSAGE =
-  'Numéro WhatsApp invalide. Saisissez un numéro sénégalais (ex. 77 123 45 67) ou un numéro international (ex. +225 07 00 00 00 00).';
+  'Numéro WhatsApp invalide. Saisissez un numéro sénégalais (ex. 77 123 45 67) ou un numéro international (ex. +221 77 123 45 67).';
 
 export const PHONE_REQUIRED_MESSAGE = 'Le numéro WhatsApp est requis.';

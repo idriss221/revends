@@ -11,12 +11,13 @@ const BCRYPT_COST = 10;
 const PHONE_REGEX = /^\+?[0-9 ]{8,20}$/;
 
 function generateSyntheticPhone(): string {
-  // Generate +225 followed by 8 random digits
+  // Generate +221 (Sénégal) followed by 8 random digits — placeholder unique,
+  // jamais un vrai numéro : ReVends est sénégalais, l'indicatif par défaut est +221.
   let digits = '';
   for (let i = 0; i < 8; i++) {
     digits += Math.floor(Math.random() * 10).toString();
   }
-  return `+225${digits}`;
+  return `+221${digits}`;
 }
 
 function sanitizeDisplayName(name: string | undefined, email: string): string {
