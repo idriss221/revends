@@ -4127,3 +4127,39 @@ opt-out simple (« répondez STOP »), sans lien tiers.
   `revends-dxayyowug-wwwidrissadiouf007-6996` → `https://revends.vercel.app`.
 - Contrôles post-déploiement : `/api/health` → `{"status":"ok"}`, titre
   « ReVendsen (ReVends) — Friperie en ligne… ».
+
+### Campagne WhatsApp — « Partagez ReVendsen avec vos proches » (12 nov. 2026)
+
+**Objectif** : demander aux utilisateurs réels de partager ReVendsen sur
+WhatsApp (statut, groupe, discussion), avec un message prêt à copier-coller.
+
+**Ciblage (strict, jamais élargi en douce)**
+- Comptes : 40 → numéros conformes `+2217` + 8 chiffres **et** hors des trois
+  adresses exclues par le produit.
+- Exclusions : 15 numéros invalides, 10 comptes de test (`@revends.test`,
+  `@maxxspace.com` — numéros fictifs pouvant appartenir à de vraies
+  personnes), 3 exclusions demandées, 1 numéro-placeholder
+  (`+221700000099`), 1 numéro émetteur (`+221770673233`).
+- **10 destinataires** au total, dédoublonnés par numéro.
+
+**Implémentation**
+- `server/scripts/send-whatsapp-share-campaign.mts` : `--send` (dry-run par
+  défaut), `--only id,id`, numéros masqués en sortie, message personnalisé
+  (prénom), délai 3 s, anti-doublon `notification_deliveries`
+  (`canal whatsapp`, clé `share-whatsapp-2026-11:<userId>`), **rejouable**
+  après échec (3 tentatives max).
+- `tsc --noEmit` : 0 erreur.
+
+**Envoi réel**
+- 5 messages partis (`sent:true`, ids Whapi `PsodzPYY…`, `PsqbJiYL…`,
+  `PsoVHmUP…`, `PsqvgGyb…`, `Psoxgay.…`) — statuts BDD `SENT`.
+- 5 refus Whapi **HTTP 402 `trial version limit exceeded`** (ids 51, 53, 54,
+  55, 56). `GET /limits` confirme la cause : 5 conversations uniques
+  consommées (`221762105745`, `221780000000`, `221782052754`, `221765241928`,
+  `221770973385`) → plafond de l'essai Whapi atteint.
+- Rejeu ciblé sur l'id 51 : **FAILED attempts=2**, même 402 → la logique de
+  reprise fonctionne, seule la limite du compte bloque.
+
+**Reste à faire** : passer le canal Whapi en offre payante (ou attendre le
+renouvellement de l'essai), puis relancer le script : les 5 `FAILED` seront
+repris automatiquement, les 5 `SENT` ne seront pas renvoyés.
