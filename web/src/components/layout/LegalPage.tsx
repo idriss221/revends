@@ -89,8 +89,8 @@ export function LegalPage({
 
         <p className="muted rv-legal-foot">
           Une question ? Écrivez-nous à{' '}
-          <a href="mailto:rangasenegal@gmail.com">
-            rangasenegal@gmail.com
+          <a href="mailto:revendsen@gmail.com">
+            revendsen@gmail.com
           </a>
           .
         </p>
@@ -197,7 +197,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     title: 'Vos droits',
     paragraphs: [
       "Vous pouvez à tout moment modifier les informations de votre profil, exporter vos données ou demander la suppression de votre compte.",
-      "Pour toute demande, écrivez à rangasenegal@gmail.com : nous répondons dans les meilleurs délais.",
+      "Pour toute demande, écrivez à revendsen@gmail.com : nous répondons dans les meilleurs délais.",
     ],
   },
   {
