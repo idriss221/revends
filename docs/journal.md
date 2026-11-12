@@ -4109,3 +4109,21 @@ une promesse claire (publier gratuitement, 10 % seulement à la vente).
 
 **Note** : l'e-mail mentionne la commission réelle (10 % à la vente) et un
 opt-out simple (« répondez STOP »), sans lien tiers.
+
+### Whapi — nouveau jeton configuré et testé (12 nov. 2026)
+
+- Jeton fourni par le produit, **non écrit dans le code** (uniquement variables
+  d'environnement).
+- Test direct `GET https://gate.whapi.cloud/health` : canal lié,
+  `user.id = 221770673233`, `is_business = true`, `channel_id` actif.
+- Test d'envoi réel `POST /messages/text` vers `+221762105745` :
+  **`sent: true`**, id `Psq09ltTfr6sKy8-wBAzog0xkQ`, source `api`.
+- Configuration locale (`~/.revends-secrets/revends.env.local`, sauvegarde
+  préalable) : `WHAPI_TOKEN` (32 car.), `WHAPI_API_URL=https://gate.whapi.cloud`,
+  `WHATSAPP_ENABLED=true`. Vérification `config.whatsapp` : `enabled=true`,
+  `provider=whapi`, token chargé.
+- Vercel production : `WHAPI_TOKEN`, `WHAPI_API_URL`, `WHATSAPP_ENABLED`
+  **remplacés** (`✓ Overrode`), redéploiement
+  `revends-dxayyowug-wwwidrissadiouf007-6996` → `https://revends.vercel.app`.
+- Contrôles post-déploiement : `/api/health` → `{"status":"ok"}`, titre
+  « ReVendsen (ReVends) — Friperie en ligne… ».
