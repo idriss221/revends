@@ -64,3 +64,6 @@ server/public/
 
 # Photos produits — générées par le seed démo, non versionnées
 web/public/catalog/
+
+# Copie locale accidentelle (ne pas versionner)
+/revends/

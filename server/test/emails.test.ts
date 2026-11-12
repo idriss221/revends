@@ -913,9 +913,9 @@ describe('E1b — Bienvenue pour un compte OAuth', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Couverture — les 21 événements se rendent tous sans trou ni lien sortant
+// Couverture — les 23 événements se rendent tous sans trou ni lien sortant
 // ---------------------------------------------------------------------------
-describe('Couverture — 21 événements, rendu complet', () => {
+describe('Couverture — 23 événements, rendu complet', () => {
   const ALL_EVENTS: MailEvent[] = [
     'welcome',
     'product_approved',
@@ -938,6 +938,8 @@ describe('Couverture — 21 événements, rendu complet', () => {
     'payment_proof_received_buyer',
     'payment_proof_rejected_buyer',
     'payment_proof_submitted_admin',
+    'phone_reset',
+    'announcement_sell',
   ];
 
   it('chaque événement produit un sujet, un HTML et un texte exploitables (CA-V5-007)', () => {
@@ -959,7 +961,7 @@ describe('Couverture — 21 événements, rendu complet', () => {
     }
   });
 
-  it('sur les 21, tous les liens pointent vers le site (CA-V5-009)', () => {
+  it('sur les 23, tous les liens pointent vers le site (CA-V5-009)', () => {
     for (const event of ALL_EVENTS) {
       const { html } = renderTemplate(event, { linkPath: '/dashboard' });
       const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]!);

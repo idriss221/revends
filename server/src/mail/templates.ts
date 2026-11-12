@@ -72,7 +72,8 @@ export type MailEvent =
   | 'payment_proof_received_buyer'
   | 'payment_proof_rejected_buyer'
   | 'payment_proof_submitted_admin'
-  | 'phone_reset';
+  | 'phone_reset'
+  | 'announcement_sell';
 
 export interface TemplateVars {
   /**
@@ -177,6 +178,180 @@ function layout(heading: string, paragraphs: string[], link: string | null): { h
 
 function para(...chunks: string[]): string {
   return chunks.join(' ');
+}
+
+/**
+ * Email d'annonce marketing (campagne « vendez ce que vous n'utilisez plus »).
+ *
+ * Volontairement séparé de `layout()` : un email d'annonce a besoin d'une mise
+ * en page plus riche (panneau sombre, tuiles de chiffres, étapes numérotées)
+ * pour porter la marque, là où les emails transactionnels restent minimalistes.
+ *
+ * Contraintes techniques identiques (CA-V5-007 / CA-V5-009) :
+ * - tableaux + styles inline uniquement (aucun `<style>`, aucun CSS externe) ;
+ * - aucune image distante (les clients mail les bloquent par défaut) ;
+ * - les deux seuls liens pointent vers `SITE_URL` (aucun lien tiers) ;
+ * - version texte équivalente, lisible sans HTML.
+ */
+function announcementLayout(primaryLink: string, secondaryLink: string): { html: string; text: string } {
+  const cta = escapeHtml(primaryLink);
+  const shop = escapeHtml(secondaryLink);
+  const html =
+    '<!doctype html><html lang="fr"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>Ce que vous n\'utilisez plus peut devenir de l\'argent</title></head>' +
+    '<body style="margin:0;padding:0;background-color:#F1E9DC;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F1E9DC;">' +
+    '<tr><td align="center" style="padding:28px 12px;">' +
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" ' +
+    'style="width:100%;max-width:600px;background-color:#FFFDF9;border:1px solid #E6DED0;border-radius:16px;">' +
+    '<tr><td style="height:5px;background-color:#B84D20;border-radius:16px 16px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>' +
+    // En-tête de marque (texte uniquement : aucun logo distant à charger).
+    '<tr><td style="padding:26px 34px 0;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:4px;color:#171513;text-transform:uppercase;">ReVendsen</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:13px;font-style:italic;color:#7B6D5D;margin-top:6px;">La seconde vie a de la valeur.</div>' +
+    '</td></tr>' +
+    // Panneau sombre : accroche.
+    '<tr><td style="padding:20px 34px 0;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#171513;border-radius:14px;">' +
+    '<tr><td style="padding:30px 28px 26px;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;letter-spacing:2.5px;color:#DCC8A8;text-transform:uppercase;">Le bon réflexe</div>' +
+    '<h1 style="margin:14px 0 12px;font-family:Georgia,\'Times New Roman\',serif;font-size:29px;line-height:1.24;color:#F7F3EC;font-weight:normal;">' +
+    'Ce que vous n\'utilisez plus peut devenir de l\'argent.</h1>' +
+    '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#CFC4B8;">' +
+    'Un téléphone qui dort dans un tiroir. Un sac porté deux fois. Un meuble qui encombre. ' +
+    'Sur ReVendsen, chaque objet trouve une nouvelle maison — et vous encaissez.</p>' +
+    '<div style="margin-top:18px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#E08A5F;">' +
+    'Publication gratuite&nbsp; ·&nbsp; 10&nbsp;% uniquement à la vente</div>' +
+    '</td></tr></table>' +
+    '</td></tr>' +
+    // Trois chiffres clés.
+    '<tr><td style="padding:22px 34px 0;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+    '<td width="33%" align="center" style="padding:14px 6px;border-top:1px solid #E6DED0;border-bottom:1px solid #E6DED0;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:#171513;">0 FCFA</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:0.6px;color:#7B6D5D;text-transform:uppercase;margin-top:5px;">pour publier</div></td>' +
+    '<td width="33%" align="center" style="padding:14px 6px;border:1px solid #E6DED0;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:#171513;">2 min</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:0.6px;color:#7B6D5D;text-transform:uppercase;margin-top:5px;">pour être en ligne</div></td>' +
+    '<td width="33%" align="center" style="padding:14px 6px;border-top:1px solid #E6DED0;border-bottom:1px solid #E6DED0;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:#171513;">10&nbsp;%</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:0.6px;color:#7B6D5D;text-transform:uppercase;margin-top:5px;">seulement à la vente</div></td>' +
+    '</tr></table>' +
+    '</td></tr>' +
+    // Les trois étapes.
+    '<tr><td style="padding:30px 34px 0;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;color:#A9471F;text-transform:uppercase;">Comment vendre</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:22px;color:#171513;margin:10px 0 18px;">Trois étapes, et c\'est parti.</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' +
+    '<tr><td width="44" valign="top" style="padding-bottom:16px;">' +
+    '<div style="width:30px;height:30px;line-height:30px;text-align:center;background-color:#F8E7DC;border-radius:15px;font-family:Georgia,\'Times New Roman\',serif;font-size:14px;color:#A9471F;">1</div></td>' +
+    '<td valign="top" style="padding-bottom:16px;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#171513;">Photographiez</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5B4A3E;margin-top:3px;">' +
+    'Deux ou trois photos nettes, une description honnête de l\'état. C\'est tout ce qu\'il faut.</div></td></tr>' +
+    '<tr><td width="44" valign="top" style="padding-bottom:16px;">' +
+    '<div style="width:30px;height:30px;line-height:30px;text-align:center;background-color:#F8E7DC;border-radius:15px;font-family:Georgia,\'Times New Roman\',serif;font-size:14px;color:#A9471F;">2</div></td>' +
+    '<td valign="top" style="padding-bottom:16px;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#171513;">Publiez</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5B4A3E;margin-top:3px;">' +
+    'Fixez votre prix en FCFA. Votre annonce est vérifiée par notre équipe, puis mise en ligne.</div></td></tr>' +
+    '<tr><td width="44" valign="top">' +
+    '<div style="width:30px;height:30px;line-height:30px;text-align:center;background-color:#F8E7DC;border-radius:15px;font-family:Georgia,\'Times New Roman\',serif;font-size:14px;color:#A9471F;">3</div></td>' +
+    '<td valign="top">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#171513;">Encaissez</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5B4A3E;margin-top:3px;">' +
+    'Un acheteur est intéressé&nbsp;? Convenez de la remise, et recevez votre paiement.</div></td></tr>' +
+    '</table>' +
+    '</td></tr>' +
+    // Réassurance.
+    '<tr><td style="padding:14px 34px 0;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F1E7D5;border-radius:12px;">' +
+    '<tr><td style="padding:20px 22px;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;color:#3A2923;text-transform:uppercase;">Pourquoi ReVendsen</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' +
+    '<tr><td width="20" valign="top" style="padding-top:10px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2F6B4F;">&#10003;</td>' +
+    '<td valign="top" style="padding-top:10px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#3A2923;">' +
+    'Une communauté sénégalaise, avec des acheteurs près de chez vous.</td></tr>' +
+    '<tr><td width="20" valign="top" style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2F6B4F;">&#10003;</td>' +
+    '<td valign="top" style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#3A2923;">' +
+    'Des annonces modérées, pour protéger acheteurs et vendeurs.</td></tr>' +
+    '<tr><td width="20" valign="top" style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2F6B4F;">&#10003;</td>' +
+    '<td valign="top" style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#3A2923;">' +
+    'Un paiement contrôlé par notre équipe, preuve à l\'appui.</td></tr>' +
+    '<tr><td width="20" valign="top" style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2F6B4F;">&#10003;</td>' +
+    '<td valign="top" style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#3A2923;">' +
+    'Publier ne coûte rien&nbsp;: 10&nbsp;% de commission seulement quand vous vendez.</td></tr>' +
+    '</table>' +
+    '</td></tr></table>' +
+    '</td></tr>' +
+    // Appel à l'action.
+    '<tr><td style="padding:28px 34px 0;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:20px;line-height:1.4;color:#171513;margin-bottom:14px;">' +
+    'Il y a sûrement un objet à vendre chez vous, dès aujourd\'hui.</div>' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>' +
+    '<td style="background-color:#B84D20;border-radius:9px;">' +
+    `<a href="${cta}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:15px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;border-radius:9px;">Publier mon article</a>` +
+    '</td></tr></table>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#7B6D5D;margin-top:14px;">' +
+    `Ou <a href="${shop}" target="_blank" rel="noopener noreferrer" style="color:#A9471F;text-decoration:underline;">parcourez le catalogue</a> pour voir ce qui se vend en ce moment.</div>` +
+    '</td></tr>' +
+    // Signature.
+    '<tr><td style="padding:26px 34px 8px;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#3A2923;">' +
+    'À très vite,<br><strong>L\'équipe ReVendsen</strong></div>' +
+    '</td></tr>' +
+    // Pied de page : transparence + opt-out simple (réponse STOP).
+    '<tr><td style="padding:18px 34px 28px;">' +
+    '<div style="border-top:1px solid #E6DED0;padding-top:16px;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#8C7A6B;">' +
+    'ReVendsen — Dakar, Sénégal · revendsen@gmail.com<br>' +
+    'Vous recevez cet e-mail car vous avez un compte sur ReVendsen. ' +
+    'Pour ne plus recevoir nos annonces, répondez simplement STOP à cet e-mail.<br>' +
+    'Message automatique ReVendsen.' +
+    '</div></td></tr>' +
+    '</table>' +
+    '</td></tr></table>' +
+    '</body></html>';
+
+  const text = [
+    'REVENDSEN — La seconde vie a de la valeur.',
+    '',
+    'CE QUE VOUS N\'UTILISEZ PLUS PEUT DEVENIR DE L\'ARGENT.',
+    '',
+    'Un téléphone qui dort dans un tiroir. Un sac porté deux fois. Un meuble qui encombre.',
+    'Sur ReVendsen, chaque objet trouve une nouvelle maison — et vous encaissez.',
+    '',
+    'Publication gratuite · 10 % uniquement à la vente.',
+    '',
+    'COMMENT VENDRE',
+    '1. Photographiez — deux ou trois photos nettes, une description honnête de l\'état.',
+    '2. Publiez — fixez votre prix en FCFA. Votre annonce est vérifiée, puis mise en ligne.',
+    '3. Encaissez — convenez de la remise avec l\'acheteur et recevez votre paiement.',
+    '',
+    'POURQUOI REVENDSEN',
+    '- Une communauté sénégalaise, avec des acheteurs près de chez vous.',
+    '- Des annonces modérées, pour protéger acheteurs et vendeurs.',
+    '- Un paiement contrôlé par notre équipe, preuve à l\'appui.',
+    '- Publier ne coûte rien : 10 % de commission seulement quand vous vendez.',
+    '',
+    'Il y a sûrement un objet à vendre chez vous, dès aujourd\'hui.',
+    '',
+    'Publier mon article :',
+    primaryLink,
+    '',
+    'Parcourir le catalogue :',
+    secondaryLink,
+    '',
+    'À très vite,',
+    'L\'équipe ReVendsen',
+    '',
+    '--',
+    'ReVendsen — Dakar, Sénégal · revendsen@gmail.com',
+    'Vous recevez cet e-mail car vous avez un compte sur ReVendsen. Pour ne plus recevoir nos annonces, répondez STOP.',
+    'Message automatique ReVendsen.',
+  ].join('\n');
+
+  return { html, text };
 }
 
 /**
@@ -515,6 +690,16 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         link ?? internalLink('/admin/commandes'),
       );
       return { subject: 'Nouvelle preuve de paiement à vérifier', html, text };
+    }
+
+    case 'announcement_sell': {
+      // Campagne marketing : les deux liens sont FIXES (formulaire de vente et
+      // catalogue). On ignore volontairement `linkPath` : une annonce ne doit
+      // jamais pouvoir être détournée vers un chemin fourni par un appelant.
+      const primary = internalLink('/sell') ?? config.siteUrl;
+      const secondary = internalLink('/shop') ?? config.siteUrl;
+      const { html, text } = announcementLayout(primary, secondary);
+      return { subject: 'Ce que vous n\'utilisez plus peut devenir de l\'argent', html, text };
     }
 
     default: {

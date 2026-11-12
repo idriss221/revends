@@ -258,6 +258,7 @@ function subjectOf(event: MailEvent): string {
     payment_proof_submitted_admin: 'Nouvelle preuve de paiement à vérifier',
     phone_reset: 'Mettez à jour votre numéro WhatsApp',
     reservation_expired_seller: 'La réservation d\'un de vos articles a expiré',
+    announcement_sell: 'Ce que vous n\'utilisez plus peut devenir de l\'argent',
   };
   return map[event];
 }

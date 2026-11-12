@@ -4070,3 +4070,42 @@ l'ancien est écrasé — ne pas oublier les contraintes — envoyer à tous ».
 Restes : 19 numéros encore flagués (non conformes) en attente de la
 saisie par les abonnés via le lien (7 jours) ; relance possible par
 `POST /api/auth/request-phone-reset` (e-mail seul, 202).
+
+### Campagne marketing — annonce « vendez ce que vous n'utilisez plus » (12 nov. 2026)
+
+**Objectif produit** : relancer tous les comptes réels avec un e-mail d'annonce
+soigné — transformer les objets inutilisés en argent, avec un ton premium et
+une promesse claire (publier gratuitement, 10 % seulement à la vente).
+
+**Implémentation**
+- Nouvel événement `announcement_sell` dans `src/mail/templates.ts`, avec une
+  mise en page dédiée `announcementLayout()` : tableaux + styles inline
+  uniquement, **aucune image distante**, aucun `<style>`, aucun script.
+  Deux liens fixes : `/sell` (CTA « Publier mon article ») et `/shop`
+  (catalogue). Version texte équivalente.
+- `subjectOf()` (`mailer.ts`) complété ; couverture de test étendue à 23
+  événements (`test/emails.test.ts`).
+- `src/services/announcement.service.ts` : envoi best-effort + **anti-doublon**
+  via `notification_deliveries` (`idempotency_key = <campagne>:<userId>`),
+  statut `SENT` / `FAILED` et date d'envoi en base.
+- `scripts/send-sell-announcement.mts` : `--dry-run`, `--limit`, `--only`,
+  `--campaign-key` (défaut `sell-announcement-2026-11`), délai 600 ms,
+  exclusion des adresses `@revends.test`.
+- `SITE_URL` locale corrigée en `https://revends.vercel.app` (cause des liens
+  `localhost` de la campagne précédente).
+
+**Preuves d'envoi (SMTP réel `revendsen@gmail.com`)**
+- Dry-run : **40 comptes connus → 35 cibles** (5 comptes `@revends.test`
+  exclus).
+- Test ciblé admin : `SENT id=7`, `transport:smtp`, attempt 1.
+- Campagne complète : **34 SENT / 0 FAIL / 1 SKIP** (admin déjà servi,
+  anti-doublon) → **35 envois au total** sur 35 cibles.
+- BDD : `notification_deliveries` → **35 lignes `SENT`**, 0 doublon
+  (`10:12:54` → `10:14:52` UTC), sujet « Ce que vous n'utilisez plus peut
+  devenir de l'argent ».
+- Vérifications : `tsc --noEmit` 0 erreur ; `test/emails.test.ts` **41/41** ;
+  rendu contrôlé : liens `/sell` + `/shop` préfixés par `SITE_URL`,
+  `localhost=false`, `img=false`, `style=false`, `script=false`.
+
+**Note** : l'e-mail mentionne la commission réelle (10 % à la vente) et un
+opt-out simple (« répondez STOP »), sans lien tiers.

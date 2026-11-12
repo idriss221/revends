@@ -134,3 +134,21 @@ Soit **13 déclencheurs métier → 17 envois** (les scénarios 7, 9, 11 envoien
   `recentSentMails()` / `clearSentMails()` observent les envois.
 - Règle : tout ajout d'événement **sans template** échoue bruyamment
   (`default:` de `renderTemplate`).
+
+## 7. Campagnes (hors transactionnel)
+
+Deux envois de masse existent, pilotés par des scripts et **non** par une
+action métier. Ils réutilisent `sendMail()` et restent anti-doublon.
+
+| Campagne | Événement | Script | Idempotence | Public |
+|---|---|---|---|---|
+| Ressaisie du numéro WhatsApp | `phone_reset` | `scripts/send-phone-reset-campaign.mts` | 1 jeton actif par compte (les anciens sont révoqués) | comptes réels hors `@revends.test` |
+| Annonce « vendez ce que vous n'utilisez plus » | `announcement_sell` | `scripts/send-sell-announcement.mts` | `notification_deliveries` (`<campagne>:<userId>`) | comptes réels hors `@revends.test` |
+
+- **Annonce marketing** : gabarit dédié `announcementLayout()` (HTML riche,
+  tableaux + styles inline, **aucune image distante**), deux liens fixes
+  `/sell` et `/shop`, version texte, mention de la commission réelle (10 % à la
+  vente) et opt-out simple (« répondez STOP »).
+- **Options du script** : `--dry-run`, `--limit N`, `--only a@x,b@y`,
+  `--campaign-key K` (défaut `sell-announcement-2026-11`), délai 600 ms.
+- **Preuve 12 nov. 2026** : 35 cibles, **35 SENT / 0 FAIL**, 0 doublon en base.
