@@ -4220,3 +4220,26 @@ supplémentaires, invisibles en revue de code :
 - Alertes e-mail : exécution du vrai chemin `alertAdmins` contre la base + SMTP de prod →
   3 envois `transport:smtp` (admin@revends.com, boiroabasse7@gmail.com, mamariss.proj@gmail.com) ;
   lignes `notification_deliveries` SENT pour les 2 comptes admin (`…:7`, `…:23`). ✅
+
+### Complément (même journée) — chargement = cœur, erreurs humaines
+
+Retour utilisateur sur le site (capture d'écran : « Chargement de l'article… » avec
+un spinner circulaire) :
+
+- **Loader** : tout état de chargement plein écran/fiche utilise désormais le
+  cœur ReVends (`HeartLoader` — même signe et même animation que le splash
+  d'ouverture, 3 tailles), plus jamais de spinner « refresh » anonyme
+  (Article, panier, catégories, compte, publier, checkout).
+- **Erreurs** : nouvelle `lib/errors.ts` (`friendlyError`) — les messages de
+  validation (`details`) restent affichés ; 0/échec réseau → « Connexion
+  impossible… », 429 → « Trop de tentatives… », 401 → « session expirée »,
+  403 → « impossible avec ce compte », 5xx et erreurs de rendu → message
+  générique attribué à la page. Jamais de `Failed to fetch`, jamais de statut
+  HTTP, jamais de texte serveur technique. `ErrorMessage` (admin) passe par la
+  même fonction ; le code machine reste affichable via `showCode` (support).
+  Les `onError` admin passent par `friendlyError` avec leur repli `TOAST_COPY`.
+
+**Recette navigateur (production)** — loader mesuré : `animation rvHeart`
+3.1 s `infinite`, cœur 104 px, `role=status` ; erreurs : réseau → « Connexion
+impossible. Vérifiez votre réseau et réessayez. », 500 → « Impossible de
+charger cet article pour le moment. » ; aucune chaîne technique détectée.

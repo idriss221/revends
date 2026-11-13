@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { Ico } from '../components/brand/Ico'
 import { Crumb, SiteEmpty, SiteHead, fmt } from '../components/site/SiteBits'
 import { SiteImage, artKindFor } from '../components/site/SiteImage'
+import { HeartLoader } from '../components/ui/HeartLoader'
 import { useCart, type CartItem } from '../context/CartContext'
 import { MAX_QTY } from '../lib/hybridStore'
 
@@ -100,7 +101,7 @@ export function CartView() {
         <Crumb items={[{ label: PAGE_TITLE }]} />
         <div className="section tight">
           {head}
-          <SiteEmpty icon="refresh" title="Chargement de votre panier…" />
+          <HeartLoader label="Chargement de votre panier…" />
         </div>
       </div>
     )

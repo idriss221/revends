@@ -1,4 +1,5 @@
 import { ApiError } from '../../lib/api'
+import { friendlyError } from '../../lib/errors'
 import { Button } from './Button'
 import { Ico } from '../brand/Ico'
 
@@ -19,7 +20,7 @@ interface ErrorMessageProps {
  */
 export function ErrorMessage({ error, showCode = false, action, loading = false }: ErrorMessageProps) {
   const apiError = error instanceof ApiError ? error : null
-  const message = apiError?.readableMessage() ?? (error instanceof Error ? error.message : 'Une erreur est survenue.')
+  const message = friendlyError(error)
   return (
     <div
       role="alert"

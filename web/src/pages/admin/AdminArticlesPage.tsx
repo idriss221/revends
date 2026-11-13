@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router'
 import { api, ApiError } from '../../lib/api'
 import { formatDate, formatFcfa } from '../../lib/format'
 import { EMPTY_COPY, PRODUCT_STATUS_FILTERS, TOAST_COPY, productStatusBadge } from '../../lib/constants'
+import { friendlyError } from '../../lib/errors'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { DashboardLayout } from '../../components/layout/DashboardLayout'
@@ -98,7 +99,7 @@ export function AdminArticlesPage() {
       } else if (err.code === 'NETWORK_ERROR') {
         toast('error', TOAST_COPY.networkError)
       } else {
-        toast('error', err.readableMessage() || TOAST_COPY.actionFailed)
+        toast('error', friendlyError(err, TOAST_COPY.actionFailed))
       }
     },
   })

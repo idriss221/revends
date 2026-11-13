@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { HeartMark } from './HeartMark'
 
 /**
  * Splash d'ouverture « Le Cœur couture » — repris de `Bureau/main/index.html`
@@ -47,13 +48,7 @@ export function SplashLoader() {
       aria-label="Chargement de ReVends"
     >
       <div className="rv-splash__box">
-        <svg className="rv-heart" viewBox="0 0 120 112" aria-hidden="true">
-          <path
-            className="hp"
-            d="M60 100 C 18 70 10 42 30 27 C 46 15 60 28 60 40 C 60 28 74 15 90 27 C 110 42 102 70 60 100 Z"
-          />
-          <path className="shine" d="M34 38 C 42 30 52 30 58 38" />
-        </svg>
+        <HeartMark />
         <span className="rv-splash__cap">ReVends</span>
       </div>
     </div>

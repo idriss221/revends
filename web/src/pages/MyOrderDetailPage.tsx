@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { formatCountdown, formatDateTime, formatFcfa } from '../lib/format'
 import { orderStatusBadge, PAYMENT_METHODS } from '../lib/constants'
 import { useToast } from '../lib/toast'
+import { friendlyError } from '../lib/errors'
 import type { PaymentProof } from '../lib/types'
 import { Crumb, SiteHead } from '../components/site/SiteBits'
 import { StatusBadge } from '../components/ui/StatusBadge'
@@ -56,7 +57,7 @@ export function MyOrderDetailPage() {
       qc.invalidateQueries({ queryKey: ['my-orders'] })
     },
     onError: (err) => {
-      toast('error', err instanceof Error && err.message ? err.message : 'Envoi de la preuve impossible.')
+      toast('error', friendlyError(err, 'Envoi de la preuve impossible.'))
     },
   })
 

@@ -4,9 +4,10 @@ import { Ico } from '../components/brand/Ico'
 import { SiteImage } from '../components/site/SiteImage'
 import { useAuth } from '../context/AuthContext'
 import { useLogin, useRegister } from '../hooks/useAuth'
-import { api, ApiError } from '../lib/api'
+import { api } from '../lib/api'
 import { AUTH_PHOTO } from '../lib/catalogPhotos'
 import { useToast } from '../lib/toast'
+import { friendlyError } from '../lib/errors'
 
 /* ============================================================================
    Authentification — `Auth()` de `Bureau/main/assets/app.js` (lignes 806-926)
@@ -332,7 +333,7 @@ export function AuthView({ mode }: { mode: AuthMode }) {
           toast('success', 'Mot de passe réinitialisé ! Connectez-vous.')
           navigate('/login', { replace: true })
         } catch (err) {
-          const message = err instanceof ApiError ? err.readableMessage() : 'Impossible de réinitialiser le mot de passe'
+          const message = friendlyError(err, 'Impossible de réinitialiser le mot de passe')
           setApiError(message)
           toast('error', message)
         } finally {
@@ -340,8 +341,9 @@ export function AuthView({ mode }: { mode: AuthMode }) {
         }
       }
     } catch (err) {
-      // Erreurs API : les hooks toast déjà ; on affiche le message lisible.
-      setApiError(err instanceof ApiError ? err.readableMessage() : 'Une erreur est survenue. Réessayez.')
+      // Erreurs API : le hook affiche déjà un toast ; ici un message lisible
+      // pour l'utilisateur — jamais le texte technique.
+      setApiError(friendlyError(err, 'Une erreur est survenue. Réessayez.'))
     }
   }
 

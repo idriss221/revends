@@ -2,9 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Ico } from '../components/brand/Ico'
 import { SiteImage } from '../components/site/SiteImage'
-import { api, ApiError } from '../lib/api'
+import { api } from '../lib/api'
 import { AUTH_PHOTO } from '../lib/catalogPhotos'
 import { useToast } from '../lib/toast'
+import { friendlyError } from '../lib/errors'
 
 /**
  * Mise à jour du numéro WhatsApp via lien e-mail (`/update-phone?token=…`).
@@ -41,7 +42,7 @@ export function UpdatePhoneView() {
       setDone(true)
       toast('success', res.message)
     } catch (err) {
-      const message = err instanceof ApiError ? err.readableMessage() : 'Impossible de mettre à jour le numéro. Réessayez.'
+      const message = friendlyError(err, 'Impossible de mettre à jour le numéro. Réessayez.')
       setError(message)
       toast('error', message)
     } finally {

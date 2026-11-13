@@ -2,6 +2,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Ico } from '../components/brand/Ico'
+import { HeartLoader } from '../components/ui/HeartLoader'
 
 /* ============================================================================
    `/category/:slug` — la référence n'a PAS de page catégorie : `catTile()` de
@@ -63,10 +64,7 @@ export function CategoryShopView() {
     return (
       <div className="wrap">
         <div className="section">
-          <div className="empty" role="status">
-            <Ico name="refresh" />
-            <h2>Chargement des catégories…</h2>
-          </div>
+          <HeartLoader size="lg" label="Chargement des catégories…" />
         </div>
       </div>
     )

@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router'
 import { Ico } from '../components/brand/Ico'
 import { Crumb, SiteHead, fmt, text } from '../components/site/SiteBits'
 import { SiteImage, art, artKindFor } from '../components/site/SiteImage'
+import { HeartLoader } from '../components/ui/HeartLoader'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useFavorites } from '../context/FavoritesContext'
@@ -169,11 +170,7 @@ export function AccountView() {
 
             <div className="box" style={{ marginBottom: 18 }}>
               <h3>Mes annonces</h3>
-              {products.isPending && (
-                <div className="note info" aria-live="polite">
-                  Chargement de vos annonces…
-                </div>
-              )}
+              {products.isPending && <HeartLoader size="sm" label="Chargement de vos annonces…" />}
               {products.isError && (
                 <div className="note warn" role="alert">
                   Impossible de charger vos annonces. Réessayez plus tard.
@@ -205,11 +202,7 @@ export function AccountView() {
 
             <div className="box">
               <h3>Mes commandes</h3>
-              {orders.isPending && (
-                <div className="note info" aria-live="polite">
-                  Chargement de vos commandes…
-                </div>
-              )}
+              {orders.isPending && <HeartLoader size="sm" label="Chargement de vos commandes…" />}
               {orders.isError && (
                 <div className="note warn" role="alert">
                   Impossible de charger vos commandes. Réessayez plus tard.

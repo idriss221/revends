@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { api } from '../../lib/api'
 import { formatDate, formatFcfa } from '../../lib/format'
 import { EMPTY_COPY, PAYOUT_FILTERS, TOAST_COPY, orderStatusBadge, payoutStatusBadge } from '../../lib/constants'
+import { friendlyError } from '../../lib/errors'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { DashboardLayout } from '../../components/layout/DashboardLayout'
@@ -51,7 +52,7 @@ export function AdminPaymentsPage() {
       setPayoutReference('')
       invalidate()
     },
-    onError: (err) => toast('error', err instanceof Error ? err.message : TOAST_COPY.payoutFailed),
+    onError: (err) => toast('error', friendlyError(err, TOAST_COPY.payoutFailed)),
   })
 
   const columns: AdminColumn<AdminOrderItem>[] = [

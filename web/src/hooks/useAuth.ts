@@ -14,14 +14,10 @@
 export { useAuth } from '../context/AuthContext'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient, ApiError } from '../lib/apiClient'
+import { apiClient } from '../lib/apiClient'
 import type { RegisterPayload } from '../lib/types'
 import { useToast } from '../lib/toast'
-
-/** Vérifie si l'erreur est une ApiError avec readableMessage. */
-function isApiError(err: unknown): err is ApiError {
-  return err instanceof ApiError
-}
+import { friendlyError } from '../lib/errors'
 
 /** Mutation de connexion — retourne l'utilisateur connecté. */
 export function useLogin() {
@@ -36,7 +32,7 @@ export function useLogin() {
       toast('success', `Bienvenue, ${res.user.displayName} !`)
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.readableMessage() : 'Échec de la connexion')
+      toast('error', friendlyError(err, 'Échec de la connexion'))
     },
   })
 }
@@ -53,7 +49,7 @@ export function useRegister() {
       toast('success', `Compte créé ! Bienvenue, ${res.user.displayName}.`)
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.readableMessage() : "Échec de l'inscription")
+      toast('error', friendlyError(err, "Échec de l'inscription"))
     },
   })
 }
@@ -70,7 +66,7 @@ export function useLogout() {
       toast('success', 'Vous êtes déconnecté.')
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.readableMessage() : 'Erreur lors de la déconnexion')
+      toast('error', friendlyError(err, 'Erreur lors de la déconnexion'))
     },
   })
 }

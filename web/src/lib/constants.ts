@@ -367,8 +367,9 @@ export const TOAST_COPY = {
   /* Catégories (AdminCategoriesPage) */
   categoryRenamed: 'Catégorie renommée.',
   categoryStatusUpdated: 'Statut mis à jour.',
-  /* Replis d’erreur admin (`onError`) — source unique : aucune page ne
-     réécrit son texte ; `err.message` (garde serveur) reste prioritaire. */
+  /* Replis d’erreur — `fallback` (SOURCE UNIQUE) est repassé par
+     `lib/errors.ts` (`friendlyError`) : les messages serveur ne sont montrés
+     que s’ils sont rédigés pour un humain. */
   paymentConfirmationFailed: 'Échec de la confirmation.',
   productReceiveFailed: 'Échec de l’opération.',
   updateFailed: 'Échec de la mise à jour.',

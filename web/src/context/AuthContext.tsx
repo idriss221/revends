@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient, ApiError } from '../lib/apiClient'
 import type { SelfUser } from '../lib/types'
 import { useToast } from '../lib/toast'
+import { friendlyError } from '../lib/errors'
 
 interface AuthContextValue {
   user: SelfUser | null
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast('success', 'Vous êtes déconnecté.')
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.readableMessage() : 'Erreur lors de la déconnexion')
+      toast('error', isApiError(err) ? friendlyError(err, 'Erreur lors de la déconnexion') : 'Erreur lors de la déconnexion')
     },
   })
 

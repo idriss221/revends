@@ -1,12 +1,14 @@
 import { useMemo, useRef, useState, type FormEvent, type DragEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { api, ApiError } from '../lib/api'
+import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../lib/toast'
+import { friendlyError } from '../lib/errors'
 import { TOAST_COPY } from '../lib/constants'
 import { Crumb, SiteHead, SitePage, fmt } from '../components/site/SiteBits'
 import { Ico } from '../components/brand/Ico'
+import { HeartLoader } from '../components/ui/HeartLoader'
 import type { Condition } from '../lib/types'
 
 /* ============================================================================
@@ -286,7 +288,7 @@ export function SellView() {
       navigate('/confirmation', { replace: true })
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? err.readableMessage() : "Impossible de publier l'article."
+      const message = friendlyError(err, "Impossible de publier l'article.")
       setApiError(message)
       toast('error', message)
     },
@@ -319,9 +321,7 @@ export function SellView() {
   if (authLoading) {
     return (
       <SitePage>
-        <p className="note info" role="status">
-          Chargement…
-        </p>
+        <HeartLoader label="Chargement…" />
       </SitePage>
     )
   }

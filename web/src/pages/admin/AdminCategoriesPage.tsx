@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { EMPTY_COPY, TOAST_COPY } from '../../lib/constants'
+import { friendlyError } from '../../lib/errors'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { DashboardLayout } from '../../components/layout/DashboardLayout'
@@ -61,7 +62,7 @@ export function AdminCategoriesPage() {
       setEditing(null)
       invalidate()
     },
-    onError: (err) => toast('error', err instanceof Error ? err.message : TOAST_COPY.categoryRenameFailed),
+    onError: (err) => toast('error', friendlyError(err, TOAST_COPY.categoryRenameFailed)),
   })
 
   const toggle = useMutation({
@@ -71,7 +72,7 @@ export function AdminCategoriesPage() {
       setToggleTarget(null)
       invalidate()
     },
-    onError: (err) => toast('error', err instanceof Error ? err.message : TOAST_COPY.updateFailed),
+    onError: (err) => toast('error', friendlyError(err, TOAST_COPY.updateFailed)),
   })
 
   const openEdit = (c: Row) => {

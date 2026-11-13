@@ -13,6 +13,8 @@ import { Ico } from '../components/brand/Ico'
 import { SiteImage, artKindFor } from '../components/site/SiteImage'
 import { SiteCardGrid } from '../components/site/SiteCard'
 import { Crumb, SiteEmpty, SiteHead, catLabel, fmt, text } from '../components/site/SiteBits'
+import { HeartLoader } from '../components/ui/HeartLoader'
+import { friendlyError } from '../lib/errors'
 import { openZoom } from '../components/site/Lightbox'
 import type { ProductDetail } from '../lib/types'
 
@@ -168,7 +170,6 @@ export function ProductView() {
   })
 
   if (slug === '' || (product.isError && product.error instanceof ApiError && product.error.status === 404)) {
-    const code = product.error instanceof ApiError ? product.error.code : 'PRODUCT_NOT_FOUND'
     return (
       <div className="wrap">
         <Crumb items={[{ label: 'Article' }]} />
@@ -179,7 +180,7 @@ export function ProductView() {
             title="Article introuvable"
             action={{ label: 'Découvrir le catalogue', to: '/shop' }}
           >
-            Cet article n'existe plus ou a été retiré du catalogue. ({code})
+            Cet article n'existe plus ou a été retiré du catalogue.
           </SiteEmpty>
         </div>
       </div>
@@ -191,7 +192,8 @@ export function ProductView() {
       <div className="wrap">
         <Crumb items={[{ label: 'Article' }]} />
         <div className="section tight">
-          <SiteEmpty icon="refresh" title="Chargement de l'article…" />
+          {/* Le loader du site (cœur), pas un spinner anonyme. */}
+          <HeartLoader size="lg" label="Chargement de l'article…" />
         </div>
       </div>
     )
@@ -207,7 +209,7 @@ export function ProductView() {
             title="Impossible de charger l'article"
             action={{ label: 'Réessayer', onClick: () => void product.refetch() }}
           >
-            {product.error instanceof Error ? product.error.message : 'Une erreur est survenue.'}
+            {friendlyError(product.error, 'Impossible de charger cet article pour le moment.')}
           </SiteEmpty>
         </div>
       </div>

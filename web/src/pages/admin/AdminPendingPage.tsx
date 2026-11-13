@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { formatDate, formatFcfa } from '../../lib/format'
 import { EMPTY_COPY, REJECTION_REASONS, TOAST_COPY } from '../../lib/constants'
+import { friendlyError } from '../../lib/errors'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { DashboardLayout } from '../../components/layout/DashboardLayout'
@@ -48,7 +49,7 @@ export function AdminPendingPage() {
       setApproveTarget(null)
       invalidate()
     },
-    onError: (err) => toast('error', err instanceof Error ? err.message : TOAST_COPY.productApprovalFailed),
+    onError: (err) => toast('error', friendlyError(err, TOAST_COPY.productApprovalFailed)),
   })
 
   const reject = useMutation({
@@ -61,7 +62,7 @@ export function AdminPendingPage() {
       setRefuse(null)
       invalidate()
     },
-    onError: (err) => toast('error', err instanceof Error ? err.message : TOAST_COPY.productRejectionFailed),
+    onError: (err) => toast('error', friendlyError(err, TOAST_COPY.productRejectionFailed)),
   })
 
   const columns: AdminColumn<ProductAdmin>[] = [

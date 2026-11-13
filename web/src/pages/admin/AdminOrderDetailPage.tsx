@@ -6,6 +6,7 @@ import { api } from '../../lib/api'
 import { formatDateTime, formatFcfa } from '../../lib/format'
 import { resolveImageUrl } from '../../lib/catalogPhotos'
 import { PAYMENT_METHODS, TOAST_COPY, orderStatusBadge, payoutStatusBadge } from '../../lib/constants'
+import { friendlyError } from '../../lib/errors'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { DashboardLayout } from '../../components/layout/DashboardLayout'
@@ -91,9 +92,9 @@ export function AdminOrderDetailPage() {
   }
 
   /* Repli d’erreur : `fallback` vient toujours de `TOAST_COPY` (§7) —
-     aucune chaîne écrite dans la page (§9.4) ; `err.message` = garde serveur. */
-  const fail = (fallback: string) => (err: unknown) =>
-    toast('error', err instanceof Error && err.message ? err.message : fallback)
+     aucune chaîne écrite dans la page (§9.4) ; les messages du serveur ne
+     sont affichés que s’ils sont rédigés pour un humain (`lib/errors.ts`). */
+  const fail = (fallback: string) => (err: unknown) => toast('error', friendlyError(err, fallback))
 
   const confirmPayment = useMutation({
     mutationFn: () => api.confirmPayment(Number(id), { method, reference: reference.trim() || undefined }),

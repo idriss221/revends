@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { api, ApiError } from '../lib/api'
+import { api } from '../lib/api'
+import { friendlyError } from '../lib/errors'
 import { Crumb, SiteEmpty, SiteHead, catLabel, fmt } from '../components/site/SiteBits'
 import { SiteCardGrid } from '../components/site/SiteCard'
 import { Ico } from '../components/brand/Ico'
@@ -308,10 +309,7 @@ export function ShopView() {
   })
 
   const pendTotal = pendCountQ.data?.total ?? 0
-  const errorMessage =
-    productsQ.error instanceof ApiError
-      ? productsQ.error.readableMessage()
-      : 'Impossible de charger les articles pour le moment.'
+  const errorMessage = friendlyError(productsQ.error, 'Impossible de charger les articles pour le moment.')
 
   return (
     <div className="wrap" ref={topRef}>

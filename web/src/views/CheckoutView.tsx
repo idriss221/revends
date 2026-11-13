@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useMutation } from '@tanstack/react-query'
-import { api, ApiError } from '../lib/api'
+import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useToast } from '../lib/toast'
+import { friendlyError } from '../lib/errors'
 import { Crumb, SiteEmpty, SiteHead, SitePage, fmt } from '../components/site/SiteBits'
 import { Ico } from '../components/brand/Ico'
+import { HeartLoader } from '../components/ui/HeartLoader'
 
 /* ============================================================================
    Page « Commande » — `Checkout()` de `Bureau/main/assets/app.js` (L674-717),
@@ -110,7 +112,7 @@ export function CheckoutView() {
       clear()
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? err.readableMessage() : 'Impossible de confirmer la commande.'
+      const message = friendlyError(err, 'Impossible de confirmer la commande.')
       setApiError(message)
       toast('error', message)
     },
@@ -147,9 +149,7 @@ export function CheckoutView() {
     return (
       <SitePage>
         <SiteHead eyebrow="Étape finale" title="Finaliser la commande" level={1} />
-        <p className="note info" role="status">
-          Préparation de votre commande…
-        </p>
+        <HeartLoader label="Préparation de votre commande…" />
       </SitePage>
     )
   }
