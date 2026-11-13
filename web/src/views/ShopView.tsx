@@ -149,7 +149,10 @@ export function ShopView() {
   const closeSheet = useCallback((focus: boolean) => {
     setSheet(null)
     setRangeDrag(null)
-    if (focus) document.querySelector<HTMLElement>('[data-open-filters]')?.focus()
+    // `preventScroll` : le bouton « Filtrer » vit dans la barre collante
+    // (`.chipbar`). Le focus par défaut le ramenait à sa position de flux, en
+    // haut du catalogue — fermer la feuille faisait sauter la page en haut.
+    if (focus) document.querySelector<HTMLElement>('[data-open-filters]')?.focus({ preventScroll: true })
   }, [])
 
   const openSheet = useCallback(
@@ -168,12 +171,19 @@ export function ShopView() {
   // `lock()` de la référence : le body ne défile plus sous une feuille.
   // Uniquement en mobile — sinon un resize vers desktop laisserait la page
   // figée avec une feuille invisible.
+  //
+  // Verrou sur `<html>`, PAS sur `<body>` : le viewport hérite de l'`overflow`
+  // du body quand celui-ci est `visible`. Poser `overflow:hidden` sur `body`
+  // rend donc la PAGE non défilable **et remet `scrollY` à 0** — ouvrir un
+  // filtre ramenait l'utilisateur en haut du catalogue. `html` bloque le
+  // défilement en conservant la position.
   useEffect(() => {
     if (!sheet || !isMobileSheet()) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const root = document.documentElement
+    const prev = root.style.overflow
+    root.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = prev
+      root.style.overflow = prev
     }
   }, [sheet])
 

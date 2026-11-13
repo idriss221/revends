@@ -4194,3 +4194,29 @@ repris automatiquement, les 5 `SENT` ne seront pas renvoyés.
 - Compte `mamariss.proj@gmail.com` : pas de compte utilisateur (`users.phone` NOT NULL UNIQUE) —
   il reçoit les alertes par e-mail ; créer un compte admin exige son numéro.
 - Whapi : 5 messages bloqués par le plafond d'essai (5 conversations).
+
+### Complément (même journée) — vérification en navigateur : 2 causes racines de plus
+
+La vérification sur la production (Playwright, viewport mobile réel 390×844) a
+montré que le bug « filtres » n'était **pas** entièrement corrigé. Deux causes
+supplémentaires, invisibles en revue de code :
+
+| # | Cause | Preuve | Correctif |
+|---|---|---|---|
+| 2a | `.market-site .view{animation:… both}` : avec `fill-mode: forwards`, l'animation reste appliquée après sa fin ; la propriété `transform` (même à l'identité) crée un **bloc conteneur**. Les `position:fixed` de la vue (feuilles Filtres/Tri, voile `.fback`) se positionnaient par rapport à `.view` → feuille **hors écran** (rect.top 1605) pendant que la page restait verrouillée | `getBoundingClientRect()` avant/après `animation:none` : 1605 → 104 px | `animation-fill-mode: backwards` (garde l'animation d'entrée, rend `transform:none` à la fin) |
+| 2b | verrou de défilement posé sur `body` : quand `body{overflow:hidden}`, le viewport devient non défilable **et `scrollY` repasse à 0** | `scrollTo(700)` → ouverture : 700 ; fermeture : 0 | verrou sur `document.documentElement` |
+| 2c | `closeSheet(true)` faisait `.focus()` sur le bouton « Filtrer » de la barre **collante** : le navigateur ramène l'élément à sa position de flux → saut en haut du catalogue (mesuré : `focusin` à `y=0`) | trace des événements `scroll`/`focusin` | `focus({ preventScroll: true })` |
+
+**Recette navigateur finale (production `revends.vercel.app`)**
+
+- Fiche produit : `y=2523` sur `/shop` → clic article → `/catalogue/haut-basic`, `y=0`. ✅
+- Filtres mobile : feuille `rect.top 101 / bottom 844` (viewport 844), `transform:none`,
+  `visibility:visible`, `<html>` verrouillé ; fermeture → position conservée (`y=700`).
+  Tri : feuille idem (`top 550`). Passage desktop → fermeture auto + déverrouillage. ✅
+- Retour admin : pastille « Espace admin » visible sur `/shop`, clic → `/admin` (Dashboard). ✅
+- Galerie admin : 3 photos en attente, clic sur la 2ᵉ miniature → image principale changée,
+  `aria-pressed=true`, compteur « Photo 2 sur 3 », image `h≈320px` entière, lien « Agrandir »
+  vers l'original. ✅
+- Alertes e-mail : exécution du vrai chemin `alertAdmins` contre la base + SMTP de prod →
+  3 envois `transport:smtp` (admin@revends.com, boiroabasse7@gmail.com, mamariss.proj@gmail.com) ;
+  lignes `notification_deliveries` SENT pour les 2 comptes admin (`…:7`, `…:23`). ✅

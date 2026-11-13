@@ -169,7 +169,14 @@
    5. Structure de page
    --------------------------------------------------------------- */
 .market-site main{min-height:60vh}
-.market-site .view{animation:viewIn var(--t-slow) var(--ease) both}
+/* `backwards` et non `both` : avec un fill-mode `forwards`, l'animation reste
+   appliquée après sa fin et la propriété `transform` (même à l'identité) crée
+   un BLOC CONTENEUR. Tous les `position:fixed` de la vue — feuilles Filtres/Tri,
+   voile `.fback` — se positionnaient alors par rapport à `.view` et non au
+   viewport : la feuille s'ouvrait hors écran pendant que `body` restait
+   verrouillé (page « figée »). `backwards` garde l'animation d'entrée et rend
+   la main au style de base (transform: none) une fois terminée. */
+.market-site .view{animation:viewIn var(--t-slow) var(--ease) backwards}
 @keyframes viewIn{from{opacity:0;transform:translateY(12px)}to{opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .market-site .section{padding-block:clamp(44px,7vw,88px)}
