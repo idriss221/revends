@@ -49,7 +49,8 @@ import {
   type ProductFields,
 } from '../repositories/products.repository.js';
 import { findParentId, selectCategoriesForValidation } from '../repositories/categories.repository.js';
-import { findAdminUserById, findById as findUserById } from '../repositories/users.repository.js';
+import { findAdminUserById, findById as findUserById, findAdminAlertRecipients } from '../repositories/users.repository.js';
+import { alertAdmins } from './admin-alerts.service.js';
 
 // ---------------------------------------------------------------------------
 // Ré-exports de compatibilité (constantes SQL + batchs d'images + types)
@@ -186,6 +187,31 @@ export async function createProduct(
 
     // N1 — Notification vendeur dans la MÊME transaction
     await insertNotification(client, ownerId, 'article_submitted', 'Article soumis', fields.name);
+
+    // Les admins doivent savoir qu'un article attend une décision. In-app
+    // immédiat (même transaction) + e-mail après commit (admin-alerts).
+    const admins = await findAdminAlertRecipients(client);
+    for (const admin of admins) {
+      await insertNotification(
+        client,
+        admin.id,
+        'article_submitted',
+        'Nouvel article à valider',
+        `${fields.name} — ${fields.price.toLocaleString('fr-FR')} FCFA`,
+      );
+    }
+    alertAdmins(
+      {
+        event: 'product_submitted_admin',
+        key: `product:${id}`,
+        vars: {
+          productName: fields.name,
+          amountFcfa: fields.price,
+          linkPath: '/admin/articles-en-attente',
+        },
+      },
+      admins,
+    );
     return id;
   }).catch(async (err) => {
     await cleanupWritten(written);

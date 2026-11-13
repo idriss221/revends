@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -46,10 +46,24 @@ const STATUS_KIND: Record<ProductStatus, StatusBadgeKind> = {
 }
 
 export function AdminProductSheet({ product, onClose, statusLabel, actions }: AdminProductSheetProps) {
+  /**
+   * Photo affichée en grand. La feuille est réutilisée d'un article à l'autre
+   * (même composant monté) : sans remise à zéro, le dossier suivant s'ouvrait
+   * sur la 3e photo du précédent — voire sur un index hors bornes.
+   */
+  const [active, setActive] = useState(0)
+  const productId = product?.id ?? null
+  useEffect(() => {
+    setActive(0)
+  }, [productId])
+
   // `Modal` ne rend rien quand `open` est false ; on concentre ici la garde pour
-  // que tout le JSX ci-dessous typed `product` comme non-null.
+  // que tout le JSX ci-dessous typed `product` comme non-null. Les hooks sont
+  // AU-DESSUS : leur nombre ne dépend pas de la prop.
   if (!product) return null
   const images = product.images ?? []
+  const shown = images.length > 0 ? Math.min(active, images.length - 1) : 0
+  const current = images[shown]
   // Double sécurité : `STATUS_KIND` est `Record<ProductStatus, …>` → ajouter un
   // statut à l'API casse la compilation (choix explicite d'un badge). Mais la
   // donnée vient du **réseau** : sans repli, un statut inconnu produirait
@@ -62,12 +76,27 @@ export function AdminProductSheet({ product, onClose, statusLabel, actions }: Ad
       <div className="grid gap-6 max-[968px]:grid-cols-1">
         {/* Aperçu — en PREMIER sur mobile (l'utilisateur décide sur l'image) */}
         <div className="max-[968px]:order-1">
-          {images[0] ? (
-            <ResilientImg
-              src={resolveImageUrl(images[0].url)}
-              alt={product.name}
-              className="h-[240px] w-full rounded-md object-cover"
-            />
+          {current ? (
+            /* La photo ENTIÈRE (object-contain) : pour modérer, un recadrage
+               `object-cover` masquait justement les bords (défauts, étiquette).
+               Le lien ouvre l'original dans un onglet — plein écran garanti. */
+            <a
+              href={resolveImageUrl(current.url)}
+              target="_blank"
+              rel="noreferrer"
+              title="Ouvrir la photo en grand"
+              aria-label={`Ouvrir la photo ${shown + 1} sur ${images.length} en grand`}
+              className="group relative block overflow-hidden rounded-md bg-ivory focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-strong"
+            >
+              <ResilientImg
+                src={resolveImageUrl(current.url)}
+                alt={`${product.name} — photo ${shown + 1} sur ${images.length}`}
+                className="h-[320px] w-full object-contain transition-transform duration-300 group-hover:scale-[1.01]"
+              />
+              <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-ink/80 px-3 py-1 text-[11px] font-semibold text-white">
+                <i className="fas fa-expand" aria-hidden="true" /> Agrandir
+              </span>
+            </a>
           ) : (
             <div className="flex h-[240px] w-full items-center justify-center rounded-md bg-ivory text-4xl text-faint">
               <i className="fas fa-image" aria-hidden="true" />
@@ -77,21 +106,37 @@ export function AdminProductSheet({ product, onClose, statusLabel, actions }: Ad
           {images.length > 1 && (
             <>
               <p aria-live="polite" className="mt-2 text-xs text-muted">
-                {images.length} photo{images.length > 1 ? 's' : ''}
+                Photo <span className="tabular font-semibold text-ink">{shown + 1}</span> sur {images.length}
+                {' — '}cliquez une miniature pour l'afficher en grand.
               </p>
               <ul className="mt-2 flex flex-wrap gap-2">
-                {images.map((img, i) => (
-                  <li key={img.id}>
-                    <ResilientImg
-                      src={resolveImageUrl(img.url)}
-                      alt={`${product.name} — photo ${i + 1}`}
-                      loading="lazy"
-                      className={`h-16 w-16 rounded-sm object-cover ${
-                        i === 0 ? 'border-2 border-terracotta-strong' : 'border-2 border-transparent'
-                      }`}
-                    />
-                  </li>
-                ))}
+                {images.map((img, i) => {
+                  const on = i === shown
+                  return (
+                    <li key={img.id}>
+                      {/* Une VRAIE cible cliquable : avant, les vignettes étaient
+                          de simples images — impossible de voir les photos 2..n. */}
+                      <button
+                        type="button"
+                        onClick={() => setActive(i)}
+                        aria-pressed={on}
+                        aria-label={`Afficher la photo ${i + 1} sur ${images.length}`}
+                        className={`block cursor-pointer rounded-sm border-2 p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-strong ${
+                          on
+                            ? 'border-terracotta-strong'
+                            : 'border-transparent hover:border-ink/20'
+                        }`}
+                      >
+                        <ResilientImg
+                          src={resolveImageUrl(img.url)}
+                          alt={`${product.name} — miniature ${i + 1}`}
+                          loading="lazy"
+                          className="h-16 w-16 rounded-sm object-cover"
+                        />
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             </>
           )}

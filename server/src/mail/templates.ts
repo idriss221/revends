@@ -72,6 +72,8 @@ export type MailEvent =
   | 'payment_proof_received_buyer'
   | 'payment_proof_rejected_buyer'
   | 'payment_proof_submitted_admin'
+  | 'product_submitted_admin'
+  | 'order_created_admin'
   | 'phone_reset'
   | 'announcement_sell';
 
@@ -690,6 +692,39 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         link ?? internalLink('/admin/commandes'),
       );
       return { subject: 'Nouvelle preuve de paiement à vérifier', html, text };
+    }
+
+    case 'product_submitted_admin': {
+      const { html, text } = layout(
+        'Nouvel article en attente de validation',
+        [
+          para('Un vendeur vient de soumettre un article. Il reste invisible au catalogue tant qu\'il n\'est pas approuvé.'),
+          product ? para('Article :', `<strong>${product}</strong>`) : '',
+          vars.amountFcfa !== undefined
+            ? para('Prix :', `<strong>${escapeHtml(money(vars.amountFcfa))}</strong>`)
+            : '',
+          para('Ouvrez la fiche pour vérifier toutes les photos avant d\'approuver ou de refuser.'),
+        ].filter(Boolean),
+        link ?? internalLink('/admin/articles-en-attente'),
+      );
+      return { subject: 'Nouvel article en attente de validation', html, text };
+    }
+
+    case 'order_created_admin': {
+      const { html, text } = layout(
+        'Nouvelle commande enregistrée',
+        [
+          para('Une nouvelle commande vient d\'être créée. Elle n\'est PAS encore payée : le vendeur ne doit rien expédier avant validation du paiement.'),
+          order ? para('Commande :', `<strong>${order}</strong>`) : '',
+          product ? para('Article :', `<strong>${product}</strong>`) : '',
+          vars.amountFcfa !== undefined
+            ? para('Montant :', `<strong>${escapeHtml(money(vars.amountFcfa))}</strong>`)
+            : '',
+          para('Suivez la preuve de paiement depuis l\'espace admin.'),
+        ].filter(Boolean),
+        link ?? internalLink('/admin/commandes'),
+      );
+      return { subject: 'Nouvelle commande enregistrée', html, text };
     }
 
     case 'announcement_sell': {

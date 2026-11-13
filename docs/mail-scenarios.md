@@ -127,6 +127,7 @@ Soit **13 déclencheurs métier → 17 envois** (les scénarios 7, 9, 11 envoien
 | `SITE_URL` | Base des liens internes des e-mails |
 | `RESET_TOKEN_TTL` | Durée de validité du lien de réinitialisation (1 h) |
 | `RESERVATION_DAYS` | Durée de réservation avant expiration (défaut **5**) |
+| `ADMIN_ALERT_EMAILS` | Adresses **supplémentaires** alertées (produit en attente, nouvelle commande), séparées par des virgules. S'ajoutent aux comptes `role = admin` ; les doublons sont retirés. |
 
 ## 6. Tests
 
@@ -152,3 +153,25 @@ action métier. Ils réutilisent `sendMail()` et restent anti-doublon.
 - **Options du script** : `--dry-run`, `--limit N`, `--only a@x,b@y`,
   `--campaign-key K` (défaut `sell-announcement-2026-11`), délai 600 ms.
 - **Preuve 12 nov. 2026** : 35 cibles, **35 SENT / 0 FAIL**, 0 doublon en base.
+
+## 8. Alertes d'administration (ajout novembre 2026)
+
+Deux événements ont été ajoutés pour que les admins soient informés **sans
+ouvrir le back-office** :
+
+| Déclencheur | Destinataires | Événement | Sujet |
+|---|---|---|---|
+| Un vendeur soumet un article (`PENDING`) | tous les comptes `role = admin` + `ADMIN_ALERT_EMAILS` | `product_submitted_admin` | Nouvel article en attente de validation |
+| Une commande est créée (non payée) | tous les comptes `role = admin` + `ADMIN_ALERT_EMAILS` | `order_created_admin` | Nouvelle commande enregistrée |
+
+- **Double canal** : notification in-app (cloche) insérée dans la même
+  transaction, puis e-mail après commit (`services/admin-alerts.service.ts`).
+- **Anti-doublon** : clé `product_submitted_admin:product:<id>:<adminId>` /
+  `order_created_admin:order:<id>:<adminId>` dans `notification_deliveries`
+  (canal e-mail). Les adresses hors comptes n'ont pas de `user_id` : envoi
+  direct, dédupliqué des adresses des comptes admin.
+- **Best-effort** : une panne SMTP ne fait jamais échouer la soumission ou la
+  commande.
+- Les e-mails ne contiennent aucune donnée sensible : nom d'article, montant,
+  numéro de commande, lien vers `/admin/articles-en-attente` ou
+  `/admin/commandes/<id>`.

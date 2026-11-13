@@ -4163,3 +4163,34 @@ WhatsApp (statut, groupe, discussion), avec un message prêt à copier-coller.
 **Reste à faire** : passer le canal Whapi en offre payante (ou attendre le
 renouvellement de l'essai), puis relancer le script : les 5 `FAILED` seront
 repris automatiquement, les 5 `SENT` ne seront pas renvoyés.
+
+---
+
+## 2026-11-13 — Corrections UX (fiche produit, filtres, admin) + alertes e-mail admin
+
+### Bugs signalés → causes racines
+
+| # | Symptôme | Cause vérifiée | Correctif |
+|---|---|---|---|
+| 1 | Ouvrir un produit affiche le bas de la fiche | aucun `ScrollToTop` / `ScrollRestoration` : React Router conservait la position de la page précédente | `components/layout/ScrollToTop.tsx` monté dans `main.tsx` (`useLocation().pathname` → `scrollTo(0,0)`) |
+| 2 | Cliquer un filtre fige la page (mobile) | `ShopView` posait `body.overflow=hidden` dès `sheet !== null`, mais `FilterPanel`/`SortSheet` **ne recevaient jamais** la classe `.on` → feuille hors écran, page verrouillée | props `open` → `.filters.on` / `.sheet.on` ; verrou body et `openSheet` réservés au mobile (`max-width:760px`) ; règle mobile `.fback` (voile) ; fermeture auto au passage desktop |
+| 3 | Admin sans retour depuis « Voir la boutique » | la coquille `/admin` est quittée pour `SiteShell`, sans lien retour | `AdminReturn` (pastille flottante « Espace admin ») monté dans `SiteShell`, visible si `user.role === 'admin'` |
+| 4 | Admin ne voit que la 1re photo | `AdminProductSheet` rendait `images[0]` + des vignettes non cliquables ; `object-cover` recadrait | état `active`, vignettes `<button aria-pressed>`, compteur `Photo n/N`, image entière `object-contain`, lien « Agrandir » vers l'original |
+| 5 | Aucun e-mail aux admins (produit en attente, commande) | aucun déclencheur : seuls `payment_proof_submitted_admin` existait | 2 événements `product_submitted_admin` / `order_created_admin` + `admin-alerts.service.ts` (comptes admin + `ADMIN_ALERT_EMAILS`), notification in-app et e-mail après commit |
+
+### Preuves
+
+- `server` : `tsc --noEmit` 0 erreur ; **30 suites / ALL SUITES GREEN** ; `test/emails.test.ts`
+  **43/43** (dont 2 nouveaux tests E0b : article soumis et commande créée → e-mail admin).
+- `web` : `tsc --noEmit` 0 erreur ; `npm run build` OK (180 modules, `dist/` produit).
+- Base : `boiroabasse7@gmail.com` (id 23) promu `admin` (2 comptes admin :
+  id 7 `admin@revends.com`, id 23).
+- `ADMIN_ALERT_EMAILS=mamariss.proj@gmail.com,boiroabasse7@gmail.com` : local
+  (`~/.revends-secrets/revends.env.local`) + production Vercel.
+- Documentation : `docs/mail-scenarios.md` §8 (alertes admin).
+
+### Reste à faire (hors correctif)
+
+- Compte `mamariss.proj@gmail.com` : pas de compte utilisateur (`users.phone` NOT NULL UNIQUE) —
+  il reçoit les alertes par e-mail ; créer un compte admin exige son numéro.
+- Whapi : 5 messages bloqués par le plafond d'essai (5 conversations).

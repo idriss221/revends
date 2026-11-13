@@ -79,6 +79,24 @@ export async function findAdminIds(q: Queryable = pool): Promise<number[]> {
   return rows.map((r) => r.id);
 }
 
+export interface AdminAlertRecipient {
+  id: number;
+  email: string;
+}
+
+/**
+ * Destinataires des alertes d'administration : **id + adresse**.
+ *
+ * L'id sert à tracer la livraison (`notification_deliveries`) et à alimenter la
+ * cloche in-app ; l'adresse permet de dédupliquer avec `ADMIN_ALERT_EMAILS`.
+ */
+export async function findAdminAlertRecipients(q: Queryable = pool): Promise<AdminAlertRecipient[]> {
+  const { rows } = await q.query<AdminAlertRecipient>(
+    "SELECT id, email FROM users WHERE role = 'admin' ORDER BY id",
+  );
+  return rows;
+}
+
 /**
  * Vue admin d'un utilisateur avec ses compteurs `productCount`/`orderCount`.
  * `includeOrderCount: false` supprime complètement la sous-requête (vue produit

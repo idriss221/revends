@@ -890,3 +890,44 @@
   padding-top: 16px;
   border-top: 1px solid var(--line-strong);
 }
+
+/* =====================================================================
+   18. RETOUR ADMIN — pastille visible uniquement quand `user.role=admin`
+   --------------------------------------------------------------------- */
+.market-site .admin-return {
+  position: fixed;
+  left: calc(16px + env(safe-area-inset-left, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 12.5px/1 var(--sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 10px 30px rgba(23, 21, 19, .28);
+  transition: background var(--t) var(--ease), transform var(--t) var(--ease);
+}
+.market-site .admin-return:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+.market-site .admin-return:active {
+  transform: scale(.97);
+}
+.market-site .admin-return:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 3px;
+}
+.market-site .admin-return .i {
+  width: 16px;
+  height: 16px;
+}
+.market-site.bare .admin-return {
+  display: none;
+}

@@ -45,6 +45,10 @@ const envSchema = z.object({
     .transform((v) => v === 'true'),
   ADMIN_EMAIL: z.string().default('admin@revends.com'),
   ADMIN_PASSWORD: z.string().default(''),
+  // Adresses supplémentaires à alerter (produit en attente, nouvelle commande).
+  // Séparées par des virgules. Elles s'ajoutent aux comptes `role = admin` ;
+  // les doublons sont retirés à l'envoi. Une adresse n'a pas besoin d'un compte.
+  ADMIN_ALERT_EMAILS: z.string().default(''),
   WEB_DIST: z.string().default('../web/dist'),
   MIGRATIONS_DIR: z.string().default('./migrations'),
 
@@ -339,6 +343,11 @@ export const config = {
   disableCron: env.DISABLE_CRON,
   adminEmail: env.ADMIN_EMAIL,
   adminPassword: env.ADMIN_PASSWORD,
+  /** Adresses admin supplémentaires (en plus des comptes `role = admin`). */
+  adminAlertEmails: env.ADMIN_ALERT_EMAILS
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 0 && s.includes('@')),
   siteUrl,
   corsOrigins: parseCorsOrigins(env.CORS_ORIGINS, siteUrl),
   mail: {

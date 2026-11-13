@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
+import { AdminReturn } from './AdminReturn'
 import { SplashLoader } from '../ui/SplashLoader'
 import { Lightbox } from '../site/Lightbox'
 import { useReveals } from '../../hooks/useReveals'
@@ -73,6 +74,8 @@ export function SiteShell() {
         </div>
       </main>
       <Footer />
+      {/* Un admin qui visite le site doit pouvoir revenir dans `/admin`. */}
+      <AdminReturn />
       <Lightbox />
     </div>
   )

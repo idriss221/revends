@@ -1032,6 +1032,12 @@
     transform:translateY(103%);visibility:hidden;
     transition:transform var(--t-slow) var(--ease),visibility 0s linear var(--t-slow)}
   .market-site .filters.on{transform:none;visibility:visible;transition:transform var(--t-slow) var(--ease),visibility 0s}
+  /* Voile sous la feuille : sans lui, le fond reste cliquable et la feuille
+     semble flotter. `[hidden]` (attribut) garde la priorité pour le retirer
+     quand aucune feuille n'est ouverte. */
+  .market-site .fback{display:block;position:fixed;inset:0;z-index:65;background:rgba(23,21,19,.45);
+    opacity:0;pointer-events:none;transition:opacity var(--t) var(--ease)}
+  .market-site .fback.on{opacity:1;pointer-events:auto}
   .market-site .fx-head{display:block;position:relative;flex:none;padding:20px var(--gut) 14px;border-bottom:1px solid var(--line)}
   .market-site .fx-head .grab{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:42px;height:4px;
     border-radius:2px;background:var(--line-strong)}

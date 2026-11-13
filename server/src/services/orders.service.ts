@@ -5,6 +5,8 @@ import { badRequest, conflict, invalidTransition, notFound } from '../utils/erro
 import { releaseExpiredReservation } from './expiry.service.js';
 import { insertNotification } from './notifications.service.js';
 import { notifyUser, whatsappOrderCreated } from './notification-dispatch.service.js';
+import { alertAdmins } from './admin-alerts.service.js';
+import { findAdminAlertRecipients } from '../repositories/users.repository.js';
 import { selectProofsByOrderId, serializePaymentProof } from '../repositories/payment-proofs.repository.js';
 import { buildAdminProductHistory, loadAdminUser, loadPrimaryImage, loadUser } from './products.service.js';
 import {
@@ -153,6 +155,32 @@ export async function createOrderInTransaction(
   await reserveProduct(client, product.id, 365);
 
   await insertNotification(client, buyerId, 'order_created', `Commande ${order.order_number} enregistrée`, product.name);
+
+  // Les admins suivent CHAQUE commande dès sa création. Elle n'est pas payée :
+  // l'alerte le dit explicitement (aucune expédition avant validation).
+  const admins = await findAdminAlertRecipients(client);
+  for (const admin of admins) {
+    await insertNotification(
+      client,
+      admin.id,
+      'order_created',
+      'Nouvelle commande',
+      `${order.order_number} — ${product.name}`,
+    );
+  }
+  alertAdmins(
+    {
+      event: 'order_created_admin',
+      key: `order:${order.id}`,
+      vars: {
+        orderNumber: order.order_number,
+        productName: product.name,
+        amountFcfa: amount,
+        linkPath: `/admin/commandes/${order.id}`,
+      },
+    },
+    admins,
+  );
   // ⚠️ RÈGLE ABSOLUE : le vendeur n'est PAS notifié ici. La commande n'est pas
   // payée ; une preuve ou une capture ne vaut pas validation. Le vendeur sera
   // notifié uniquement après `confirmPayment` (voir admin.service).

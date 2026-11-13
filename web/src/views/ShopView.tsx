@@ -46,6 +46,16 @@ import {
      appliqué par « Voir les N articles », exactement comme `wireShop()`.
    ========================================================================== */
 
+/**
+ * Les feuilles « Filtres » / « Tri » n'existent qu'en mobile — c'est le même
+ * point de rupture que le CSS (`@media (max-width:760px)`). Sur desktop le
+ * panneau de filtres est la colonne sticky : ouvrir une feuille n'y a aucun
+ * sens et surtout, verrouiller `body` figerait la page sans rien afficher.
+ */
+function isMobileSheet(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 760px)').matches
+}
+
 export function ShopView() {
   const [sp, setSp] = useSearchParams()
   const f = useMemo(() => readFilters(sp), [sp])
@@ -144,6 +154,9 @@ export function ShopView() {
 
   const openSheet = useCallback(
     (kind: 'filters' | 'sort', facetKey?: string) => {
+      // Desktop : pas de feuille (le panneau est déjà visible). Ouvrir quand
+      // même poserait la classe `.on` sans effet ET verrouillerait le body.
+      if (!isMobileSheet()) return
       closeSheet(false)
       setPend(pendFrom(f))
       setSheet(kind)
@@ -153,14 +166,28 @@ export function ShopView() {
   )
 
   // `lock()` de la référence : le body ne défile plus sous une feuille.
+  // Uniquement en mobile — sinon un resize vers desktop laisserait la page
+  // figée avec une feuille invisible.
   useEffect(() => {
-    if (!sheet) return
+    if (!sheet || !isMobileSheet()) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
   }, [sheet])
+
+  // Passage mobile → desktop : on referme la feuille (et donc on libère le
+  // défilement) au lieu de laisser un état fantôme.
+  useEffect(() => {
+    if (!sheet) return
+    const mq = window.matchMedia('(max-width: 760px)')
+    const onChange = () => {
+      if (!mq.matches) closeSheet(false)
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [sheet, closeSheet])
 
   // Échap ferme la feuille ouverte (accessibilité des bottom sheets).
   useEffect(() => {
@@ -324,6 +351,7 @@ export function ShopView() {
             onApply={onApply}
             onClose={() => closeSheet(true)}
             applyLabel={pendTotal ? `Voir les ${pendTotal} article${pendTotal > 1 ? 's' : ''}` : 'Aucun résultat'}
+            open={sheet === 'filters'}
           />
           <div className="shop-main">
             <div className="result-bar">
@@ -367,8 +395,19 @@ export function ShopView() {
           </div>
         </div>
       </div>
-      <div className="fback" id="fback" data-close-sheets hidden={sheet === null} onClick={() => closeSheet(true)} />
-      <SortSheet sort={f.sort} onSort={onSortSheet} onClose={() => closeSheet(true)} />
+      <div
+        className={`fback${sheet ? ' on' : ''}`}
+        id="fback"
+        data-close-sheets
+        hidden={sheet === null}
+        onClick={() => closeSheet(true)}
+      />
+      <SortSheet
+        sort={f.sort}
+        onSort={onSortSheet}
+        onClose={() => closeSheet(true)}
+        open={sheet === 'sort'}
+      />
     </div>
   )
 }

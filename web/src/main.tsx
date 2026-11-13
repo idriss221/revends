@@ -15,6 +15,7 @@ import './styles/tokens.css'
 import './styles/bureau-fixes.css'
 import { App } from './App'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
+import { ScrollToTop } from './components/layout/ScrollToTop'
 import { IconSprite } from './components/brand/IconSprite'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
@@ -46,6 +47,9 @@ createRoot(document.getElementById('root')!).render(
                       (public ET admin, toast compris). Hors `ErrorBoundary` :
                       le sprite doit survivre à une erreur de rendu. */}
                   <IconSprite />
+                  {/* Haut de page à chaque navigation (les filtres passent par
+                      `search`, jamais par `pathname` : ils ne remontent pas). */}
+                  <ScrollToTop />
                   <ErrorBoundary>
                     <App />
                   </ErrorBoundary>

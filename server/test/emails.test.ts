@@ -298,6 +298,39 @@ describe('E0 — Commande enregistrée (POST /api/orders) → acheteur connecté
 });
 
 // ---------------------------------------------------------------------------
+// E0b — Alertes administrateurs (produit en attente / nouvelle commande)
+// ---------------------------------------------------------------------------
+
+describe('E0b — Alertes admins (produit soumis, commande créée)', () => {
+  it('un article soumis envoie un e-mail à CHAQUE admin', async () => {
+    const account = await registerUser(server, 'adminAlertProduct');
+    const product = await createProduct(account.client, { name: 'Objet à modérer' });
+    assert.ok(product.id > 0);
+
+    const mails = (await mailsOf('product_submitted_admin')).filter((m) => m.to === 'admin@revends.com');
+    assert.equal(mails.length, 1, 'un envoi à l’admin de test');
+    assert.equal(mails[0]!.ok, true, 'envoi effectif (transport de test)');
+    assert.ok(mails[0]!.subject.toLowerCase().includes('validation'), `sujet : ${mails[0]!.subject}`);
+  });
+
+  it('une commande créée envoie un e-mail à CHAQUE admin, sans notifier le vendeur', async () => {
+    const account = await registerUser(server, 'adminAlertOrder');
+    const product = await createApprovedProduct(seller, admin, { name: 'Article suivi admin' });
+    const { status, body } = await createOrder(account.client, product.id);
+    assert.equal(status, 201, `commande refusée : ${JSON.stringify(body)}`);
+
+    const mails = (await mailsOf('order_created_admin')).filter((m) => m.to === 'admin@revends.com');
+    assert.equal(mails.length, 1, 'un envoi à l’admin de test');
+    assert.equal(mails[0]!.ok, true, 'envoi effectif (transport de test)');
+    assert.ok(mails[0]!.subject.toLowerCase().includes('commande'), `sujet : ${mails[0]!.subject}`);
+    assert.ok(
+      (await mailsOf('order_created_admin')).every((m) => m.to !== norm(sellerEmail)),
+      'le vendeur ne reçoit pas l’alerte admin',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // E4 / E5 — Commande payée (2 envois)
 // ---------------------------------------------------------------------------
 
@@ -913,9 +946,9 @@ describe('E1b — Bienvenue pour un compte OAuth', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Couverture — les 23 événements se rendent tous sans trou ni lien sortant
+// Couverture — les 25 événements se rendent tous sans trou ni lien sortant
 // ---------------------------------------------------------------------------
-describe('Couverture — 23 événements, rendu complet', () => {
+describe('Couverture — 25 événements, rendu complet', () => {
   const ALL_EVENTS: MailEvent[] = [
     'welcome',
     'product_approved',
@@ -938,6 +971,8 @@ describe('Couverture — 23 événements, rendu complet', () => {
     'payment_proof_received_buyer',
     'payment_proof_rejected_buyer',
     'payment_proof_submitted_admin',
+    'product_submitted_admin',
+    'order_created_admin',
     'phone_reset',
     'announcement_sell',
   ];
@@ -961,7 +996,7 @@ describe('Couverture — 23 événements, rendu complet', () => {
     }
   });
 
-  it('sur les 23, tous les liens pointent vers le site (CA-V5-009)', () => {
+  it('sur les 25, tous les liens pointent vers le site (CA-V5-009)', () => {
     for (const event of ALL_EVENTS) {
       const { html } = renderTemplate(event, { linkPath: '/dashboard' });
       const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]!);

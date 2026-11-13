@@ -82,6 +82,12 @@ export interface FilterPanelProps {
   onClose: () => void
   /** libellé du bouton d'application : « Voir les N articles » / « Aucun résultat » */
   applyLabel: string
+  /**
+   * Feuille mobile ouverte. Sur desktop la classe est sans effet (le panneau
+   * est la colonne sticky visible), mais c'est elle qui déclenche
+   * `transform:none` + `visibility:visible` sous 760 px.
+   */
+  open: boolean
 }
 
 /** `filterPanel()` — `<aside class="filters">` (sticky desktop / sheet mobile). */
@@ -99,9 +105,10 @@ export function FilterPanel({
   onApply,
   onClose,
   applyLabel,
+  open,
 }: FilterPanelProps) {
   return (
-    <aside className="filters" id="filters" aria-label="Filtres">
+    <aside className={`filters${open ? ' on' : ''}`} id="filters" aria-label="Filtres">
       <div className="fx-head">
         <span className="grab" aria-hidden="true" />
         <h3>
@@ -167,13 +174,16 @@ export function SortSheet({
   sort,
   onSort,
   onClose,
+  open,
 }: {
   sort: ShopSort
   onSort: (v: ShopSort) => void
   onClose: () => void
+  /** feuille ouverte (classe `.on` : `transform:none` + `visibility:visible`) */
+  open: boolean
 }) {
   return (
-    <div className="sheet" id="sortSheet" aria-label="Trier par">
+    <div className={`sheet${open ? ' on' : ''}`} id="sortSheet" aria-label="Trier par">
       <div className="fx-head">
         <span className="grab" aria-hidden="true" />
         <h3>Trier par</h3>
