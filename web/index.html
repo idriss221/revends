@@ -35,8 +35,11 @@
       property="og:description"
       content="La marketplace sénégalaise de la seconde main : achetez et vendez vos articles d'occasion en toute confiance. Paiement sécurisé, livraison suivie."
     />
-    <meta property="og:image" content="https://revends.vercel.app/apple-touch-icon.png" />
-    <meta property="og:image:alt" content="ReVendsen — marketplace seconde main" />
+    <meta property="og:image" content="https://revends.vercel.app/og-cover.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ReVends — friperie en ligne au Sénégal" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -45,7 +48,8 @@
       name="twitter:description"
       content="Achetez et vendez vos articles d'occasion au Sénégal en toute confiance. Paiement sécurisé, livraison suivie, vendeurs vérifiés."
     />
-    <meta name="twitter:image" content="https://revends.vercel.app/apple-touch-icon.png" />
+    <meta name="twitter:image" content="https://revends.vercel.app/og-cover.jpg" />
+    <meta name="twitter:image:alt" content="ReVends — friperie en ligne au Sénégal" />
 
     <!-- Données structurées : Organization + WebSite (search action) -->
     <script type="application/ld+json">
@@ -56,9 +60,9 @@
             "@type": "Organization",
             "@id": "https://revends.vercel.app/#organization",
             "name": "ReVendsen",
-            "alternateName": ["ReVends", "revendsen"],
+            "alternateName": ["ReVends", "ReVendsen Sénégal"],
             "url": "https://revends.vercel.app/",
-            "logo": "https://revends.vercel.app/apple-touch-icon.png",
+            "logo": "https://revends.vercel.app/logo.png",
             "areaServed": { "@type": "Country", "name": "Sénégal" },
             "description": "Marketplace sénégalaise de la seconde main : achat et vente d'articles d'occasion en toute confiance."
           },
@@ -67,7 +71,7 @@
             "@id": "https://revends.vercel.app/#website",
             "url": "https://revends.vercel.app/",
             "name": "ReVendsen",
-            "alternateName": "ReVends",
+            "alternateName": ["ReVends", "ReVendsen Sénégal"],
             "inLanguage": "fr",
             "publisher": { "@id": "https://revends.vercel.app/#organization" },
             "potentialAction": {
@@ -89,11 +93,18 @@
          "light" repasse en clair. Clé de persistance : "rv:theme". -->
     <script src="/theme-init.js"></script>
 
-    <!-- Favicons REVENDS (DA §2) : SVG 32 prioritaire, ICO 16/32 en repli. -->
+    <!-- Favicons REVENDS (DA §2) :
+         SVG 32 prioritaire ; PNG **96×96 / 192×192** (multiples de 48, exigence
+         Google pour le site name / rich results) ; ICO 16/32 en repli ;
+         apple-touch-icon 180×180 pour iOS. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <meta name="theme-color" content="#11100F" />
+    <meta name="application-name" content="ReVendsen" />
+    <meta name="apple-mobile-web-app-title" content="ReVendsen" />
 
     <!-- Token CSRF pour les requêtes mutantes (POST/PATCH/DELETE). -->
     <meta name="csrf-token" content="" />

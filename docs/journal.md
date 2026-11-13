@@ -4243,3 +4243,25 @@ un spinner circulaire) :
 3.1 s `infinite`, cœur 104 px, `role=status` ; erreurs : réseau → « Connexion
 impossible. Vérifiez votre réseau et réessayez. », 500 → « Impossible de
 charger cet article pour le moment. » ; aucune chaîne technique détectée.
+
+### Complément (même journée) — SEO : nom du site « ReVendsen » dans Google + logo
+
+Constat : le résultat SERP affiche « Vercel » comme nom de site (indexation pas
+recalculée + favicon 180 non conforme aux exigences Google « multiple de 48 px »).
+
+- `index.html` : `og:site_name` (déjà présent, confirmé live) ; JSON-LD `WebSite`
+  `alternateName: ["ReVends","ReVendsen Sénégal"]` (était une chaîne unique) ;
+  `Organization.logo` → `/logo.png` (480×480 = multiple de 48) ; WebSite inchangé
+  (« ReVendsen »). Canonical `revends.vercel.app` **conservé** (un canonical vers
+  vercel.app ferait indexer le domaine Vercel à la place du site).
+- Icônes conformes Google : `/favicon-96x96.png`, `/favicon-192x192.png` (192 = 4×48),
+  dérivées de `apple-touch-icon.png`. `apple-touch-icon` 180 conservé pour iOS.
+- `public/logo.png` créé (480×480) → le `<image:image>` du sitemap (pointait vers un
+  `logo.png` inexistant = 404 avec fallback SPA HTML) est désormais servi.
+- `og:image` / `twitter:image` → `/og-cover.jpg` (1200×630, créé : tuile sombre,
+  cœur ReVends + « ReVends. » + tagline) au lieu d'un apple-touch-icon 180 px trop petit.
+
+Recette prod (curl) : toutes les URLs icones/logo/OG répondent `200`
+(`image/png`, `image/jpeg`), JSON-LD et balises servis **dans le HTML initial**
+(pas seulement en JS). Resté au propriétaire : demander la réindexation dans
+Google Search Console (3-14 jours pour recalculer le « site name »).
