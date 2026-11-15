@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | **2.4 (2026-09-28)** — **Évolution V5** : C1 e-mails transactionnels (9 déclencheurs / 11 envois), C4 suppression logique admin, C5 suppression des N+1, C6 durcissement admin. Ajouts de contrat bornés par **PO-V5-18** : tri `relevance` + `GET /api/products/suggestions`. Rate limit global + `Cache-Control`. Les versions 2.0 → 2.3 restent applicables, non répétées ici. |
+| **Version** | **2.6 (2026-11-15)** — **Parrainage « Le Cercle des 10 »** : `GET /api/referrals/me` (privé), champ `ref` facultatif à l'inscription, `referralCode` dans le profil, `seller.ambassador` (badge) et priorité Vitrine au tri par défaut. Les encarts **v2.4 (Évolution V5)** et **v2.5 (Évolution V6 — WhatsApp, preuve de paiement, numéros +221)** restent applicables, non répétés ici. Les versions 2.0 → 2.3 restent également applicables. |
 | **Auteur** | Agent api-designer, pour l'équipe projet |
 | **Statut** | Source de vérité du contrat d'API — implémentation `@backend`, consommation `@frontend` |
 | **Sources** | `docs/cahier-des-charges-v5.md` (C1–C9, PO-V5-01…20, §5.1, §5.9) · `docs/architecture-v5.md` (§4.3 catégories d'index, §4.4, §5, §6.1–6.2 budgets, §10 décisions D2–D9) · `server/migrations/009_soft_delete_perf.sql` (index `idx_products_owner_deleted`, index partiel `uq_one_active_order_per_product`) · `server/src/mail/` (9 déclencheurs / 11 envois) · docs antérieures conservées : `docs/cahier-des-charges-v2.md` (base conservée hors périmètre V3) · `docs/cahier-des-charges-v3.md` (S1 — US E1/E2, CA-AUTH04/05, CA-ORD01..12, §5/§6/§7, Annexe A/B) · `docs/architecture.md` §11 (S2 — DDL 003, règles `order_events`, matrice, contrat esquissé) · `server/migrations/003_order_events.sql` (enum `order_status` 11 valeurs, table `order_events`, trigger de matrice) · `server/migrations/006_order_shipped.sql` + `007_order_shipped_cycle.sql` (**Évolution V4** : enum `order_status` 12 valeurs avec `SHIPPED`, `payout_status` `DUE`, `notification_type` `order_shipped`, matrice `PREPARING → SHIPPED → IN_DELIVERY`) · `docs/cahier-des-charges-v4-accueil.md` (**V4-Accueil** : D-ACC-1..8, PO-ACC-1..6 arbitrés, RG-PROD-1..8, §5 US/CA-ACC, §7.1 contrat cible, §8 « Voir plus ») · **DDL 008** (créé et appliqué : `server/migrations/008_accueil_v3.sql` — `products.old_price`, `products.view_count`, table `banners` + seed, `notification_type` + `product.contact`) |
@@ -138,6 +138,14 @@
 > - WhatsApp = **Cloud API officielle Meta** uniquement (Graph `/{phoneNumberId}/messages`), timeout 8 s, numéro masqué dans les logs. `WHATSAPP_ENABLED=false` par défaut : sans token, le canal est **coupé proprement** (statut `SKIPPED`), l'e-mail continue.
 >
 > **V6.6 — SEO.** `web/index.html` : title/description ciblés (« ReVendsen », « revends », « revends Sénégal », « marketplace »), canonical, Open Graph, Twitter Card, JSON-LD `Organization` + `WebSite` (SearchAction). `robots.txt` exclut les pages privées ; `sitemap.xml` conserve `/` et `/catalogue` et ajoute `/shop`, `/category`. Aucune URL publique existante n'est supprimée.
+>
+> **V6.7 — Parrainage « Le Cercle des 10 » (2026-11-15).**
+> - **`GET /api/referrals/me` — NOUVEAU (privé)** : code personnel, progression, paliers, badge et Vitrine (détail §3.8).
+> - `POST /api/auth/register` : champ **`ref` facultatif** (code du parrain). Un code inconnu, mal formé ou auto-référencé est **ignoré sans erreur** : un parrainage ne doit jamais empêcher une inscription.
+> - `GET /api/auth/me` : + **`referralCode`** (`string|null`) et **`ambassador: true`** *seulement* si le badge est actif.
+> - `PublicUser` : + **`ambassador: true`** *seulement* si actif. Aucun champ `false` n'est ajouté : le contrat existant ne change pas (P5), et le front n'a pas à distinguer « pas ambassadeur » de « champ absent ».
+> - `GET /api/products` (tri par défaut uniquement) : les articles d'un vendeur en **Vitrine active** passent devant. Les tris explicites de l'acheteur (`price_asc`, `price_desc`, `oldest`, `popular`, `relevance`) sont **inchangés** — un classement payant ne doit jamais fausser un tri choisi.
+> - `POST /api/admin/products/:id/approve` : si c'est le **premier** article approuvé d'un filleul, le parrain est crédité (idempotent) — e-mail `referral_milestone` au franchissement des paliers 5 et 10, jamais à chaque article.
 
 ## 1. Vue d'ensemble et conventions
 
@@ -257,8 +265,8 @@ L'API expose **trois vues** d'un utilisateur :
 
 | Vue | Champs | Utilisée dans |
 |---|---|---|
-| `PublicUser` | `id`, `displayName`, `memberSince` (année d'inscription), `sales` (nb d'articles `SOLD`, **vendeur uniquement**) | Catalogue, fiche article, commandes côté acheteur |
-| `SelfUser` | `id`, `displayName`, `name`, `email`, `phone`, `role`, `memberSince`, `createdAt` | `GET /api/auth/me`, réponse de register |
+| `PublicUser` | `id`, `displayName`, `memberSince` (année d'inscription), `sales` (nb d'articles `SOLD`, **vendeur uniquement**), `ambassador` (**présent et `true` seulement si le badge est actif**, jamais `false` — §3.8) | Catalogue, fiche article, commandes côté acheteur |
+| `SelfUser` | `id`, `displayName`, `name`, `email`, `phone`, `role`, `memberSince`, `createdAt`, `referralCode` (`string|null`, code personnel — §3.8), `ambassador` (idem `PublicUser`) | `GET /api/auth/me`, réponse de register |
 | `AdminUser` | tout ci-dessus + `productCount`, `orderCount` | routes admin |
 
 - **Jamais** de `name`, `email`, `phone` dans les vues `PublicUser` (T22 : les inspecteurs JSON catalogue/fiche/commandes doivent constater leur absence).
@@ -512,6 +520,7 @@ Crée un compte **utilisateur** (jamais admin — CA-AUTH03-01), connecte imméd
 | `phone` | string | `^\+?[0-9 ]{8,20}$` (ex. `+225 07 00 00 00 00`), **unique** |
 | `password` | string | 8..72 caractères (limite bcrypt), stocké haché (bcryptjs cost 10 — CA-AUTH01-03) |
 | `acceptedCgu` | boolean | **doit être `true`** sinon blocage (CA-AUTH01-01) |
+| `ref` | string | **facultatif** — code de parrainage (`RV` + 6 à 12 alphanumériques, normalisé en majuscules, ≤ 16). Code inconnu/mal formé/auto-référencé → **ignoré**, l'inscription réussit quand même (§3.8) |
 
 **Exemple :**
 
@@ -538,11 +547,14 @@ Crée un compte **utilisateur** (jamais admin — CA-AUTH03-01), connecte imméd
     "phone": "+225 07 00 00 00 00",
     "role": "user",
     "memberSince": 2026,
-    "createdAt": "2026-09-20T10:00:00.000Z"
+    "createdAt": "2026-09-20T10:00:00.000Z",
+    "referralCode": "RV3F9A2B7C"
   },
   "unreadNotifications": 0
 }
 ```
+
+> `referralCode` est le code **personnel** du nouvel inscrit (créé en base par `DEFAULT`), pas le code utilisé pour s'inscrire. `ambassador` n'apparaît que si un badge est actif — jamais à l'inscription normale.
 
 **Erreurs :**
 
@@ -1928,6 +1940,9 @@ Journal `admin_actions`, tri `created_at DESC` (CA-ADM07 — « qui a fait quoi,
 | E8 | Paiement vendeur disponible | idem | **vendeur** | « Votre paiement est disponible » |
 | E9 | Paiement vendeur versé | `POST /api/admin/orders/:id/seller-payout` | **vendeur** | « Votre paiement a été versé » |
 | E10 | Réservation expirée | job d'expiration (`expire-reservations`) | **acheteur + vendeur** (2 envois) | « Votre réservation a expiré » |
+| E11 | Palier de parrainage atteint | `POST /api/admin/products/:id/approve` (1er article d'un filleul) | **parrain** | « Votre Cercle s'agrandit » (paliers 5 et 10, **un seul envoi par franchissement** — §3.8) |
+
+> **Hors requête HTTP** : `referral_program_launch` (« Le Cercle des 10 ») n'est déclenché par **aucun endpoint** — c'est une campagne e-mail opérée par le script `server/scripts/send-referral-campaign.mts` (`--dry-run`, `--only`, `--limit`, `--campaign-key`). Anti-doublon : une ligne `notification_deliveries` par `(campagne:userId, canal)`, insérée en `ON CONFLICT DO NOTHING` ; relancer le script ne renvoie jamais deux fois le même message.
 
 **Règles opposables :**
 
@@ -1982,6 +1997,56 @@ Les deux chemins sont montés **avant** le rate limiter : une sonde de déploiem
 | Toutes les autres `/api/*` | `private, no-store` |
 
 Seules des données **publiques et identiques pour tous** sont mises en cache public. Toute réponse liée à une session est `private, no-store` : un cache partagé ne doit jamais pouvoir servir la donnée d'un utilisateur à un autre. L'en-tête ne modifie aucune forme de réponse (P5).
+
+### 3.8 Parrainage — « Le Cercle des 10 » (V6, privé)
+
+Un vendeur invite des pairs avec son code personnel : à **10 filleuls validés**, il reçoit le badge **Ambassadeur** (1 an) et **30 jours de Vitrine** (mise en avant au tri par défaut du catalogue). Palier intermédiaire : **5 filleuls** → badge **30 jours** + **7 jours de Vitrine**. La commission vendeur (**10 %**) ne change jamais : un parrainage récompense la croissance, il ne touche pas au modèle économique.
+
+#### `GET /api/referrals/me` — session (`requireAuth`)
+
+Route **privée** : un code de parrainage permet de rattacher des filleuls, il n'a rien à faire dans une réponse publique. Aucune donnée de filleul (nom, e-mail, numéro) n'est jamais renvoyée — seulement un **compteur**.
+
+**Réponse `200` :**
+
+```json
+{
+  "code": "RV3F9A2B7C",
+  "qualified": 3,
+  "target": 10,
+  "badgeTarget": 5,
+  "badgeActive": false,
+  "badgeUntil": null,
+  "vitrineActive": false,
+  "vitrineUntil": null,
+  "remaining": 7
+}
+```
+
+| Champ | Type | Sens |
+|---|---|---|
+| `code` | string | Code **personnel** du demandeur (`RV` + 8 hexadécimaux). Créé à la demande si absent — jamais `null` pour un compte existant |
+| `qualified` | int ≥ 0 | Filleuls **validés** (pas les inscriptions) |
+| `target` | int | `10` — entrée dans le Cercle |
+| `badgeTarget` | int | `5` — premier palier |
+| `badgeActive` | boolean | Badge **actif maintenant** (`ambassador_until > now()`) |
+| `badgeUntil` | ISO 8601 \| null | Fin du badge, `null` si jamais obtenu ou expiré |
+| `vitrineActive` | boolean | Vitrine **active maintenant** (`vitrine_until > now()`) |
+| `vitrineUntil` | ISO 8601 \| null | Fin de la Vitrine |
+| `remaining` | int ≥ 0 | `max(0, target − qualified)` — **jamais négatif**, même au-delà de 10 |
+
+**Erreurs :** `401 UNAUTHENTICATED` (aucune session). `requireAuth` et non `requireUser` : le garde **client** `RequireUser` admet un admin connecté sur les pages de son espace ; refuser ici l'admin produirait un `403` sur une page que l'interface vient d'ouvrir. Un admin a lui aussi un profil, donc un code.
+
+**Compromis assumé** : le code est visible par le compte qui le détient et par personne d'autre. Il n'est pas un secret cryptographique (il circule dans un lien `?ref=` partageable), mais il n'est pas énumérable utilement : le rattachement exige une **inscription réussie**, et un code inconnu est ignoré.
+
+#### Règles de qualification (opposables)
+
+1. **Un filleul est validé à l'approbation de son PREMIER article** (`POST /api/admin/products/:id/approve`), jamais à l'inscription. Un compte vide, un faux compte ou un article refusé ne crédite aucun parrain (anti-fraude).
+2. **Idempotence** : `referral_qualifications.referee_id` est `UNIQUE`, l'insertion est un `ON CONFLICT DO NOTHING`. Rejouer l'approbation, ou approuver un second article du même filleul, ne recrédite jamais.
+3. **Un filleul = un seul parrain**, un parrain crédité une seule fois par filleul. Auto-parrainage impossible (`CHECK`, et `referred_by = userId` refusé).
+4. **Rattrapage** : un compte existant qui s'inscrit avec un `ref` alors qu'il a déjà un article approuvé est qualifié **immédiatement**, sans attendre une future approbation.
+5. **Paliers** : à 5 → badge 30 j + Vitrine 7 j ; à 10 → badge 1 an + Vitrine 30 j. Le franchissement envoie **un** e-mail (`referral_milestone`), pas dix. Un échec d'envoi ne défait jamais la qualification.
+6. **La Vitrine ne touche pas aux tris explicites** : elle ne départage que le tri par défaut (`recent`) de `GET /api/products`, et **jamais** un `sort` choisi par l'acheteur (§3.2). Hors fenêtre d'activité, elle n'a aucun effet.
+7. **Badge** : exposé comme `ambassador: true` uniquement s'il est actif. Aucun champ `false`, aucune date exposée dans les vues publiques — un consommateur ne doit jamais interpréter une date expirée.
 
 ---
 
@@ -2079,6 +2144,7 @@ Toute insertion de notification est faite **dans la même transaction** que l'é
 | `POST /api/products` | user | multipart (champs + 1-4 photos) | `201` |
 | `PUT /api/products/:id` | owner | multipart (champs + photo_order/remove_photo_ids/photos) | `200` |
 | `GET /api/me/products` | user | — | `200` |
+| `GET /api/referrals/me` (**V6**, parrainage) | session (`requireAuth`, admin admis) | — | `200` |
 | `POST /api/orders` | user | `{ productId, paymentMethod? }` | `201` |
 | `GET /api/me/orders` | user | — | `200` |
 | `GET /api/orders/:id` | session (buyer/seller/**admin**) | — | `200` |
