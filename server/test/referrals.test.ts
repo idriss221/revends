@@ -112,6 +112,12 @@ describe('GET /api/referrals/me — route privée', () => {
     assert.equal(res.status, 401);
   });
 
+  it('un admin connecté y accède aussi (cohérence avec le garde client)', async () => {
+    const res = await admin.get('/api/referrals/me');
+    assert.equal(res.status, 200);
+    assert.match((res.body as any).code, /^RV[A-Z0-9]{8}$/);
+  });
+
   it('200 : code RV…, progression initiale à zéro, aucune donnée privée', async () => {
     const u = await registerWith('refsummary');
     assert.equal(u.status, 201, JSON.stringify(u.body));
