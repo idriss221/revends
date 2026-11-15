@@ -4307,12 +4307,47 @@ personnalisé avec le pseudo public et le nombre d'articles en ligne, CTA
 via `notification_deliveries` (clé `referral-cercle10-2026-11:<userId>`) :
 relancer le script ne renvoie jamais deux fois le même message.
 
-**Tests** — `server/test/referrals.test.ts` (15 cas, tous verts) : route privée,
+**Tests** — `server/test/referrals.test.ts` (16 cas, tous verts) : route privée,
 code stable, attribution (casse, code inconnu, code malformé, auto-parrainage),
 qualification par l'article (compte vide = 0), idempotence, palier 5 avec **un
 seul** e-mail, Vitrine devant au tri par défaut **sans** fausser `price_asc`,
-absence de qualification orpheline.
+absence de qualification orpheline, accès admin (cohérence garde client).
 
 **Cible d'envoi** — calculée en base, jamais écrite à la main : vendeurs ayant au
-moins un article `AVAILABLE` (4 comptes au 15/11/2026) ; le dispositif reste
+moins un article `AVAILABLE` (**3 comptes au 15/11/2026** : `in.idrissa@icloud.com`,
+`papealiounediouf54@gmail.com`, `dia429391@gmail.com`) ; le dispositif reste
 ouvert à tous ensuite via `/parrainage`.
+
+### Clôture — livraison et campagne (15/11/2026)
+
+**Livraison** — commit `e784009` + fix garde admin (`requireAuth` au lieu de
+`requireUser`, commit `9d3809f`) poussés sur `fix/v6-on-799a7ab` ; déploiement
+Vercel prod OK (`https://revends.vercel.app`). Migrations prod `015→018`
+appliquées manuellement (l'entrée serverless n'appelle pas `migrate()`).
+Vérifié en base : colonnes `referral_code`, `referred_by`, `ambassador_until`,
+`vitrine_until` + table `referral_qualifications` ; **43 comptes, 43 codes
+uniques** ; `schema_migrations` = 18.
+
+**Recette navigateur prod (Playwright)** — 15/15 verts : titre, compteur `0 / 10`,
+code `RV…`, lien `?ref=`, partage WhatsApp, jauge `aria-valuenow`, états simulés
+5/10 et 10/10 (pastilles), badge Ambassadeur sur fiche produit, double colonne
+au desktop, **aucune erreur JS** (les `401` du probe `/api/auth/me` sont filtrés
+volontairement).
+
+**Campagne** — test ciblé (`--only in.idrissa@icloud.com`, clé
+`referral-cercle10-2026-11-test`) : `SENT`. Envoi réel (3 cibles) : **3 SENT /
+0 FAILED** (`notification_deliveries`, attempts=1). Relance sans `--only` →
+**3 SKIP** : l'anti-doublon fonctionne en production. `MAIL_ENABLED` actif,
+transport `smtp`.
+
+**Aperçu interne** — envoi du gabarit réel au compte
+`dioufidrissaa@gmail.com` (id 14, 0 article en ligne →
+« Merci de faire vivre ReVendsen. »), clé de campagne
+`referral-cercle10-2026-11-preview` (séparée de la campagne officielle, sans
+effet sur la cible vendeur) : `SENT`. Le compte n'est **pas** une cible de la
+campagne officielle (0 article `AVAILABLE`) et le script officiel n'a pas été
+poussé dessus.
+
+**Documentation** — `docs/api.md` v2.6 poussé (commit `24cc187`) : encart
+V6.7, `GET /api/referrals/me` (§3.8), champ `ref`, `referralCode`/`ambassador`,
+E11 (e-mail palier), carte §6, `requireAuth` documenté avec sa raison.
