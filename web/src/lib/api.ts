@@ -37,6 +37,7 @@ import type {
   ProductListParams,
   ProductsResponse,
   RegisterPayload,
+  ReferralSummary,
   PaymentProof,
   SearchSuggestionsResponse,
   SelfUser,
@@ -378,6 +379,12 @@ export class ApiClient {
 
   markNotificationRead(id: number): Promise<{ notification: Notification }> {
     return request<{ notification: Notification }>(`/api/me/notifications/${id}/read`, { method: 'POST' })
+  }
+
+  /* --- Parrainage « Le Cercle des 10 » --- */
+
+  referralSummary(): Promise<ReferralSummary> {
+    return request<ReferralSummary>('/api/referrals/me')
   }
 
   markAllNotificationsRead(): Promise<{ updated: number }> {

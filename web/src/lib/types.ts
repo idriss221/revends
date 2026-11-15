@@ -11,6 +11,8 @@ export interface PublicUser {
   memberSince: number
   /** présent sur les vendeurs (réputation D2), omis pour les acheteurs vus par le vendeur */
   sales?: number
+  /** Badge Ambassadeur (parrainage) — présent sur la fiche produit. */
+  ambassador?: boolean
 }
 
 export interface SelfUser {
@@ -22,6 +24,8 @@ export interface SelfUser {
   role: Role
   memberSince: number
   createdAt: string
+  referralCode?: string | null
+  ambassador?: boolean
 }
 
 export type AdminUser = SelfUser & {
@@ -492,6 +496,8 @@ export interface RegisterPayload {
   phone: string
   password: string
   acceptedCgu: boolean
+  /** Code de parrainage (facultatif) — ignoré par l'API s'il est inconnu. */
+  ref?: string
 }
 
 export interface ValidationErrorDetail {
@@ -591,4 +597,17 @@ export interface SearchSuggestionsResponse {
   brands: string[]
   /** ≤ 6 — articles `AVAILABLE` triés `view_count DESC, id` */
   products: ProductCardItem[]
+}
+
+/** Parrainage « Le Cercle des 10 » — GET /api/referrals/me. */
+export interface ReferralSummary {
+  code: string
+  qualified: number
+  target: number
+  badgeTarget: number
+  badgeActive: boolean
+  badgeUntil: string | null
+  vitrineActive: boolean
+  vitrineUntil: string | null
+  remaining: number
 }

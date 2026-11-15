@@ -23,6 +23,7 @@ import { meRouter } from './routes/me.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { cartRouter } from './routes/cart.routes.js';
 import { favoritesRouter } from './routes/favorites.routes.js';
+import { referralsRouter } from './routes/referrals.routes.js';
 import { listPublicCategories } from './services/categories.service.js';
 
 /**
@@ -218,6 +219,7 @@ export function createApp(): express.Express {
   app.use('/api/me', meRouter);
   app.use('/api/cart', cartRouter);
   app.use('/api/favorites', favoritesRouter);
+  app.use('/api/referrals', referralsRouter);
   app.use('/api/admin', adminRouter);
 
   // 404 JSON pour les routes API inconnues (contrat §1.1)

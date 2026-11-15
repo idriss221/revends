@@ -32,6 +32,22 @@ const queryClient = new QueryClient({
   },
 })
 
+/**
+ * Parrainage : capture du code `?ref=RV…` AVANT le rendu React.
+ *
+ * Pourquoi ici et pas dans une page : un filleul peut atterrir n'importe où
+ * (`/`, `/catalogue/…`) puis s'inscrire 10 minutes plus tard. Si le code n'est
+ * conservé qu'à l'affichage de `/register`, il est perdu. On le mémorise donc
+ * au chargement — et `AuthView` le relit à l'inscription.
+ */
+try {
+  const ref = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase()
+  if (ref && /^RV[A-Z0-9]{6,12}$/.test(ref)) localStorage.setItem('rv_ref', ref)
+} catch {
+  // Stockage indisponible (navigation privée stricte) : le parrainage reste
+  // facultatif, jamais bloquant.
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

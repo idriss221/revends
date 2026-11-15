@@ -4265,3 +4265,54 @@ Recette prod (curl) : toutes les URLs icones/logo/OG répondent `200`
 (`image/png`, `image/jpeg`), JSON-LD et balises servis **dans le HTML initial**
 (pas seulement en JS). Resté au propriétaire : demander la réindexation dans
 Google Search Console (3-14 jours pour recalculer le « site name »).
+
+### Parrainage — « Le Cercle des 10 » (lancement vendeurs, 16 nov. → 16 déc. 2026)
+
+Objectif : transformer les vendeurs actuels en recruteurs. Un vendeur qui fait
+publier **10 filleuls validés** reçoit le badge Ambassadeur **1 an** + **30 jours
+de Vitrine** (annonces en tête du catalogue, badge public sur ses fiches,
+validation prioritaire). La commission reste **10 %, due uniquement à la vente** :
+la récompense ne touche pas au modèle économique.
+
+**Règles, sans astérisque** (appliquées par le code, pas par une promesse) :
+
+| Point | Décision | Où c'est appliqué |
+|---|---|---|
+| Filleul « validé » | compte + `+221` vérifié + **1 article approuvé** | `qualifyReferral()` appelée **après commit** de `approveProduct` |
+| Attribution | une seule fois, au premier parrain valide ; auto-parrainage refusé | `users.referred_by`, `attributeReferral()` |
+| Anti-fraude | un compte vide, un article refusé, un second article ne créditent jamais | `referral_qualifications.referee_id UNIQUE` + `ON CONFLICT DO NOTHING` |
+| Palier 5 | badge 30 j + Vitrine 7 j | `qualifyReferral()` |
+| Palier 10 | badge 1 an + Vitrine 30 j | idem, un seul e-mail par franchissement |
+| Code | `RV` + 8 hex, non devinable, stable | `users.referral_code` (DEFAULT + backfill) |
+
+**Base** — migration `018_referrals.sql` : colonnes `referral_code`,
+`referred_by`, `ambassador_until`, `vitrine_until` sur `users`, table
+`referral_qualifications` (1 ligne par filleul crédité, `CHECK` anti
+auto-parrainage), index de lecture.
+
+**API** — `GET /api/referrals/me` (route privée) : code, progression, paliers,
+dates de badge/Vitrine. Le champ `ref` est accepté à l'inscription et
+**volontairement non bloquant** : un code inconnu ou malformé est ignoré,
+l'inscription répond 201. `seller.ambassador` est exposé par la fiche produit ;
+`referralCode` par le profil connecté.
+
+**Interface** — page `/parrainage` : compteur `n / 10`, jauge, badges d'état,
+lien personnel (copie + partage WhatsApp), règles et paliers. Entrée « Parrainage »
+dans le compte ; badge « Ambassadeur » sur la fiche produit. Un `?ref=RV…` reçu
+sur n'importe quelle page est conservé au chargement puis envoyé à l'inscription.
+
+**Campagne e-mail** — gabarit dédié (aucune image distante, aucun script),
+personnalisé avec le pseudo public et le nombre d'articles en ligne, CTA
+`/parrainage`, code personnel affiché, opt-out « répondez STOP ». Anti-doublon
+via `notification_deliveries` (clé `referral-cercle10-2026-11:<userId>`) :
+relancer le script ne renvoie jamais deux fois le même message.
+
+**Tests** — `server/test/referrals.test.ts` (15 cas, tous verts) : route privée,
+code stable, attribution (casse, code inconnu, code malformé, auto-parrainage),
+qualification par l'article (compte vide = 0), idempotence, palier 5 avec **un
+seul** e-mail, Vitrine devant au tri par défaut **sans** fausser `price_asc`,
+absence de qualification orpheline.
+
+**Cible d'envoi** — calculée en base, jamais écrite à la main : vendeurs ayant au
+moins un article `AVAILABLE` (4 comptes au 15/11/2026) ; le dispositif reste
+ouvert à tous ensuite via `/parrainage`.

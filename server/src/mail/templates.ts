@@ -75,7 +75,9 @@ export type MailEvent =
   | 'product_submitted_admin'
   | 'order_created_admin'
   | 'phone_reset'
-  | 'announcement_sell';
+  | 'announcement_sell'
+  | 'referral_program_launch'
+  | 'referral_milestone';
 
 export interface TemplateVars {
   /**
@@ -89,6 +91,14 @@ export interface TemplateVars {
   orderNumber?: string;
   amountFcfa?: number;
   reason?: string;
+  /** Pseudo PUBLIC du destinataire (jamais `users.name`, privé). */
+  displayName?: string;
+  /** Nombre d'articles en ligne — personnalisation de la campagne de parrainage. */
+  productCount?: number;
+  /** Palier franchi (5 ou 10) pour `referral_milestone`. */
+  milestone?: number;
+  /** Code de parrainage (campagne) — assaini avant d'entrer dans l'URL. */
+  referralCode?: string;
   /** Chemin interne, ex. `/orders/CMD-000123`. Relié à SITE_URL. Jamais absolu. */
   linkPath?: string;
 }
@@ -371,6 +381,10 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
     productName: rawVars.productName === undefined ? undefined : escapeHtml(rawVars.productName),
     orderNumber: rawVars.orderNumber === undefined ? undefined : escapeHtml(rawVars.orderNumber),
     reason: rawVars.reason === undefined ? undefined : escapeHtml(rawVars.reason),
+    displayName: rawVars.displayName === undefined ? undefined : escapeHtml(rawVars.displayName),
+    productCount: rawVars.productCount,
+    milestone: rawVars.milestone,
+    referralCode: rawVars.referralCode === undefined ? undefined : escapeHtml(rawVars.referralCode),
     amountFcfa: rawVars.amountFcfa,
     linkPath: rawVars.linkPath,
   };
@@ -737,6 +751,50 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
       return { subject: 'Ce que vous n\'utilisez plus peut devenir de l\'argent', html, text };
     }
 
+    case 'referral_program_launch': {
+      // Campagne de parrainage : le lien reste INTERNE (`/parrainage`) et le
+      // code personnel est affiché à part. On ne met PAS `?ref=` dans l'e-mail :
+      // un vendeur déjà inscrit n'a rien à s'auto-attribuer, et le code affiché
+      // est plus simple à partager à la voix ou par SMS.
+      const code = (vars.referralCode ?? '').replace(/[^A-Za-z0-9]/g, '');
+      const referralUrl = internalLink('/parrainage') ?? config.siteUrl;
+      const { html, text } = referralLayout({
+        displayName: vars.displayName ?? null,
+        productCount: typeof vars.productCount === 'number' ? vars.productCount : null,
+        referralUrl,
+        code: code.length > 0 ? code : null,
+      });
+      return { subject: '10 amis, un mois de vitrine offert', html, text };
+    }
+
+    case 'referral_milestone': {
+      const milestone = vars.milestone === 10 ? 10 : 5;
+      const inCircle = milestone === 10;
+      const { html, text } = layout(
+        inCircle ? 'Bienvenue dans le Cercle des 10' : 'Vous êtes Ambassadeur ReVendsen',
+        [
+          para(
+            inCircle
+              ? 'Votre dixième filleul vient de faire publier son premier article. Vous entrez dans le Cercle des 10.'
+              : 'Votre cinquième filleul vient de faire publier son premier article. Vous êtes désormais Ambassadeur ReVendsen.',
+          ),
+          para(
+            inCircle
+              ? 'Votre badge Ambassadeur est actif pour un an et votre Vitrine est ouverte pour 30 jours : vos annonces passent en tête du catalogue, votre badge s\'affiche sur vos fiches produit, et vos articles sont validés en priorité.'
+              : 'Votre badge Ambassadeur est actif pour 30 jours et votre Vitrine est ouverte pour 7 jours : vos annonces passent en tête du catalogue et votre badge s\'affiche sur vos fiches produit.',
+          ),
+          para('Rien à activer : c\'est déjà en place.'),
+          para('La commission reste à 10 %, due uniquement à la vente.'),
+        ],
+        link ?? internalLink('/parrainage') ?? internalLink('/'),
+      );
+      return {
+        subject: inCircle ? 'Vous entrez dans le Cercle des 10' : 'Vous êtes Ambassadeur ReVendsen',
+        html,
+        text,
+      };
+    }
+
     default: {
       // `event` est typé : cette branche est inatteignable en TypeScript. Elle
       // existe pour qu'un ajout futur d'événement sans template échoue bruyamment
@@ -745,4 +803,154 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
       throw new Error(`Template d'email manquant : ${String(unreachable)}`);
     }
   }
+}
+
+/**
+ * Campagne « Le Cercle des 10 » — gabarit marketing dédié.
+ *
+ * Même charte que l'annonce de vente (fond ivoire, panneau sombre, accents
+ * terre cuite) mais un objectif différent : faire partager un lien. Aucune
+ * image distante, aucun CSS externe, aucun script — les clients mail
+ * (Gmail, Outlook) affichent donc la mise en page telle quelle.
+ */
+function referralLayout(opts: {
+  displayName: string | null;
+  productCount: number | null;
+  referralUrl: string;
+  /** Code personnel (`RV…`) — nul si absent : on n'affiche alors pas la ligne. */
+  code: string | null;
+}): { html: string; text: string } {
+  const { displayName, productCount, referralUrl, code } = opts;
+  const hello = displayName ? `Bonjour ${displayName},` : 'Bonjour,';
+  const articles =
+    productCount === null || productCount <= 0
+      ? 'Merci de faire vivre ReVendsen.'
+      : productCount === 1
+        ? 'Votre article est en ligne sur ReVendsen. Merci — c\'est grâce à des vendeurs comme vous que la marketplace grandit.'
+        : `Vos ${productCount} articles sont en ligne sur ReVendsen. Merci — c'est grâce à des vendeurs comme vous que la marketplace grandit.`;
+  const cta = escapeHtml(referralUrl);
+  const brand = 'ReVendsen';
+
+  const html =
+    '<!doctype html><html lang="fr"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    "<title>10 amis, un mois de vitrine offert</title></head>" +
+    '<body style="margin:0;padding:0;background-color:#F1E9DC;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F1E9DC;">' +
+    '<tr><td align="center" style="padding:28px 12px;">' +
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" ' +
+    'style="width:100%;max-width:600px;background-color:#FFFDF9;border:1px solid #E6DED0;border-radius:16px;">' +
+    '<tr><td style="height:5px;background-color:#B84D20;border-radius:16px 16px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>' +
+    '<tr><td style="padding:26px 34px 0;">' +
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:4px;color:#171513;text-transform:uppercase;">${brand}</div>` +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:13px;font-style:italic;color:#7B6D5D;margin-top:6px;">La seconde vie a de la valeur.</div>' +
+    '</td></tr>' +
+    '<tr><td style="padding:20px 34px 0;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#171513;border-radius:14px;">' +
+    '<tr><td style="padding:30px 28px 26px;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;letter-spacing:2.5px;color:#DCC8A8;text-transform:uppercase;">Le Cercle des 10</div>' +
+    '<h1 style="margin:14px 0 12px;font-family:Georgia,\'Times New Roman\',serif;font-size:29px;line-height:1.24;color:#F7F3EC;font-weight:normal;">' +
+    'Dix amis. Un mois de vitrine offert.</h1>' +
+    '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#CFC4B8;">' +
+    `${escapeHtml(hello)} ${escapeHtml(articles)}</p>` +
+    '<div style="margin-top:18px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#E08A5F;">' +
+    'Invitez des vendeurs&nbsp; ·&nbsp; 10 filleuls validés&nbsp; ·&nbsp; badge + Vitrine 30 jours</div>' +
+    '</td></tr></table>' +
+    '</td></tr>' +
+    '<tr><td style="padding:26px 34px 0;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;color:#A9471F;text-transform:uppercase;">Comment ça marche</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:22px;color:#171513;margin:10px 0 18px;">Trois étapes, un lien.</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' +
+    '<tr><td width="44" valign="top" style="padding-bottom:14px;"><div style="width:30px;height:30px;line-height:30px;text-align:center;background-color:#F8E7DC;border-radius:15px;font-family:Georgia,\'Times New Roman\',serif;font-size:14px;color:#A9471F;">1</div></td>' +
+    '<td valign="top" style="padding-bottom:14px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#171513;">Partagez votre lien</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5B4A3E;margin-top:3px;">Envoyez-le à des personnes qui ont des articles à vendre, autour de vous.</div></td></tr>' +
+    '<tr><td width="44" valign="top" style="padding-bottom:14px;"><div style="width:30px;height:30px;line-height:30px;text-align:center;background-color:#F8E7DC;border-radius:15px;font-family:Georgia,\'Times New Roman\',serif;font-size:14px;color:#A9471F;">2</div></td>' +
+    '<td valign="top" style="padding-bottom:14px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#171513;">Votre filleul publie</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5B4A3E;margin-top:3px;">Il crée son compte, vérifie son numéro +221 et fait approuver un premier article : le filleul est validé.</div></td></tr>' +
+    '<tr><td width="44" valign="top"><div style="width:30px;height:30px;line-height:30px;text-align:center;background-color:#F8E7DC;border-radius:15px;font-family:Georgia,\'Times New Roman\',serif;font-size:14px;color:#A9471F;">3</div></td>' +
+    '<td valign="top"><div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#171513;">Vous entrez dans le Cercle</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5B4A3E;margin-top:3px;">À 10 filleuls validés, le badge et la Vitrine sont activés automatiquement.</div></td></tr>' +
+    '</table>' +
+    '</td></tr>' +
+    '<tr><td style="padding:22px 34px 0;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;color:#3A2923;text-transform:uppercase;margin-bottom:10px;">Ce que vous gagnez</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+    '<td width="46%" valign="top" style="padding:16px;border:1px solid #E6DED0;border-radius:12px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:20px;color:#171513;">5 filleuls</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:#5B4A3E;margin-top:6px;">Badge Ambassadeur 30 jours + Vitrine 7 jours.</div></td>' +
+    '<td width="8%" style="font-size:0;line-height:0;">&nbsp;</td>' +
+    '<td width="46%" valign="top" style="padding:16px;background-color:#F1E7D5;border-radius:12px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:20px;color:#171513;">10 filleuls</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:#3A2923;margin-top:6px;">Badge Ambassadeur 1 an + <strong>Vitrine 30 jours</strong> : annonces en tête du catalogue, badge sur vos fiches, validation prioritaire.</div></td>' +
+    '</tr></table>' +
+    '</td></tr>' +
+    '<tr><td style="padding:18px 34px 0;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.65;color:#7B6D5D;">' +
+    'Les règles, sans astérisque : un filleul validé = un compte avec numéro +221 vérifié et un article approuvé. Une seule récompense par vendeur. Offre ouverte jusqu\'au <strong>16 décembre 2026</strong>. La commission reste à 10&nbsp;%, due uniquement à la vente.' +
+    '</div></td></tr>' +
+    '<tr><td style="padding:26px 34px 0;">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>' +
+    '<td style="background-color:#B84D20;border-radius:9px;">' +
+    `<a href="${cta}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:15px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;border-radius:9px;">Découvrir mon lien de parrainage</a>` +
+    '</td></tr></table>' +
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#7B6D5D;margin-top:12px;">Ou copiez ce lien : <span style="color:#A9471F;">${cta}</span></div>` +
+    (code === null
+      ? ''
+      : `<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#7B6D5D;margin-top:8px;">Votre code personnel : <strong style="color:#171513;letter-spacing:1px;">${escapeHtml(code)}</strong> — vos filleuls peuvent aussi le saisir à l'inscription.</div>`) +
+    '</td></tr>' +
+    '<tr><td style="padding:24px 34px 0;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#3A2923;">' +
+    'Pas 10 amis sous la main&nbsp;? Le palier 5 existe exactement pour ça — et il donne déjà le badge.<br><br>' +
+    'À très vite,<br><strong>Idrissa, fondateur de ReVendsen</strong><br>' +
+    '<span style="color:#7B6D5D;font-size:13px;">revendsen@gmail.com</span></div>' +
+    '</td></tr>' +
+    '<tr><td style="padding:18px 34px 28px;">' +
+    '<div style="border-top:1px solid #E6DED0;padding-top:16px;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#8C7A6B;">' +
+    'ReVendsen — Dakar, Sénégal · revendsen@gmail.com<br>' +
+    'Vous recevez cet e-mail parce que vous avez publié un article sur ReVendsen. ' +
+    'Pour ne plus recevoir nos offres, répondez simplement STOP à cet e-mail.<br>' +
+    'Message automatique ReVendsen.' +
+    '</div></td></tr>' +
+    '</table>' +
+    '</td></tr></table>' +
+    '</body></html>';
+
+  const text = [
+    'REVENDSEN — La seconde vie a de la valeur.',
+    '',
+    'LE CERCLE DES 10 — DIX AMIS, UN MOIS DE VITRINE OFFERT.',
+    '',
+    unescapeHtml(hello),
+    unescapeHtml(articles),
+    '',
+    'COMMENT ÇA MARCHE',
+    '1. Partagez votre lien avec des personnes qui ont des articles à vendre.',
+    '2. Votre filleul crée son compte, vérifie son numéro +221 et fait approuver un premier article.',
+    '3. À 10 filleuls validés, le badge et la Vitrine sont activés automatiquement.',
+    '',
+    'CE QUE VOUS GAGNEZ',
+    '- 5 filleuls : badge Ambassadeur 30 jours + Vitrine 7 jours.',
+    '- 10 filleuls : badge Ambassadeur 1 an + Vitrine 30 jours (annonces en tête du catalogue, badge sur vos fiches, validation prioritaire).',
+    '',
+    'Les règles, sans astérisque : un filleul validé = un compte avec numéro +221 vérifié et un article approuvé.',
+    'Une seule récompense par vendeur. Offre ouverte jusqu\'au 16 décembre 2026.',
+    'La commission reste à 10 %, due uniquement à la vente.',
+    '',
+    'Découvrir mon lien de parrainage :',
+    referralUrl,
+    '',
+    ...(code === null ? [] : [`Votre code personnel : ${code} — vos filleuls peuvent aussi le saisir à l'inscription.`, '']),
+    'Pas 10 amis sous la main ? Le palier 5 existe exactement pour ça — et il donne déjà le badge.',
+    '',
+    'À très vite,',
+    'Idrissa, fondateur de ReVendsen',
+    'revendsen@gmail.com',
+    '',
+    '--',
+    'ReVendsen — Dakar, Sénégal · revendsen@gmail.com',
+    'Vous recevez cet e-mail parce que vous avez publié un article sur ReVendsen. Pour ne plus recevoir nos offres, répondez STOP.',
+    'Message automatique ReVendsen.',
+  ].join('\n');
+
+  return { html, text };
 }

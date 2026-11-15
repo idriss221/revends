@@ -359,6 +359,11 @@ export function ProductView() {
             <span className="av">{text(p.seller.displayName).charAt(0)}</span>
             <div>
               <span className="who-name">{text(p.seller.displayName)}</span>
+              {p.seller.ambassador ? (
+                <span className="amb-badge" title="Ambassadeur ReVendsen — vendeur parrain du Cercle des 10">
+                  <Ico name="star" cls="sm" /> Ambassadeur
+                </span>
+              ) : null}
               <div className="meta-line">Membre depuis {p.seller.memberSince}</div>
               {p.seller.sales !== undefined ? (
                 <div className="facts">

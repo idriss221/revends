@@ -261,6 +261,8 @@ function subjectOf(event: MailEvent): string {
     phone_reset: 'Mettez à jour votre numéro WhatsApp',
     reservation_expired_seller: 'La réservation d\'un de vos articles a expiré',
     announcement_sell: 'Ce que vous n\'utilisez plus peut devenir de l\'argent',
+    referral_program_launch: '10 amis, un mois de vitrine offert',
+    referral_milestone: 'Votre récompense de parrainage',
   };
   return map[event];
 }

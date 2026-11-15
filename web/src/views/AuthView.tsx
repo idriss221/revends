@@ -315,6 +315,12 @@ export function AuthView({ mode }: { mode: AuthMode }) {
         navigate(res.user.role === 'admin' ? '/admin' : (redirect ?? '/'), { replace: true })
       } else if (mode === 'register') {
         const trimmed = name.trim()
+        // Parrainage : `?ref=` prioritaire, sinon le code capturé au chargement
+        // (il survit à la navigation dans le catalogue). Validé côté client
+        // pour ne jamais envoyer une chaîne fantaisiste ; l'API l'ignore de
+        // toute façon si le code est inconnu.
+        const rawRef = sp.get('ref') ?? localStorage.getItem('rv_ref')
+        const ref = rawRef && /^RV[A-Z0-9]{6,12}$/i.test(rawRef.trim()) ? rawRef.trim().toUpperCase() : undefined
         await registerMutation.mutateAsync({
           // Le contrat exige un `displayName` (pseudo public) : dérivé du nom
           // complet, faute de champ dédié dans la maquette.
@@ -324,7 +330,13 @@ export function AuthView({ mode }: { mode: AuthMode }) {
           phone: phone.trim(),
           password: pass,
           acceptedCgu: true,
+          ...(ref ? { ref } : {}),
         })
+        try {
+          localStorage.removeItem('rv_ref')
+        } catch {
+          // stockage indisponible : sans effet
+        }
         navigate(redirect ?? '/', { replace: true })
       } else {
         setResetPending(true)

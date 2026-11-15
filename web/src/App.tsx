@@ -13,6 +13,7 @@ import { SellView } from './views/SellView'
 import { AuthView } from './views/AuthView'
 import { UpdatePhoneView } from './views/UpdatePhoneView'
 import { AccountView } from './views/AccountView'
+import { ReferralPage } from './pages/ReferralPage'
 import { NotFoundView } from './views/NotFoundView'
 
 /* Pages d'espace connecté SANS équivalent dans `Bureau/main` : conservées
@@ -111,6 +112,7 @@ export function App() {
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="/profil" element={<RequireUser><AccountView /></RequireUser>} />
         <Route path="/account" element={<RequireUser><AccountView /></RequireUser>} />
+        <Route path="/parrainage" element={<RequireUser><ReferralPage /></RequireUser>} />
         <Route path="/mes-commandes" element={<RequireUser><MyOrdersPage /></RequireUser>} />
         <Route path="/mes-commandes/:id" element={<RequireUser><MyOrderDetailPage /></RequireUser>} />
         <Route path="/commandes/:id/suivi" element={<RequireUser><OrderTrackingPage /></RequireUser>} />

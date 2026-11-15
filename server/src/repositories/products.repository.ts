@@ -493,6 +493,16 @@ export async function queryCatalogPage(
     where.push(`p.id <> ALL($${params.length}::bigint[])`);
   }
 
+  // Vitrine (parrainage) : les vendeurs « Cercle des 10 » passent devant sur le
+  // tri par défaut. On ne touche PAS aux tris explicites (prix, popularité) :
+  // un classement payant qui fausse un tri choisi par l'acheteur serait trompeur.
+  if (filters.section === undefined && sort === 'recent') {
+    orderBy = `EXISTS (
+      SELECT 1 FROM users wv
+       WHERE wv.id = p.owner_id AND wv.vitrine_until > now()
+    ) DESC, ${orderBy}`;
+  }
+
   const whereClause = where.join(' AND ');
   const limit = perPage;
   const offset = (page - 1) * perPage;

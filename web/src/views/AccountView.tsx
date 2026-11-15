@@ -141,6 +141,10 @@ export function AccountView() {
                 <Ico name="plus-circle" cls="sm" />
                 Mes annonces
               </Link>
+              <Link to="/parrainage">
+                <Ico name="star" cls="sm" />
+                Parrainage
+              </Link>
             </nav>
             <button
               className="btn ghost sm"

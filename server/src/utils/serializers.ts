@@ -15,6 +15,11 @@ export interface UserRow {
   product_count?: number;
   order_count?: number;
   password_changed_at?: string | null;
+  /** Parrainage (migration 018) — colonnes présentes sur `SELECT *`. */
+  referral_code?: string | null;
+  referred_by?: number | null;
+  ambassador_until?: Date | string | null;
+  vitrine_until?: Date | string | null;
 }
 
 export interface ProductRow {
@@ -123,7 +128,22 @@ export function serializePublicUser(row: UserRow, opts?: { sales: boolean }): Re
     memberSince: new Date(row.created_at).getUTCFullYear(),
   };
   if (opts?.sales) out.sales = row.sales ?? 0;
+  // Badge Ambassadeur (parrainage) : ajouté UNIQUEMENT quand il est actif.
+  //
+  // Pourquoi pas `false` : la forme publique existante (T22/strict-api) est un
+  // contrat — un champ supplémentaire toujours présent élargirait toutes les
+  // réponses vendeur/acheteur pour une information qui, dans 99 % des cas, ne
+  // s'affiche pas. Absent = pas ambassadeur ; présent et `true` = badge à
+  // afficher. Aucun consommateur ne doit interpréter une date expirée.
+  if (isActive(row.ambassador_until)) out.ambassador = true;
   return out;
+}
+
+/** Vrai si la date (Postgres `timestamptz`) est dans le futur. */
+function isActive(value: Date | string | null | undefined): boolean {
+  if (value === null || value === undefined) return false;
+  const d = value instanceof Date ? value : new Date(value);
+  return !Number.isNaN(d.getTime()) && d.getTime() > Date.now();
 }
 
 export function serializeSelfUser(row: UserRow): Record<string, unknown> {
@@ -136,6 +156,8 @@ export function serializeSelfUser(row: UserRow): Record<string, unknown> {
     role: row.role,
     memberSince: new Date(row.created_at).getUTCFullYear(),
     createdAt: toIso(row.created_at),
+    referralCode: row.referral_code ?? null,
+    ...(isActive(row.ambassador_until) ? { ambassador: true } : {}),
   };
 }
 

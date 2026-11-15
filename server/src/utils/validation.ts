@@ -25,6 +25,12 @@ export const registerSchema = z.object({
     .refine((value): value is string => value !== null, { error: PHONE_ERROR_MESSAGE }),
   password: z.string({ error: 'Le mot de passe est requis' }).min(8, { error: 'Le mot de passe doit contenir au moins 8 caractères' }).max(72),
   acceptedCgu: z.literal(true, { error: 'Vous devez accepter les conditions d\'utilisation' }),
+  /**
+   * Code de parrainage (facultatif). Volontairement PAS validé en regex : un
+   * code inconnu ou malformé est IGNORÉ à l'attribution, il ne doit jamais
+   * bloquer une inscription (le champ est décoratif, pas une condition).
+   */
+  ref: z.string().trim().max(16).toUpperCase().optional(),
 });
 
 export const loginSchema = z.object({

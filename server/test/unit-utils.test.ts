@@ -53,6 +53,15 @@ describe('RG 7.7 — sérialisation PublicUser (T22 au niveau mapper)', () => {
     const out = serializePublicUser({ id: 1, display_name: 'X', name: 'Y', email: 'e', phone: 'p', role: 'user', created_at: new Date() });
     assert.ok(!('sales' in out));
   });
+  it('expose ambassador=true UNIQUEMENT si le badge est actif (parrainage)', () => {
+    const base = { id: 1, display_name: 'X', name: 'Y', email: 'e', phone: 'p', role: 'user' as const };
+    const future = new Date(Date.now() + 86_400_000);
+    const past = new Date(Date.now() - 86_400_000);
+    const active = serializePublicUser({ ...base, created_at: new Date(), ambassador_until: future });
+    const expired = serializePublicUser({ ...base, created_at: new Date(), ambassador_until: past });
+    assert.equal(active.ambassador, true);
+    assert.ok(!('ambassador' in expired), 'date passée = aucun badge, pas `false`');
+  });
 });
 
 describe('Validation serveur — register (CA-AUTH01-01)', () => {

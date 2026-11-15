@@ -7,6 +7,8 @@ import { countUnreadNotifications } from './notifications.service.js';
 import { sendMail } from '../mail/mailer.js';
 import { runInBackground } from '../utils/background.js';
 import { findByEmail, insertUser, type UserWithHash } from '../repositories/users.repository.js';
+import { attributeReferral } from './referral.service.js';
+import { logger } from '../utils/logger.js';
 
 const BCRYPT_COST = 10;
 
@@ -22,6 +24,8 @@ export interface RegisterInput {
   phone: string;
   password: string;
   acceptedCgu: true;
+  /** Code de parrainage facultatif — ignoré s'il est inconnu (voir `referral.service`). */
+  ref?: string;
 }
 
 /** Inscription : hash bcrypt + INSERT, échecs uniques → 409. Retourne la ligne DB (session). */
@@ -32,6 +36,16 @@ export async function registerUser(input: RegisterInput): Promise<UserRow> {
       { displayName: input.displayName, name: input.name, email: input.email, phone: input.phone },
       hashed,
     );
+    // Parrainage : best-effort APRÈS l'insertion. Un code inconnu ou une
+    // panne de cette écriture ne doit jamais faire échouer une inscription.
+    if (input.ref) {
+      await attributeReferral(user.id, input.ref).catch((err: unknown) => {
+        logger.warn('inscription : attribution de parrainage impossible', {
+          userId: user.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
     runInBackground(sendMail(user.id, user.email, 'welcome', { linkPath: '/' }));
     return user;
   } catch (err) {

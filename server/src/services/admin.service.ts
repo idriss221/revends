@@ -6,6 +6,8 @@ import { insertNotification } from './notifications.service.js';
 import { buildAdminProduct, loadImagesBatch, serializeAdminProductRow } from './products.service.js';
 import { getAdminOrderDetail, loadOrderListParts, updateOrderStatus } from './orders.service.js';
 import { queueMail } from '../mail/queue.js';
+import { qualifyReferral } from './referral.service.js';
+import { logger } from '../utils/logger.js';
 import { notifyUser, whatsappPaymentConfirmed, whatsappSellerNewOrder } from './notification-dispatch.service.js';
 import { formatFCFA, serializeAdminOrder, serializeAdminUser, serializeHistoryRow, type UserRow, type OrderStatus } from '../utils/serializers.js';
 import {
@@ -87,8 +89,10 @@ async function lockPendingProduct(client: DbClient, productId: number): Promise<
 }
 
 export async function approveProduct(adminId: number, productId: number): Promise<Record<string, unknown>> {
+  let ownerId: number | null = null;
   await withTransaction(async (client) => {
     const product = await lockPendingProduct(client, productId);
+    ownerId = product.owner_id;
     await markProductApproved(client, productId, adminId);
     await insertAdminAction(client, {
       adminId,
@@ -101,6 +105,18 @@ export async function approveProduct(adminId: number, productId: number): Promis
     queueMail(product.owner_id, 'product_approved', { productName: product.name, linkPath: '/mes-articles' });
   });
   await cacheDel(['categories:public']);
+  // Parrainage « Le Cercle des 10 » : la PREMIÈRE approbation d'un filleul
+  // crédite son parrain. Après commit, jamais dans la transaction ; un échec
+  // ici ne doit pas annuler une approbation valide.
+  if (ownerId !== null) {
+    await qualifyReferral(ownerId, productId).catch((err: unknown) => {
+      logger.warn('parrainage : qualification impossible après approbation', {
+        productId,
+        ownerId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
   return { product: await buildAdminProduct(productId) };
 }
 
