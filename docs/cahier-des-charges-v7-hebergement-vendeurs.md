@@ -5,7 +5,7 @@
 | **Projet** | ReVends — marketplace de revente d'articles d'occasion (Sénégal, cf. PO-V7-07) |
 | **Version document** | 1.0 — **17/11/2026** |
 | **Auteur** | Agent `@cahier-des-charges` (Big Pickle), sur instruction du chef de projet et de l'utilisateur |
-| **Statut** | **À VALIDER PAR LE CHEF DE PROJET** — spécification seule, aucune implémentation réalisée |
+| **Statut** | **Validé par le chef de projet le 17/11/2026 — base de cadrage V7** — spécification seule, aucune implémentation réalisée |
 | **Nature** | **Cahier additif** : il s'ajoute à V1→V6 sans les amender. Aucun verrou existant n'est modifié. |
 | **Cible** | Web (React + Vite, `revends/web`) + API (Node + Express + Postgres, `revends/server`). Aucune cible mobile native. |
 | **Contexte de production** | https://revends.vercel.app — branche `fix/v6-on-799a7ab` (HEAD `8a8357a` au 17/11/2026) |
@@ -68,7 +68,7 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 | **F1** | Boutique publique `/boutique/:slug` | Page publique listant les seules annonces de boutique actives d'un vendeur abonné `ACTIVE` |
 | **F2** | Espace abonné privé `/mon-abonnement` | État de l'abonnement, forfait, quota consommé, gestion des annonces de boutique |
 | **F3** | Souscription | Choix du forfait par le vendeur → abonnement `PENDING` → activation **manuelle** par l'admin |
-| **F4** | Forfaits | 3 paliers indicatifs (prix **à confirmer**), stockés en base, aucun prix écrit en dur dans le JSX |
+| **F4** | Forfaits | 3 paliers définitifs (prix **validé par l'utilisateur le 17/11/2026**), stockés en base, aucun prix écrit en dur dans le JSX |
 | **F5** | Quota de boutique | Annonces actives simultanées dont le statut est **dérivé de `products.status`** (`PENDING|AVAILABLE|RESERVED`), comptées **dans la boutique uniquement** ; `SOLD`/`REJECTED`/retrait libèrent une place ; pas de reset mensuel |
 | **F6** | Nouvelle route d'ajout à la boutique | Route dédiée, distincte de `POST /api/products`, réservée au propriétaire abonné `ACTIVE` |
 | **F7** | Retrait d'annonce de boutique | Retrait de la vitrine uniquement ; le produit catalogue et les commandes en cours restent intacts |
@@ -120,15 +120,15 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 
 ## 4. Règles métier
 
-### 4.1 Paliers de forfaits indicatifs — **PRIX À CONFIRMER PAR L'UTILISATEUR**
+### 4.1 Paliers de forfaits définitifs — **VALIDÉ PAR L'UTILISATEUR LE 17/11/2026**
 
-> Les valeurs ci-dessous sont **indicatives et non validées**. Elles ne doivent être ni présentées comme approuvées, ni codées en dur. Le prix est stocké en base (champ entier FCFA) et sa valeur définitive est **PO-V7-01 / PO-V7-02**.
+> Les valeurs ci-dessous sont **définitives et validées par l'utilisateur le 17/11/2026** (PO-V7-01/02, désormais tranchés). Elles restent stockées en base (champ entier FCFA) et ne sont **jamais codées en dur dans le front** (CA-V7-010 inchangé).
 
-| Palier | Prix indicatif (FCFA / mois) | Quota indicatif (annonces **de boutique**) | Statut |
+| Palier | Prix (FCFA / mois) | Quota (annonces **de boutique**) | Statut |
 |---|---|---|---|
-| Découverte | ~2 000 | 10 | **à confirmer par l'utilisateur** |
-| Boutique | ~5 000 | 30 | **à confirmer par l'utilisateur** |
-| Atelier | ~10 000 | 100 | **à confirmer par l'utilisateur** |
+| Découverte | 2 000 | 10 | **validé par l'utilisateur le 17/11/2026** |
+| Boutique | 5 000 | 30 | **validé par l'utilisateur le 17/11/2026** |
+| Atelier | 10 000 | 100 | **validé par l'utilisateur le 17/11/2026** |
 
 ### 4.2 Règles de cycle de vie et de données
 
@@ -141,7 +141,7 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 | **Souscription** | Le vendeur choisit un forfait → création d'un abonnement `PENDING`. Aucun accès abonné, aucune boutique publique tant que l'admin n'a pas activé. |
 | **Activation manuelle** | Seul un `admin` peut passer `PENDING → ACTIVE` ; l'action est tracée (`activated_by`, `activated_at`). Aucun webhook, cron ou paiement ne peut lever le statut. |
 | **Changement de forfait** | Proposition (PO-V7-04) : création d'un nouvel abonnement `PENDING` ; l'abonnement `ACTIVE` reste actif jusqu'à activation du nouveau, puis passe `CANCELLED` ; jamais deux `ACTIVE` simultanés. L'historique est conservé. |
-| **Expiration** | À l'échéance `ends_at`, l'abonnement passe `EXPIRED` : la boutique n'est plus publique, les annonces de boutique sont **masquées, pas supprimées**, le catalogue reste intact. Re-souscription possible. Durée exacte et affichage à confirmer (PO-V7-03). |
+| **Expiration** | Durée **définitive : 30 jours glissants après activation** (PO-V7-03 validé le 17/11/2026). À l'échéance `ends_at`, l'abonnement passe `EXPIRED` : `/boutique/:slug` est masqué (**404**), les annonces de boutique sont **conservées, pas supprimées**, le catalogue reste intact, et un **message clair** s'affiche dans `/mon-abonnement`. Re-souscription possible. |
 | **Comptage du quota** | Le statut d'une annonce de boutique est **dérivé en lecture** de `products.status` par jointure, jamais stocké. Requête : `SELECT COUNT(*) FROM storefront_listings l JOIN products p ON p.id = l.product_id WHERE l.subscription_id = $1 AND l.withdrawn_at IS NULL AND p.status IN ('PENDING','AVAILABLE','RESERVED') AND p.deleted_at IS NULL`. La table de liaison ne contient **que** `(product_id, subscription_id, created_at, withdrawn_at)` et **aucun `status`** : aucune écriture dans le pipeline de commande/paiement, aucun trigger sur `products`, aucun compteur dénormalisé, aucun reset mensuel, aucun cron. `SOLD`/`REJECTED` (via `products.status`) et retrait (via `withdrawn_at`) libèrent une place. |
 | **Retrait d'une annonce de boutique** | Pose `withdrawn_at` sur la ligne de liaison (aucun `status` n'est écrit) : le listing disparaît de la boutique et libère une place ; le produit catalogue, ses commandes et son historique restent inchangés. |
 | **Contact via formulaire interne** | Tout contact avec le vendeur abonné passe par un formulaire interne boutique-scopé générant une notification interne. **Jamais** de numéro de téléphone, WhatsApp, e-mail direct, `tel:` ou `mailto:` exposé (D2, `docs/cahier-des-charges.md:40`). Ce formulaire ne réintroduit aucun canal sur la fiche produit (CA-V5-101). |
@@ -153,7 +153,7 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 
 **US-V7-01** — *En tant que vendeur, je veux choisir un forfait et soumettre une demande d'abonnement, afin d'obtenir une boutique dédiée sans payer en ligne.*
 - Exigences : écran de choix des 3 paliers dans `/mon-abonnement` ; statut `PENDING` affiché ; message « En attente d'activation par l'administration ».
-- Contraintes : aucun champ de paiement, aucun prix codé en dur, prix affiché depuis la base (à confirmer), accessibilité clavier.
+- Contraintes : aucun champ de paiement, aucun prix codé en dur, prix définitif affiché depuis la base (validé le 17/11/2026), accessibilité clavier.
 
 **US-V7-02** — *En tant qu'administrateur, je veux voir les demandes en attente et activer manuellement un abonnement, afin de contrôler l'ouverture des boutiques.*
 - Exigences : liste `PENDING` avec vendeur, forfait, date ; action « Activer » ; traçabilité.
@@ -196,13 +196,13 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 
 ### 6.2 Forfaits et abonnement (CA-V7-010 → 016)
 
-- **CA-V7-010** `[EXEC]` **3 paliers, quotas stockés en base, prix à confirmer.** `SELECT * FROM subscription_plans` retourne **3 lignes** nommées `Découverte`, `Boutique`, `Atelier` avec quotas **10 / 30 / 100**. Le champ `price_fcfa` est un entier ≥ 0 non nul, alimenté par seed/migration ; **aucune valeur tarifaire n'est écrite en dur dans le front**. Preuve : requête SQL + `grep -rn "2000\|5000\|10000" web/src` → 0 occurrence liée aux forfaits. Les valeurs définitives restent **PO-V7-01/02**.
+- **CA-V7-010** `[EXEC]` **3 paliers définitifs, prix et quotas stockés en base.** `SELECT * FROM subscription_plans` retourne **3 lignes** : `Découverte` (**2 000 FCFA/mois, 10 annonces**), `Boutique` (**5 000 FCFA/mois, 30**) et `Atelier` (**10 000 FCFA/mois, 100**), **validées par l'utilisateur le 17/11/2026**. Le champ `price_fcfa` est un entier ≥ 0 non nul, alimenté par seed/migration ; **aucune valeur tarifaire n'est écrite en dur dans le front** (exigence inchangée). Preuve : requête SQL + `grep -rn "2000\|5000\|10000" web/src` → 0 occurrence liée aux forfaits.
 - **CA-V7-011** `[TEST]` **Un seul abonnement `ACTIVE` par vendeur.** Une contrainte d'unicité partielle interdit deux `ACTIVE` pour le même `seller_id`. Test : activation d'un 2e abonnement du même vendeur → `409 SUBSCRIPTION_ALREADY_ACTIVE`, `SELECT COUNT(*) ... WHERE status='ACTIVE'` = **1**.
 - **CA-V7-012** `[TEST]` **Souscription = `PENDING`, sans accès abonné.** Le vendeur choisit un forfait → création `PENDING`. Avant activation : `/mon-abonnement` affiche « En attente d'activation par l'administration », `GET /boutique/:slug` → **404**, et tout appel à la route d'ajout boutique → **403 SUBSCRIPTION_REQUIRED**.
 - **CA-V7-013** `[TEST]` **Activation manuelle par l'admin uniquement.** `POST /api/admin/subscriptions/:id/activate` par un `admin` → `200`, statut `ACTIVE`, `activated_by` = admin connecté, `activated_at` non nul ; le même appel par un `user` → **403** ; la boutique devient publique immédiatement (`GET /boutique/:slug` → **200**). Aucun autre chemin ne modifie le statut.
 - **CA-V7-014** `[AUDIT]` + `[TEST]` **Aucun paiement en ligne.** Aucune route de paiement, aucun champ de carte, aucun webhook, aucun cron ne peut passer un abonnement en `ACTIVE`. Un test tente les chemins alternatifs (payload client avec `status: 'ACTIVE'`, appel direct au dépôt) : tous sont rejetés. Aucune donnée bancaire stockée.
 - **CA-V7-015** `[TEST]` **Changement de forfait sans double `ACTIVE`.** Un vendeur `ACTIVE` sur `Boutique` demande `Atelier` → nouvel abonnement `PENDING` ; l'ancien reste `ACTIVE` ; `COUNT(ACTIVE)` = **1** ; après activation du nouveau, `COUNT(ACTIVE)` = **1** (le nouveau) et l'ancien passe `CANCELLED` ; l'historique conserve les 2 enregistrements. Le quota appliqué est celui du forfait `ACTIVE`.
-- **CA-V7-016** `[TEST]` **Expiration.** Avec `ends_at` fixé dans le passé en test, l'abonnement passe `EXPIRED` : `GET /boutique/:slug` → **404**, les annonces de boutique ne sont plus affichées mais **toujours présentes en base**, et les **mêmes produits restent visibles et vendables dans le catalogue**. Une nouvelle souscription est possible.
+- **CA-V7-016** `[TEST]` **Expiration (30 jours glissants, PO-V7-03 validé le 17/11/2026).** Un abonnement activé à T0 passe `EXPIRED` à T0+30 jours (`ends_at = activated_at + 30 jours`). Avec `ends_at` fixé dans le passé en test : `GET /boutique/:slug` → **404**, les annonces de boutique ne sont plus affichées mais **toujours conservées en base**, `/mon-abonnement` affiche un **message clair** d'expiration avec possibilité de re-souscription, et les **mêmes produits restent visibles et vendables dans le catalogue**.
 
 ### 6.3 Slug et boutique publique (CA-V7-020 → 027)
 
@@ -272,18 +272,18 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 
 | ID | Risque | Niveau | Action (propriétaire) | Plan B / attendu |
 |---|---|---|---|---|
-| **R-V7-01** | Les prix et quotas sont **indicatifs** : un développement qui les câble en dur produirait une offre fausse | 🔴 Critique | Stocker prix/quota en base via seed ; **aucun tarif en dur** ; @backend. **Attend : PO-V7-01/02 (utilisateur) avant toute communication tarifaire** | Livrer les 3 paliers avec `price_fcfa` configurables et boutique fonctionnelle ; communication tarifaire différée |
+| **R-V7-01** | Prix et quotas désormais **validés** : risque résiduel uniquement si un tarif est codé en dur dans le front | ✅ Clos (PO-V7-01/02 validés le 17/11/2026) | Maintenir CA-V7-010 : prix et quotas stockés en base, **0 tarif en dur** ; @backend | Aucun arbitrage restant ; tout écart tarifaire est détecté par la requête SQL et le `grep` du critère |
 | **R-V7-02** | Fuite du quota dans `POST /api/products` → régression du catalogue (CA-V5-069/070) | 🔴 Critique | Exécuter CA-V7-003/004/033/038 **avant chaque merge** ; @tester + @backend | Feature flag désactivant V7 ; rollback immédiat ; aucun test V5 amendé |
 | **R-V7-03** | Activation manuelle = goulot d'étranglement (admin seul, file `PENDING` qui s'accumule) | ⚠️ Important | Écran admin avec filtre `PENDING` + notification admin à la souscription ; @backend/@frontend. **Attend : PO-V7-08 (SLA)** | SLA annoncé aux vendeurs ; file traitée par lot |
 | **R-V7-04** | Le formulaire de contact réintroduit un canal supprimé en V5 (C6, CA-V7-047) | ⚠️ Important | Périmètre strictement boutique + CA-V7-047 en test de non-régression ; @cahier-des-charges | Retirer F8 ; conserver uniquement la vitrine, sans formulaire |
 | **R-V7-05** | Slug non normalisé → collision, injection de chemin ou caractères spéciaux | ⚠️ Important | Regex stricte + normalisation + mots réservés (CA-V7-020/021/022) + échappement React ; @backend | Whitelist serveur + rejection `400` avant toute écriture |
 | **R-V7-06** | Tentation de dupliquer le statut du listing → écriture interdite dans le pipeline de commande | ⚠️ Important | Dériver le statut **en lecture** par jointure sur `products.status` (CA-V7-031/037/038) ; @backend | Aucun job de réconciliation nécessaire : la lecture reflète toujours `products.status` ; test de non-écriture en garde-fou |
-| **R-V7-07** | Comportement à l'expiration non arbitré (404 vs page « boutique expirée », durée exacte) | ⚠️ Important | Arbitrage **PO-V7-03** avant implémentation de F2/F5 | Retenir 404 + message dans `/mon-abonnement` (proposition §4.2) |
+| **R-V7-07** | Expiration désormais arbitrée : 30 jours glissants, `EXPIRED`, `/boutique/:slug` → 404, annonces conservées, message clair | ✅ Clos (PO-V7-03 validé le 17/11/2026) | Appliquer la règle §4.2 et CA-V7-016 ; @backend/@frontend | Aucun plan B nécessaire : l'arbitrage est acté dans le cadrage V7 |
 | **R-V7-08** | Confusion entre abonnement et paiement produit : risque de prélever des frais sur une vente | ⚠️ Important | Aucun code d'abonnement dans le pipeline de commande ; CA-V7-006/014 ; @backend | Audit du calcul de commission avant recette |
 | **R-V7-09** | Incohérence géographique (V7 « Sénégal », V1–V5 « Côte d'Ivoire ») | ℹ️ Mineur | Clarifier **PO-V7-07** ; aucun impact fonctionnel | Conserver la mention existante dans les docs antérieurs, non modifiés |
 | **R-V7-10** | Nouvelles pages non accessibles (clavier, contraste, erreurs JS) | ℹ️ Mineur | CA-V7-027/061/062/064 dès le développement ; @frontend | Correctifs ciblés avant recette, sans toucher aux pages existantes |
 
-**Risques ouverts à ce jour** : R-V7-01, R-V7-03, R-V7-07, R-V7-09 (attendent une décision utilisateur/chef de projet). Les autres sont **atténués par un critère de recette** et non bloquants pour la validation de ce document.
+**Risques ouverts à ce jour** : R-V7-03 (SLA d'activation, PO-V7-08) et R-V7-09 (PO-V7-07), qui attendent une décision. R-V7-01 et R-V7-07 sont **clos** (décisions du 17/11/2026) ; les autres sont **atténués par un critère de recette** et non bloquants pour l'architecture.
 
 ---
 
@@ -330,19 +330,19 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 
 ---
 
-## 10. Points ouverts à clarifier
+## 10. Points ouverts et décisions validées le 17/11/2026
 
-| ID | Question précise | Blocant pour | Proposition par défaut |
+| ID | Point | Statut | Décision / proposition par défaut |
 |---|---|---|---|
-| **PO-V7-01** | Quels sont les **prix définitifs** des 3 paliers (actuellement ~2 000 / ~5 000 / ~10 000 FCFA) ? | Communication tarifaire, facturation (pas le dev si stocké en base) | Conserver les valeurs indicatives en base, **non communiquées** |
-| **PO-V7-02** | Confirmer les **noms** (Découverte / Boutique / Atelier) et les **quotas** (10 / 30 / 100) | Implémentation des seeds | Paliers et quotas tels qu'indiqués §4.1 |
-| **PO-V7-03** | Quelle **durée** exacte pour un forfait (30 jours glissants ou mois calendaire) et que se passe-t-il à l'expiration : `404` ou page « boutique expirée » ? | F2, F5 | `ends_at` = activation + 30 jours ; `404` + message dans `/mon-abonnement` |
-| **PO-V7-04** | Changement de forfait : **nouvel abonnement `PENDING`** ou modification de l'enregistrement courant ? | F3, CA-V7-015 | Nouvel abonnement `PENDING`, ancien maintenu `ACTIVE`, historique conservé |
-| **PO-V7-05** | Conserver le **formulaire de contact boutique** sachant que V5 a retiré « Contacter le vendeur » (CA-V5-101) ? | F8 | Oui, strictement boutique-scopé, sans jamais réintroduire le canal sur la fiche |
-| **PO-V7-06** | La liste des **20 mots réservés** (§4.2) est-elle la liste définitive ? faut-il ajouter des marques ou noms de catégories ? | CA-V7-021 | Liste §4.2 |
-| **PO-V7-07** | Le projet est-il bien « marketplace **Sénégal** » alors que V1–V5 mentionnent « Côte d'Ivoire » ? | Rédactionnelle uniquement | Conserver les docs antérieurs inchangés ; V7 mentionne Sénégal |
-| **PO-V7-08** | Quel **SLA d'activation** admin (ex. < 24 h ouvrées) et faut-il notifier l'admin à chaque nouvelle demande ? | Exploitation, R-V7-03 | Notification admin à la souscription ; SLA à définir |
-| **PO-V7-09** | Le nom définitif de la route d'ajout (`POST /api/storefront/listings` proposé) et le mode de rattachement au produit (table de liaison, sans duplication) | Contrat API | Table de liaison `storefront_listings(product_id, subscription_id)` |
+| **PO-V7-01** | Prix des 3 paliers | ✅ **Validé le 17/11/2026** | Découverte **2 000 FCFA/mois**, Boutique **5 000**, Atelier **10 000** ; stockés en base, jamais codés en dur dans le front (CA-V7-010) |
+| **PO-V7-02** | Noms et quotas des paliers | ✅ **Validé le 17/11/2026** | **Découverte 10**, **Boutique 30**, **Atelier 100** annonces de boutique (§4.1) |
+| **PO-V7-03** | Durée et expiration | ✅ **Validé le 17/11/2026** | **30 jours glissants** après activation ; `EXPIRED`, `/boutique/:slug` → 404, annonces conservées, message clair dans `/mon-abonnement` (§4.2, CA-V7-016) |
+| **PO-V7-04** | Changement de forfait : **nouvel abonnement `PENDING`** ou modification de l'enregistrement courant ? | 🔓 Ouvert | Nouvel abonnement `PENDING`, ancien maintenu `ACTIVE`, historique conservé (F3, CA-V7-015) |
+| **PO-V7-05** | Maintien du formulaire de contact boutique | ✅ **Validé le 17/11/2026 — tranché** | **Conservé**, strictement boutique-scopé, notification interne, **aucun canal sur la fiche produit** (CA-V7-047) |
+| **PO-V7-06** | La liste des **20 mots réservés** (§4.2) est-elle la liste définitive ? faut-il ajouter des marques ou noms de catégories ? | 🔓 Ouvert | Liste §4.2 (CA-V7-021) |
+| **PO-V7-07** | Le projet est-il bien « marketplace **Sénégal** » alors que V1–V5 mentionnent « Côte d'Ivoire » ? | 🔓 Ouvert | Conserver les docs antérieurs inchangés ; V7 mentionne Sénégal |
+| **PO-V7-08** | Quel **SLA d'activation** admin (ex. < 24 h ouvrées) et faut-il notifier l'admin à chaque nouvelle demande ? | 🔓 Ouvert | Notification admin à la souscription ; SLA à définir (R-V7-03) |
+| **PO-V7-09** | Le nom définitif de la route d'ajout (`POST /api/storefront/listings` proposé) et le mode de rattachement au produit (table de liaison, sans duplication) | 🔓 Ouvert | Table de liaison `storefront_listings(product_id, subscription_id)` |
 
 ---
 
@@ -352,12 +352,12 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 
 | # | Exigence de la mission | État | Preuve |
 |---|---|---|---|
-| 1 | Un seul nouveau fichier créé, aucun autre modifié | ✅ | `revends/docs/cahier-des-charges-v7-hebergement-vendeurs.md` ; `git status --porcelain` = 1 fichier non suivi, 0 fichier suivi modifié |
-| 2 | Version/date 17/11/2026, auteur, statut « à valider par le chef de projet » | ✅ | En-tête du document |
+| 1 | Un seul nouveau fichier créé, aucun autre modifié | ✅ | `revends/docs/cahier-des-charges-v7-hebergement-vendeurs.md` ; `git status --porcelain` = 1 seul fichier modifié (ce cahier), 0 autre fichier touché |
+| 2 | Version/date 17/11/2026, auteur, statut « Validé par le chef de projet le 17/11/2026 — base de cadrage V7 » | ✅ | En-tête du document |
 | 3 | Objectifs, cibles, personas, fonctionnalités (enablement) | ✅ | §1, §2.1 |
 | 4 | User stories au format « En tant que…, je veux…, afin de… » | ✅ | §5 (7 stories) |
 | 5 | Hors-périmètre détaillé (liste explicite de tout ce qui est intouché) | ✅ | §2.2 (15 lignes) |
-| 6 | Paliers indicatifs, prix explicitement « à confirmer par l'utilisateur » | ✅ | §4.1, PO-V7-01/02 |
+| 6 | Paliers définitifs, prix explicitement « validé par l'utilisateur le 17/11/2026 » | ✅ | §4.1, PO-V7-01/02 (tranchés) |
 | 7 | Règles métier (slug, unicité, changement, expiration, retrait, contact interne) | ✅ | §4.2 |
 | 8 | 45 critères `[TEST]`/`[EXEC]`/`[AUDIT]` avec données mesurables, dont tous les critères imposés | ✅ | §6.1 → §6.8 ; non-abonné 10→201 §6.1, quota boutique §6.4, dépassement + vendable §6.4, activation admin §6.2, unicité slug §6.3, coordonnées §6.3/6.5, clavier §6.3/6.7, 0 erreur JS §6.7 |
 | 9 | Matrice de risques actionable | ✅ | §7 (10 risques, actions et plans B) |
@@ -370,14 +370,14 @@ V7 ajoute un **service d'hébergement des vendeurs** : un vendeur choisit un for
 - **Fichier** : `revends/docs/cahier-des-charges-v7-hebergement-vendeurs.md`
 - **Sections** : 11 sections principales (en-tête + §1 à §11), dont 8 sous-sections de critères
 - **Critères d'acceptation** : **45** (CA-V7-001 à CA-V7-064, répartis en 7 groupes)
-- **User stories** : 7 · **Risques** : 10 · **Points ouverts** : 9 · **Scénarios de recette** : 12
+- **User stories** : 7 · **Risques** : 10 · **Points suivis** : 9 (**4 validés** : PO-V7-01/02/03/05 ; **5 ouverts** : PO-V7-04/06/07/08/09) · **Scénarios de recette** : 12
 - **Références V5 citées** : `cahier-des-charges-v5.md:114-115`, `:399`, `:400`, `:498`, `:620`, `:719`, `:105` ; `api.md:2003`, `:2033` ; `journal.md:4269` ; `cahier-des-charges.md:40`
 
 ### VERDICT
 
-**PRÊT POUR VALIDATION** — le cahier est complet, binaire, prouvable et additif ; il est soumis à l'approbation du chef de projet.
+**PRÊT POUR VALIDATION** — le cahier est complet, binaire, prouvable et additif ; **validé par le chef de projet le 17/11/2026 comme base de cadrage V7**.
 
-**Réserve explicite** : 3 points (**PO-V7-01/02** prix et paliers, **PO-V7-03** expiration) et 1 décision (**PO-V7-05** maintien du formulaire contact) doivent être arbitrés **avant le début de l'implémentation**. Ils ne bloquent pas la validation du document, qui les consigne comme « à confirmer ». Aucun livrable V7 n'est déclaré Done : la grille de recette §9 reste **non exécutée** tant que le code n'existe pas.
+**Points désormais validés** : **PO-V7-01/02** (paliers et tarifs définitifs), **PO-V7-03** (30 jours glissants et expiration) et **PO-V7-05** (formulaire de contact conservé, strictement boutique-scopé) sont **tranchés et intégrés au cadrage V7** depuis le 17/11/2026. Seuls les points ouverts restants (**PO-V7-04/06/07/08/09**) disposent d'une proposition par défaut et **n'empêchent pas l'architecture**. Aucun livrable V7 n'est déclaré Done : la grille de recette §9 reste **non exécutée** tant que le code n'existe pas.
 
 
 
