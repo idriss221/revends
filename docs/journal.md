@@ -4351,3 +4351,36 @@ poussé dessus.
 **Documentation** — `docs/api.md` v2.6 poussé (commit `24cc187`) : encart
 V6.7, `GET /api/referrals/me` (§3.8), champ `ref`, `referralCode`/`ambassador`,
 E11 (e-mail palier), carte §6, `requireAuth` documenté avec sa raison.
+
+## 17/11/2026 — Hébergement des vendeurs (V7) — cadrage additif
+
+**Demande** : un commerçant choisit un abonnement, obtient une boutique dédiée
+et un quota de publications selon le forfait. Consigne forte de l'utilisateur :
+**ne toucher à aucune fonctionnalité existante, ni au parcours de vente** —
+ajouter uniquement une nouvelle fonctionnalité.
+
+**Décisions utilisateur** : (1) boutique publique `/boutique/:slug` + espace
+abonné `/mon-abonnement` ; (2) quota = annonces **actives simultanées** ;
+(3) non-abonnés gardent l'illimité ; (4) choix du forfait puis **activation
+manuelle admin**, sans paiement en ligne dans cette phase.
+
+**Interprétation retenue (point clé)** : le quota porte sur les annonces
+**affichées dans la boutique**, pas sur la publication dans le catalogue.
+`POST /api/products`, `/vendre`, `/mes-articles`, catalogue, fiche produit,
+commandes, checkout, paiement, commission 10 %, payouts et notifications
+existants n'ont **aucun changement de comportement**. Aucune colonne ajoutée aux
+tables existantes ; uniquement de nouvelles tables/routes/pages. Le statut du
+listing est **dérivé en lecture** de `products.status` (jointure), jamais
+stocké : aucune écriture dans le pipeline de commande, aucun trigger. Les
+verrous **CA-V5-069** et **CA-V5-070** restent verts **sans amendement**.
+
+**Livrable** : `docs/cahier-des-charges-v7-hebergement-vendeurs.md` (384 lignes,
+45 critères d'acceptation, 7 user stories, 10 risques, 9 points ouverts, verdict
+`@cahier-des-charges` « PRÊT POUR VALIDATION »). Auto-revue + correction du chef
+de projet sur la dérivation du statut (13 lignes) vérifiées.
+
+**Verdict chef de projet** : cahier **approuvé comme base de cadrage**. Aucune
+implémentation, aucun test de code, aucun déploiement lancé. **Bloquent avant
+code** : PO-V7-01/02 (prix, noms et quotas définitifs), PO-V7-03 (durée et
+expiration), PO-V7-05 (formulaire de contact boutique conservé ou non), et
+accord explicite pour ouvrir l'étape architecture.
