@@ -57,7 +57,7 @@ Vérifié sur `server/package.json` et `web/package.json` au 17/11/2026. Aucune 
 [ Vendeur ]  POST /api/subscriptions {planId, slug}
                   │  (requireAuth)
                   ▼
-        seller_subscriptions (PENDING) ──slug réservé──┐
+        seller_subscriptions (PENDING) ──slug réservé au vendeur──┐
                   │                                     │
         [ Admin ] POST /api/admin/subscriptions/:id/activate
                   │  (requireAdmin, transaction)
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS seller_subscriptions (
     plan_id       BIGINT NOT NULL REFERENCES subscription_plans(id) ON DELETE RESTRICT,
     status        subscription_status NOT NULL DEFAULT 'PENDING',
     slug          VARCHAR(40) NOT NULL,                  -- normalisé, format checké (§2.5)
-    supersedes_id BIGINT REFERENCES seller_subscriptions(id) ON DELETE SET NULL, -- plan change / ré-abonnement (§3.3)
+    supersedes_id BIGINT REFERENCES seller_subscriptions(id) ON DELETE SET NULL, -- changement de forfait uniquement : cible l'ACTIVE du connecté (§2.2, §3.3)
     started_at    TIMESTAMPTZ,                           -- = activated_at, début effectif
     ends_at       TIMESTAMPTZ,                           -- = activated_at + 30 jours
     activated_by  BIGINT REFERENCES users(id) ON DELETE SET NULL, -- admin ayant activé (traçabilité)
@@ -174,9 +174,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_one_active_subscription_per_seller
     ON seller_subscriptions (seller_id) WHERE status = 'ACTIVE';
 
 -- Un slug public ne résout que vers UNE boutique ACTIVE (filet DB, CA-V7-020/024).
--- La réservation « à vie » du slug (tous statuts, cross-sellers) est vérifiée dans
--- le service (point d'écriture unique, §2.5) — un même vendeur peut réutiliser
--- SON slug pour un changement de forfait (CA-V7-015) : d'où l'index PARTIEL.
+-- La réservation « à vie » est attachée au VENDEUR (tous statuts, cross-sellers),
+-- indépendamment de supersedes_id. Elle est vérifiée dans le service (point
+-- d'écriture unique, §2.5) : changement de forfait ET re-souscription après
+-- EXPIRED/CANCELLED réutilisent SON slug. D'où l'index PARTIEL.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_subscription_slug
     ON seller_subscriptions (slug) WHERE status = 'ACTIVE';
 
@@ -186,10 +187,10 @@ CREATE INDEX IF NOT EXISTS idx_seller_subscriptions_pending
     ON seller_subscriptions (created_at) WHERE status = 'PENDING';   -- file admin (CA-V7-051)
 
 COMMENT ON COLUMN seller_subscriptions.supersedes_id IS
-    'Plan change / ré-abonnement : distingue une demande de changement (activation autorisée avec cancellation du prédécesseur) d''un 2e abonnement indépendant (409 SUBSCRIPTION_ALREADY_ACTIVE, CA-V7-011 vs 015)';
+    'Changement de forfait uniquement : cible l''abonnement ACTIVE du vendeur connecté. NULL pour une souscription initiale ou une re-souscription après EXPIRED/CANCELLED (slug récupéré par réservation par vendeur, indépendamment de ce champ)';
 ```
 
-**Contraintes clés** : FK `seller_id → users`, FK `plan_id → subscription_plans`, enum 4 états, `slug` formaté (3–40, regex stricte), **unicité partielle `(seller_id) WHERE ACTIVE`**, **unicité partielle `(slug) WHERE ACTIVE`**, `chk_activation_pair`, `chk_active_window`, traçabilité `activated_by/activated_at`, `supersedes_id` (arbitrage approuvé, §2.2 / §3.3).
+**Contraintes clés** : FK `seller_id → users`, FK `plan_id → subscription_plans`, enum 4 états, `slug` formaté (3–40, regex stricte), **unicité partielle `(seller_id) WHERE ACTIVE`**, **unicité partielle `(slug) WHERE ACTIVE`**, `chk_activation_pair`, `chk_active_window`, traçabilité `activated_by/activated_at`, `supersedes_id` (arbitrage approuvé : `ACTIVE` uniquement, §2.2 / §3.3).
 
 #### Arbitrage chef de projet — `supersedes_id` approuvé (R-V7-A1 clos)
 
@@ -198,12 +199,13 @@ Les critères CA-V7-011 et CA-V7-015 semblent contradictoires :
 - **CA-V7-011** : l'activation d'un 2ᵉ abonnement du même vendeur → `409 SUBSCRIPTION_ALREADY_ACTIVE` ;
 - **CA-V7-015** : un vendeur `ACTIVE` demande `Atelier` → nouvel abonnement `PENDING`, puis son activation **réussit** et l'ancien passe `CANCELLED`.
 
-**Décision définitive du chef de projet (17/11/2026)** : `supersedes_id` est **approuvé**. Il s'agit d'une colonne d'une **nouvelle table** (`seller_subscriptions`), donc conforme à l'interdiction d'ajouter une colonne à une table existante. La différence est **l'intention déclarée à la souscription** : `POST /api/subscriptions` accepte un `supersedesId` optionnel (l'id de l'abonnement à remplacer). Le service vérifie qu'il appartient bien au vendeur et copie son `slug`. À l'activation :
+**Décision définitive du chef de projet (17/11/2026)** : `supersedes_id` est **approuvé**, mais **uniquement pour un changement de forfait** : il cible l'abonnement `ACTIVE` du vendeur connecté. Il s'agit d'une colonne d'une **nouvelle table** (`seller_subscriptions`), donc conforme à l'interdiction d'ajouter une colonne à une table existante. `POST /api/subscriptions` accepte un `supersedesId` optionnel ; le service vérifie qu'il appartient au connecté **et qu'il est `ACTIVE`** (sinon `404 NOT_FOUND` si autre vendeur, `400 INVALID_SUPERSEDES` si statut autre que `ACTIVE`). Le slug est alors copié depuis cette cible `ACTIVE`. À l'activation :
 
-- `supersedesId` renseigné → `supersedes_id` renseigné : changement de forfait, `CANCELLED` du prédécesseur + réattach de ses listings actifs, activation réussie (CA-V7-015) ;
-- `supersedesId` absent → demande indépendante : si un `ACTIVE` existe déjà → `409 SUBSCRIPTION_ALREADY_ACTIVE` (CA-V7-011).
+- `supersedesId` renseigné → changement de forfait : `CANCELLED` du prédécesseur + réattach de ses listings actifs, activation réussie (CA-V7-015) ;
+- `supersedesId` absent et aucun `ACTIVE` → souscription initiale **ou re-souscription après `EXPIRED`/`CANCELLED`** : nouvelle ligne fraîche, **aucun lien vers l'ancienne ligne** ; le slug du vendeur est récupéré automatiquement par la réservation par vendeur (§2.5), **indépendamment de `supersedes_id`** ;
+- `supersedesId` absent et un `ACTIVE` existe déjà → `409 SUBSCRIPTION_ALREADY_ACTIVE` à l'activation (CA-V7-011).
 
-Sans ce champ, aucun mécanisme ne permettrait de distinguer les deux cas. L'arbitrage est clos : aucun plan B n'est requis, le passage à `@backend` n'est plus différé.
+Sans ce champ, aucun mécanisme ne permettrait de distinguer changement de forfait et 2ᵉ demande indépendante pendant un `ACTIVE`. L'arbitrage est clos : aucun plan B n'est requis, le passage à `@backend` n'est plus différé.
 
 ### 2.3 Table 3 — `storefront_listings` (annonces de boutique)
 
@@ -255,7 +257,8 @@ Le corps reste `De : <displayName>< — <email>>\n\n<message>` (§4.2(6)). Aucun
 | Normalisation | `NFD` → suppression diacritiques `[\u0300-\u036f]` → `toLowerCase()` → espaces et non-alphanumériques → `-` → trim des `-`. Même esprit que `slugify.ts` existant, mais **sans fallback `'article'`** et plafonné à 40 (pas 120). |
 | Format accepté | `^[a-z0-9]+(?:-[a-z0-9]+)*$`, longueur **3–40**. Rejette `a`, `ab`, `--x`, `x--y`, `mode_dakar`, `mode.dakar`, `république`, `a/b`, 41 caractères (CA-V7-022). |
 | Mots réservés (20) | `admin, api, boutique, catalogue, vendre, mes-articles, mon-abonnement, parrainage, panier, profil, login, register, search, static, assets, health, www, help, contact, legal` → `400 SLUG_RESERVED` (CA-V7-021). Liste figée dans le fichier, **PO-V7-06 ouvert** (§9). |
-| Unicité cross-sellers | Dans la **seule** fonction d'écriture : `SELECT seller_id FROM seller_subscriptions WHERE slug = $1 ORDER BY created_at LIMIT 1`. Si trouvé et `seller_id <> current` → `409 SLUG_TAKEN`, quel que soit le statut trouvé (y compris `EXPIRED`/`CANCELLED`) → slug réservé à vie (CA-V7-020). Si `seller_id = current` → autorisé (plan change / ré-abonnement). |
+| Unicité cross-sellers | Dans la **seule** fonction d'écriture : `SELECT seller_id FROM seller_subscriptions WHERE slug = $1 ORDER BY created_at LIMIT 1`. Si trouvé et `seller_id <> current` → `409 SLUG_TAKEN`, quel que soit le statut trouvé (y compris `EXPIRED`/`CANCELLED`) → slug réservé **à vie au vendeur** (CA-V7-020). Si `seller_id = current` → autorisé : changement de forfait **ou** re-souscription. |
+| Récupération auto du slug | Si le vendeur n'a plus d'`ACTIVE` et possède déjà un slug (`EXPIRED`/`CANCELLED` compris), le service **remplace** le `slug` reçu par le premier slug possédé par ce vendeur (`ORDER BY created_at ASC LIMIT 1`). Aucun `supersedesId` n'est requis ni autorisé vers une ligne `EXPIRED`/`CANCELLED` : la réservation par vendeur est **indépendante de `supersedes_id`** (décision 17/11/2026). |
 | Filet DB | `uq_active_subscription_slug` garantit qu'une boutique publique ne peut jamais résoudre vers deux abonnements `ACTIVE` concurrents. Violation 23505 → mapping `SLUG_TAKEN` (§5.1). |
 
 > La normalisation est faite **côté serveur** (autorité), pas seulement dans le zod front : `Mode Dakar` et `mode-dakar` sont la même clé (CA-V7-020).
@@ -284,9 +287,10 @@ Le corps reste `De : <displayName>< — <email>>\n\n<message>` (§4.2(6)). Aucun
                                     ┌─────────┐
                      ┌──────────────│ PENDING │◄─────────────┐
                      │              └────┬────┘              │
-                     │                   │ activation ADMIN   │ re-souscription
-                     │                   │ (manuelle)         │ (EXPIRED/CANCELLED
-                     │                   ▼                    │  → nouveau PENDING)
+                     │                   │ activation ADMIN   │ re-souscription SANS
+                     │                   │ (manuelle)         │ supersedesId
+                     │                   ▼                    │ (EXPIRED/CANCELLED → PENDING,
+                     │                                        │  slug récupéré automatiquement)
                      │              ┌─────────┐               │
                      │              │ ACTIVE  │─── now() ≥ ───┼──► ┌─────────┐
                      │              └────┬────┘   ends_at     │    │ EXPIRED │
@@ -303,16 +307,18 @@ Le corps reste `De : <displayName>< — <email>>\n\n<message>` (§4.2(6)). Aucun
 
 | De | Vers | Qui / déclencheur | Effets (dans la même transaction) |
 |---|---|---|---|
-| ∅ | `PENDING` | Vendeur (`requireAuth`), `POST /api/subscriptions` | Validation slug (§2.5), `INSERT` sans aucune date d'activation. |
-| `PENDING` | `ACTIVE` | **Admin uniquement**, `POST /api/admin/subscriptions/:id/activate` | (1) matérialisation paresseuse des `ACTIVE` expirés du vendeur ; (2) si `supersedes_id` → `CANCELLED` du prédécesseur + réattach de ses listings actifs ; sinon garde `409 SUBSCRIPTION_ALREADY_ACTIVE` ; (3) `started_at = now()`, `ends_at = now() + 30 days`, `activated_by`, `activated_at`, `status = ACTIVE`. |
+| ∅ | `PENDING` | Vendeur (`requireAuth`), `POST /api/subscriptions` | Validation slug (§2.5), `INSERT` sans aucune date d'activation ; `supersedes_id = NULL` (souscription initiale). |
+| `PENDING` | `ACTIVE` | **Admin uniquement**, `POST /api/admin/subscriptions/:id/activate` | (1) matérialisation paresseuse des `ACTIVE` expirés du vendeur ; (2) si `supersedes_id` (forcément un `ACTIVE` du même vendeur) → `CANCELLED` du prédécesseur + réattach de ses listings actifs ; sinon garde `409 SUBSCRIPTION_ALREADY_ACTIVE` ; (3) `started_at = now()`, `ends_at = now() + 30 days`, `activated_by`, `activated_at`, `status = ACTIVE`. |
 | `ACTIVE` | `EXPIRED` | **Aucun écrivain dédié** — matérialisation **paresseuse en lecture**, sans cron | `UPDATE seller_subscriptions SET status='EXPIRED' WHERE id=$1 AND status='ACTIVE' AND ends_at <= now()` (idempotent, conditionnel). Déclenchée par `GET /api/subscriptions/me`, `GET /api/storefront/:slug` (après le SELECT public) et avant toute activation. Les listings sont **conservés** (aucun `DELETE`, aucun `withdrawn_at`). |
 | `ACTIVE` | `CANCELLED` | Admin, automatiquement lors de l'activation d'un plan change | `UPDATE ... SET status='CANCELLED' WHERE id = supersedes_id AND seller_id = $seller AND status='ACTIVE'` ; réattach des listings. |
-| `EXPIRED` | `PENDING` | Vendeur, nouvelle souscription | Nouvelle ligne ; `supersedes_id` = ancienne ligne ; slug identique (le sien). |
-| `CANCELLED` | `PENDING` | Vendeur, nouvelle souscription | Idem. |
+| `EXPIRED` | `PENDING` | Vendeur, re-souscription **sans `supersedesId`** | Nouvelle ligne **fraîche** ; `supersedes_id = NULL`, aucun lien vers l'ancienne ligne ; le slug est récupéré automatiquement depuis la réservation par vendeur (§2.5). |
+| `CANCELLED` | `PENDING` | Vendeur, re-souscription **sans `supersedesId`** | Idem : nouvelle ligne fraîche, `supersedes_id = NULL`, slug récupéré automatiquement. |
 
-**Transitions interdites** (aucune route ne les expose) : `PENDING → ACTIVE` par un `user` (403 CA-V7-013), `PENDING → EXPIRED`, `EXPIRED → ACTIVE` direct, `CANCELLED → ACTIVE` direct, écriture de `status` depuis un payload client (CA-V7-014). Aucun trigger SQL sur `seller_subscriptions` n'est ajouté : la matrice est appliquée dans le service, et l'unicité partielle est le filet DB.
+**Transitions interdites** (aucune route ne les expose) : `PENDING → ACTIVE` par un `user` (403 CA-V7-013), `PENDING → EXPIRED`, `EXPIRED → ACTIVE` direct, `CANCELLED → ACTIVE` direct, écriture de `status` depuis un payload client (CA-V7-014), **`supersedesId` ciblant une ligne `EXPIRED`/`CANCELLED`/`PENDING` ou appartenant à un autre vendeur** (`400 INVALID_SUPERSEDES` / `404 NOT_FOUND`, décision 17/11/2026). Aucun trigger SQL sur `seller_subscriptions` n'est ajouté : la matrice est appliquée dans le service, et l'unicité partielle est le filet DB.
 
 ### 3.3 Changement de forfait et continuité des listings (CA-V7-015, arbitrage R-V7-A1 clos)
+
+**Rappel de contrat (décision 17/11/2026)** : `supersedes_id` ne désigne que l'`ACTIVE` du connecté. Une re-souscription depuis `EXPIRED`/`CANCELLED` ne pose **pas** ce champ et récupère son slug réservé (§2.5). Le réattach ci-dessous ne s'applique donc **qu'au changement de forfait**.
 
 Quand le nouvel abonnement est activé, les listings **actifs** de l'abonnement remplacé sont réattachés au nouvel `subscription_id` :
 
@@ -328,7 +334,7 @@ Raison : le quota est compté par `subscription_id`. Sans ce réattach, la bouti
 ### 3.4 Expiration paresseuse — pourquoi ce choix
 
 - **Pas de cron** : le cahier l'interdit explicitement (§4.2, CA-V7-036), et l'environnement est serverless Vercel (un cron dans le process Express n'est pas fiable en serverless).
-- **Pas de dérivation pure sans matérialisation** : l'index `uq_one_active_subscription_per_seller` exige qu'une seule ligne porte réellement `ACTIVE`. Si une ligne expirée restait `ACTIVE` en base indéfiniment, une ré-souscription entrerait en conflit 23505. La matérialisation conditionnelle à la lecture résout ce point.
+- **Pas de dérivation pure sans matérialisation** : l'index `uq_one_active_subscription_per_seller` exige qu'une seule ligne porte réellement `ACTIVE`. Si une ligne expirée restait `ACTIVE` en base indéfiniment, une ré-souscription **sans `supersedesId`** entrerait en conflit 23505 à l'activation. La matérialisation conditionnelle à la lecture, avant toute activation, résout ce point.
 - **Lecture publique non divulgatrice** : la requête de boutique filtre directement `s.status='ACTIVE' AND s.ends_at > now()` ; une ligne expirée non encore matérialisée répond déjà `404`. La matérialisation n'est qu'une opportunité de mise à jour, jamais une condition de réponse.
 
 > Comparaison : c'est le même pattern que l'expiration paresseuse des réservations décrite dans `docs/architecture.md` §5.2 — mais **sans la partie cron**, conformément à V7.
@@ -397,8 +403,8 @@ Convention héritée de `docs/api.md` §1.1 : JSON, `camelCase`, statuts/enums `
 
 **Corps** : `{ "planId": 1, "slug": "Mode Dakar", "supersedesId": null }`
 - `planId` : entier, doit référencer un plan `active = TRUE` (sinon `404 PLAN_NOT_FOUND`).
-- `slug` : string 3–40, normalisé serveur (§2.5).
-- `supersedesId` : entier optionnel ; si fourni, doit appartenir au vendeur (sinon `404 NOT_FOUND`), sinon `400 INVALID_SUPERSEDES`. Le slug est alors **copié depuis le prédécesseur** (ignorer le `slug` envoyé). **Arbitrage chef de projet** : renseigné = intention de changement de forfait (activation avec `CANCELLED` du prédécesseur) ; absent = 409 à l'activation si un `ACTIVE` existe déjà (CA-V7-011/015).
+- `slug` : string 3–40, normalisé serveur (§2.5). **En re-souscription sans `supersedesId`, le service remplace cette valeur par le slug réservé au vendeur** (le champ peut être omis).
+- `supersedesId` : entier optionnel, **uniquement pour un changement de forfait**. S'il est fourni, il doit cibler l'abonnement `ACTIVE` du connecté : autre vendeur → `404 NOT_FOUND` ; cible inexistante, `PENDING`, `EXPIRED` ou `CANCELLED` → `400 INVALID_SUPERSEDES`. Le slug est alors **copié depuis cette cible `ACTIVE`**. **Décision définitive (17/11/2026)** : `NULL` pour une souscription initiale **et** pour une re-souscription après `EXPIRED`/`CANCELLED` (nouvelle ligne fraîche, slug récupéré par réservation, §2.5) ; absent avec un `ACTIVE` déjà présent → `409 SUBSCRIPTION_ALREADY_ACTIVE` à l'activation (CA-V7-011/015).
 
 **Réponse `201`** :
 ```json
@@ -406,7 +412,7 @@ Convention héritée de `docs/api.md` §1.1 : JSON, `camelCase`, statuts/enums `
                     "supersedesId": null, "createdAt": "2026-11-17T10:15:00.000Z" } }
 ```
 
-**Erreurs** : `401 UNAUTHENTICATED` · `400 VALIDATION_ERROR` (details `slug` / `planId`) · `400 SLUG_RESERVED` · `404 PLAN_NOT_FOUND` · `409 SLUG_TAKEN` · `409 SUBSCRIPTION_ALREADY_ACTIVE` n'est **pas** renvoyé ici (la souscription crée toujours un `PENDING` ; le 409 est à l'activation, CA-V7-011).
+**Erreurs** : `401 UNAUTHENTICATED` · `400 VALIDATION_ERROR` (details `slug` / `planId`) · `400 INVALID_SUPERSEDES` (cible pas `ACTIVE` du connecté) · `400 SLUG_RESERVED` · `404 NOT_FOUND` (supersedes d'autrui) · `404 PLAN_NOT_FOUND` · `409 SLUG_TAKEN` · `409 SUBSCRIPTION_ALREADY_ACTIVE` n'est **pas** renvoyé ici (la souscription crée toujours un `PENDING` ; le 409 est à l'activation, CA-V7-011).
 
 > **Décision mineure retenue** : `requireAuth` et non `requireUser`, par cohérence avec `routes/referrals.routes.ts` (un admin a un profil et peut donc souscrire) ; aucun rôle nouveau, aucun `users.role` écrit. Un admin appelant cette route n'est donc **pas** rejeté (pas de `403 FORBIDDEN` ici). Ce choix ne modifie aucun RBAC existant et reste conforme à CA-V7-002/052 ; aucune confirmation supplémentaire requise.
 
@@ -427,7 +433,7 @@ Convention héritée de `docs/api.md` §1.1 : JSON, `camelCase`, statuts/enums `
 }
 ```
 Sans abonnement : `subscription: null`, `usage: null`, `listings: []`, `plans: [3 paliers]`.
-Abonnement `EXPIRED` : `status: "EXPIRED"`, `message` clair « Votre abonnement a expiré le … . Vos annonces de boutique sont conservées ; souscrivez à nouveau pour rouvrir votre vitrine. » (CA-V7-016).
+Abonnement `EXPIRED` : `status: "EXPIRED"`, `message` clair « Votre abonnement a expiré le … . Vos annonces de boutique sont conservées ; souscrivez à nouveau sans indication de remplacement pour rouvrir votre vitrine : votre slug vous est réservé et sera récupéré automatiquement. » (CA-V7-016, décision 17/11/2026).
 
 `effectiveStatus` est **dérivé de `products.status` par jointure** (jamais stocké). Les prix viennent de `subscription_plans` (aucun tarif en dur).
 
@@ -501,7 +507,7 @@ Abonnement `EXPIRED` : `status: "EXPIRED"`, `message` clair « Votre abonnement 
 #### (8) `POST /api/admin/subscriptions/:id/activate` — activation manuelle
 
 **Corps** : `{}`.
-**Effets** : séquence exacte décrite en §3.2 (matérialisation expiry → cancellation/reattach si `supersedes_id` → garde 409 sinon → activation tracée). Une seule transaction.
+**Effets** : séquence exacte décrite en §3.2 (matérialisation expiry → cancellation/reattach si `supersedes_id` cible un `ACTIVE` du même vendeur → garde 409 sinon → activation tracée). Une seule transaction.
 **Réponse `200`** : `{ "subscription": { "id": 41, "status": "ACTIVE", "slug": "mode-dakar", "startedAt": "…", "endsAt": "…", "activatedBy": 7, "activatedAt": "…" } }`.
 **Erreurs** : `401 UNAUTHENTICATED` · `403 FORBIDDEN` (user) · `404 NOT_FOUND` (id inconnu) · `409 INVALID_STATUS` (cible pas `PENDING`) · `409 SUBSCRIPTION_ALREADY_ACTIVE` (2ᵉ abonnement indépendant, CA-V7-011 ; mapping 23505 de `uq_one_active_subscription_per_seller` inclus) · `500 INTERNAL_ERROR`.
 
@@ -509,7 +515,7 @@ Abonnement `EXPIRED` : `status: "EXPIRED"`, `message` clair « Votre abonnement 
 
 ### 4.3 Codes d'erreur nouveaux (à documenter dans `docs/api.md` v2.7 par `@backend`, CA-V7-063)
 
-`SLUG_TAKEN` (déjà utilisé pour `products.slug`, réutilisé) · `SLUG_RESERVED` · `SUBSCRIPTION_REQUIRED` · `SUBSCRIPTION_ALREADY_ACTIVE` · `STOREFRONT_QUOTA_EXCEEDED` · `STOREFRONT_ALREADY_LISTED` · `NOT_PRODUCT_OWNER` · `CONTACT_SELF` (déjà documenté pour le contact produit, réutilisé) · `PLAN_NOT_FOUND` · `INVALID_STATUS` · `NOT_FOUND` (boutique). Tous avec un `message` français affichable tel quel dans un Toast (§1.1).
+`SLUG_TAKEN` (déjà utilisé pour `products.slug`, réutilisé) · `SLUG_RESERVED` · `SUBSCRIPTION_REQUIRED` · `SUBSCRIPTION_ALREADY_ACTIVE` · `INVALID_SUPERSEDES` (cible pas l'`ACTIVE` du connecté) · `STOREFRONT_QUOTA_EXCEEDED` · `STOREFRONT_ALREADY_LISTED` · `NOT_PRODUCT_OWNER` · `CONTACT_SELF` (déjà documenté pour le contact produit, réutilisé) · `PLAN_NOT_FOUND` · `INVALID_STATUS` · `NOT_FOUND` (boutique). Tous avec un `message` français affichable tel quel dans un Toast (§1.1).
 
 > **Exception §1.4 à documenter en v2.7** (arbitrage chef de projet) : sur `POST /api/storefront/listings`, un produit d'autrui donne `403 NOT_PRODUCT_OWNER` et non `404`. La non-divulgation reste la règle pour les boutiques (§3.6) ; ici le demandeur est authentifié et le produit lui est déjà connu via le catalogue.
 
@@ -531,7 +537,7 @@ Abonnement `EXPIRED` : `status: "EXPIRED"`, `message` clair « Votre abonnement 
 | `src/repositories/subscriptions.repository.ts` | CRUD abonnements, requêtes d'activation | `repositories/admin.repository.ts` |
 | `src/repositories/storefront.repository.ts` | **Requête de comptage exacte (§3.5)**, listings, boutique publique | `repositories/cart.repository.ts` |
 | `src/utils/storefront.ts` | Normalisation slug, regex, 20 mots réservés, constantes de quota/message, constante locale du type `product.contact` (aucune union éditée) | `utils/slugify.ts` |
-| `src/utils/storefront-validation.ts` | Schémas zod (`planId`, `slug`, `supersedesId`, `productId`, `message`, `email`, pagination) | `utils/validation.ts` (fichier existant **non édité**) |
+| `src/utils/storefront-validation.ts` | Schémas zod (`planId`, `slug`, `supersedesId`, `productId`, `message`, `email`, pagination) ; la règle « cible `ACTIVE` du connecté » est appliquée dans le service (§2.2) | `utils/validation.ts` (fichier existant **non édité**) |
 | `src/utils/storefront-serializers.ts` | `serializeStorefrontPublic`, `serializeMySubscription` (champs publics seulement) | `utils/serializers.ts` (fichier existant **non édité**) |
 
 **Éditions additives minimales dans des fichiers existants** (aucune ligne de handler modifiée) :
@@ -628,12 +634,12 @@ Format `gestion-risques` : impact × probabilité, action, plan B. Statut au 17/
 
 | ID | Risque | Niveau | Action (propriétaire) | Plan B / attendu |
 |---|---|---|---|---|
-| **R-V7-A1** | CA-V7-011 vs CA-V7-015 sur l'activation d'un 2ᵉ abonnement | ✅ **Clos — arbitrage chef de projet 17/11/2026** | `supersedes_id` **approuvé** (§2.2, §3.3) : colonne d'une **nouvelle table**, donc aucune table existante modifiée ; sémantique définitive intention/409. | Aucun plan B : décision exécutoire pour `@backend` |
+| **R-V7-A1** | CA-V7-011 vs CA-V7-015 sur l'activation d'un 2ᵉ abonnement | ✅ **Clos — arbitrages chef de projet 17/11/2026** | `supersedes_id` **approuvé** (§2.2, §3.3) : colonne d'une **nouvelle table**, cible **uniquement l'`ACTIVE` du connecté** pour un changement de forfait ; re-souscription après `EXPIRED`/`CANCELLED` **sans champ**, slug récupéré par réservation par vendeur (indépendante de `supersedes_id`). | Aucun plan B : décision exécutoire pour `@backend` |
 | **R-V7-A2** | CA-V7-030 demande **403** pour un produit d'autrui ; api.md §1.4 demande **404** | ✅ **Clos — arbitrage chef de projet 17/11/2026** | Le **cahier prévaut** : `403 NOT_PRODUCT_OWNER` sur `POST /api/storefront/listings`. `api.md` **v2.7 documentera l'exception explicite à §1.4** (demandeur authentifié, produit connu via le catalogue) ; `@api-designer` + `@backend`. | Aucun repli 404 : exception assumée et tracée |
 | **R-V7-A3** | Risque d'évolution d'un type existant pour la notification de contact | ✅ **Clos — arbitrage chef de projet 17/11/2026** | **Interdiction de modifier `notification_type`** : réutilisation de `product.contact` (V4/N14, conservé en V5 — CA-V5-099), titre boutique + expéditeur (§2.4, §4.2(6)). **0 objet existant modifié, y compris les types/enums.** | Aucun : la valeur existante suffit ; aucun nouveau type, aucune union à étendre |
 | **R-V7-A4** | `POST /api/products/:id/contact` est documenté en api.md v2.6 mais **non implémenté** dans `server/src` (vérifié) ; risque de le réactiver par erreur | ⚠️ Important | V7 contact = route **dédiée** `/api/storefront/:slug/contact` ; CA-V7-047 en test de non-régression ; `@backend` + `@tester` | Retirer F8 (formulaire) ; conserver la vitrine seule (plan B R-V7-04 du cahier) |
 | **R-V7-A5** | Concurrence : 2 ajouts simultanés au dernier slot → dépassement de quota | ⚠️ Important | `SELECT … FOR UPDATE` sur l'abonnement + `COUNT` + `INSERT` dans la même transaction (§3.5) ; `@backend` | Aucun : la sérialisation par ligne est suffisante au volume MVP |
-| **R-V7-A6** | Expiration non matérialisée → conflit 23505 sur `uq_one_active_subscription_per_seller` à la ré-souscription | ⚠️ Important | Matérialisation paresseuse avant toute activation + filtre `ends_at > now()` en lecture (§3.4) ; `@backend` | Mapping 23505 → `SUBSCRIPTION_ALREADY_ACTIVE` (déjà prévu) |
+| **R-V7-A6** | Expiration non matérialisée → conflit 23505 sur `uq_one_active_subscription_per_seller` à la ré-souscription **sans `supersedesId`** | ⚠️ Important | Matérialisation paresseuse avant toute activation + filtre `ends_at > now()` en lecture (§3.4) ; `@backend` | Mapping 23505 → `SUBSCRIPTION_ALREADY_ACTIVE` (déjà prévu) |
 | **R-V7-A7** | Migration appliquée **après** le code en prod → 500 sur les routes V7 | 🔴 Critique | Ordre strict §7.2 + feature flag §7.3 ; `@deploy-ops` | Flag `false` immédiat, appliquer 019, réactiver |
 | **R-V7-A8** | Fuite de quota dans `POST /api/products` → régression CA-V5-069/070 | 🔴 Critique | CA-V7-003/004/033/038 exécutés avant chaque merge ; `@tester` + `@backend` | Flag off + rollback ; 0 test V5 amendé |
 | **R-V7-A9** | Slug non normalisé → collision / injection de chemin | ⚠️ Important | Regex + NFD + mots réservés + échappement React (§2.5) ; `@backend` | Rejet 400 serveur avant toute écriture |
@@ -662,9 +668,9 @@ Format `gestion-risques` : impact × probabilité, action, plan B. Statut au 17/
 | **CA-V7-038** | Aucune logique de quota / écriture V7 hors nouvelle route | `grep -rn "quota\|STOREFRONT_QUOTA\|subscription_id" server/src` ne touche que `routes/storefront*`, `services/storefront*`, `repositories/storefront*`, `services/subscriptions*`, `routes/admin-subscriptions*`, `app.ts` (montage) — **jamais** products/orders/checkout/payment. | ✅ |
 | **CA-V7-054** | Parrainage et Vitrine préservés bit à bit | Aucune requête n'écrit/ne lit `referred_by`, `ambassador_until`, `vitrine_until`, `referral_qualifications` ; 0 colonne ajoutée à `users`. | ✅ |
 
-**Conclusion** : aucun critère verrou n'est contredit. Les trois points de friction initiaux sont **clos par arbitrage définitif du chef de projet** (17/11/2026) : `supersedes_id` approuvé (CA-V7-011/015), `403 NOT_PRODUCT_OWNER` retenu (CA-V7-030), `product.contact` réutilisé sans évolution de type (CA-V7-045/046). **Zéro objet existant modifié, y compris les types/enums.**
+**Conclusion** : aucun critère verrou n'est contredit. Les points de friction initiaux sont **clos par arbitrage définitif du chef de projet** (17/11/2026) : `supersedes_id` approuvé **pour le seul changement de forfait vers l'`ACTIVE` du connecté** (CA-V7-011/015), `403 NOT_PRODUCT_OWNER` retenu (CA-V7-030), `product.contact` réutilisé sans évolution de type (CA-V7-045/046). La re-souscription après `EXPIRED`/`CANCELLED` est une ligne fraîche sans `supersedesId`, avec récupération automatique du slug réservé au vendeur. **Zéro objet existant modifié, y compris les types/enums.**
 
-**Contrôles additionnels sur les 45 critères** : CA-V7-011/015 → intention déclarée via `supersedesId` (§2.2, §3.2, §3.3) · CA-V7-030 → 403 assumé et documenté en api.md v2.7 §1.4 (§4.2(3), §6) · CA-V7-045/046/047/048 → contact strictement boutique-scopé, notification `product.contact`, titre boutique + expéditeur, aucun canal sur `/catalogue/:slug` (§4.2(6)) · CA-V7-063 → contrat v2.7 par `@backend`. Les 45 critères restent applicables sans amendement.
+**Contrôles additionnels sur les 45 critères** : CA-V7-011/015 → `supersedesId` **uniquement vers l'`ACTIVE` du connecté** ; re-souscription `EXPIRED`/`CANCELLED` sans champ, slug récupéré par réservation par vendeur indépendante de `supersedes_id` (§2.2, §2.5, §3.2, §3.3, §4.2(1)) · CA-V7-030 → 403 assumé et documenté en api.md v2.7 §1.4 (§4.2(3), §6) · CA-V7-045/046/047/048 → contact strictement boutique-scopé, notification `product.contact`, titre boutique + expéditeur, aucun canal sur `/catalogue/:slug` (§4.2(6)) · CA-V7-063 → contrat v2.7 par `@backend`. Les 45 critères restent applicables sans amendement.
 
 ---
 
@@ -674,7 +680,7 @@ Format `gestion-risques` : impact × probabilité, action, plan B. Statut au 17/
 
 | # | Exigence de la mission | État | Preuve |
 |---|---|---|---|
-| 1 | Un seul fichier du livrable, aucun autre chemin touché | ✅ | `revends/docs/architecture-v7-hebergement-vendeurs.md` ; preuve : `cd "/home/dioufidriss/Documents/Default Project/revends" && git status --porcelain` → `?? docs/architecture-v7-hebergement-vendeurs.md` (aucun autre chemin) |
+| 1 | Un seul fichier du livrable, aucun autre chemin touché | ✅ | `revends/docs/architecture-v7-hebergement-vendeurs.md` ; preuve : `cd "/home/dioufidriss/Documents/Default Project/revends" && git diff --name-only` → `docs/architecture-v7-hebergement-vendeurs.md` (un seul fichier modifié par cette mission) |
 | 2 | Vue d'ensemble et principes additifs | ✅ | §1 (P1→P10, flux) |
 | 3 | 3 nouvelles tables avec DDL PostgreSQL complète, types, contraintes, index, 0 colonne existante | ✅ | §2 (2.1, 2.2, 2.3, 2.6) |
 | 4 | Machine à états : transitions, acteurs, unicité partielle, changement de forfait, expiration paresseuse sans cron, slug réservé | ✅ | §3 (3.1→3.4), §2.5 |
@@ -689,7 +695,7 @@ Format `gestion-risques` : impact × probabilité, action, plan B. Statut au 17/
 
 ### Auto-revue (une ligne, skill `auto-revue`)
 
-> Auto-revue : 3 incohérences de spécification détectées puis **tranchées définitivement par le chef de projet** (CA-V7-011/015 → `supersedes_id` approuvé ; CA-V7-030 vs api.md §1.4 → 403 assumé ; notification → `product.contact` réutilisé, type inchangé), 1 chemin de migration corrigé (`server/migrations/` et non `server/src/db/migrations/`), 1 collision de route évitée (`/listings` déclaré avant `/:slug`). Vérification finale : plus aucune occurrence de l'ancien nom de valeur de notification, de mutation de type, ni de point en attente issu des trois arbitrages.
+> Auto-revue : 3 incohérences de spécification détectées puis **tranchées définitivement par le chef de projet** (CA-V7-011/015 → `supersedes_id` approuvé ; CA-V7-030 vs api.md §1.4 → 403 assumé ; notification → `product.contact` réutilisé, type inchangé), **1 précision de contrat intégrée** (`supersedesId` = `ACTIVE` uniquement ; re-souscription sans champ + slug réservé au vendeur), 1 chemin de migration corrigé (`server/migrations/` et non `server/src/db/migrations/`), 1 collision de route évitée (`/listings` déclaré avant `/:slug`). Vérification finale : plus aucune occurrence de l'ancien nom de valeur de notification, de mutation de type, ni de point en attente issu des arbitrages.
 
 ### VERDICT
 
@@ -710,5 +716,5 @@ Format `gestion-risques` : impact × probabilité, action, plan B. Statut au 17/
 | Expiration paresseuse (pattern V2, sans cron ici) | `docs/architecture.md` §5.2 |
 | Migration manuelle en prod | `docs/rapport-final-v6.md:168` (`RUN_MIGRATIONS=false`) |
 | Non-régression V5 | `docs/cahier-des-charges-v5.md:399` (CA-V5-069), `:400` (CA-V5-070), `:620` (CA-V5-150), `:498` (CA-V5-101) |
-| Arbitrages définitifs du chef de projet (17/11/2026) | §2.2 et §3.3 (`supersedes_id`) · §4.2(3)/§4.3/§6 (403 `NOT_PRODUCT_OWNER`) · §2.4/§4.2(6) (`product.contact`) · §8 (R-V7-A1/A2/A3 clos) |
+| Arbitrages définitifs du chef de projet (17/11/2026) | §2.2, §2.5 et §3.3 (`supersedes_id` = `ACTIVE` uniquement ; re-souscription sans champ, slug réservé au vendeur) · §4.2(3)/§4.3/§6 (403 `NOT_PRODUCT_OWNER`) · §2.4/§4.2(6) (`product.contact`) · §8 (R-V7-A1/A2/A3 clos) |
 | Type de notification réutilisé | `notification_type = 'product.contact'` (V4/N14, conservé en base en V5 — CA-V5-099) ; aucun type/enum modifié |

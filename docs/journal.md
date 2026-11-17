@@ -4384,3 +4384,22 @@ implémentation, aucun test de code, aucun déploiement lancé. **Bloquent avant
 code** : PO-V7-01/02 (prix, noms et quotas définitifs), PO-V7-03 (durée et
 expiration), PO-V7-05 (formulaire de contact boutique conservé ou non), et
 accord explicite pour ouvrir l'étape architecture.
+
+**Documentation V7 validée (17/11/2026, aucune ligne de code)**
+- `docs/architecture-v7-hebergement-vendeurs.md` : 3 nouvelles tables
+  (`subscription_plans`, `seller_subscriptions`, `storefront_listings`), machine
+  à états, 8 nouvelles routes, `supersedes_id` = changement de forfait vers
+  l'ACTIVE uniquement, expiration en lecture (aucun cron), `product.contact`
+  réutilisée, 0 objet existant modifié.
+- `docs/api-v7-hebergement-vendeurs.md` : contrat des 8 routes, codes d'erreur,
+  non-divulgation (404 unique), exception assumée 403 NOT_PRODUCT_OWNER,
+  contact boutique ≥ 10 caractères, rate limit 10 msg/10 min, `private, no-store`.
+- `docs/design-v7-hebergement-vendeurs.md` : 3 écrans (`/boutique/:slug`,
+  `/mon-abonnement`, `/admin/abonnements`), jetons `.market-site` existants
+  (zéro hex nouveau), `memberSince` déjà exposé réutilisé, `HeartLoader` comme
+  état de chargement, accessibilité AA.
+- Arbitrages actés : `supersedes_id` APPROUVÉ (plan change uniquement) ;
+  403 NOT_PRODUCT_OWNER retenu ; réutilisation de `product.contact`
+  (aucun `ALTER TYPE`) ; skin public `.market-site` pour la boutique.
+- `docs/api.md` non modifié : fusion en **v2.7** à l'implémentation. La recette
+  des 45 critères est due par `@tester`.
