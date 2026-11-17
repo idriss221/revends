@@ -13,9 +13,12 @@ import { friendlyError } from './errors'
 import type {
   ActivateSubscriptionResponse,
   AddListingResponse,
+  MyStatsResponse,
   MySubscriptionResponse,
+  StorefrontProfileResponse,
   StorefrontPublicResponse,
   SubscribeResponse,
+  SubscribeWithPaymentBody,
   SubscriptionAdminListResponse,
   SubscriptionStatus,
 } from './storefront.types'
@@ -46,12 +49,42 @@ export const storefrontApi = {
     return request<MySubscriptionResponse>('/api/subscriptions/me')
   },
 
-  /** POST /api/subscriptions — souscription / changement de forfait. */
-  subscribe(body: { planId: number; slug: string; supersedesId?: number }): Promise<SubscribeResponse> {
+  /** POST /api/subscriptions — souscription / changement de forfait. V8 : référence de paiement OBLIGATOIRE (E1). */
+  subscribe(body: SubscribeWithPaymentBody): Promise<SubscribeResponse> {
     return request<SubscribeResponse>('/api/subscriptions', {
       method: 'POST',
       body: JSON.stringify(body),
     })
+  },
+
+  /* ---------------- V8 — branding (R1/R2/R3, contrat v2.8 §3.10) ---------------- */
+
+  /**
+   * PUT /api/storefront/profile — écriture branding en multipart.
+   * Champs : logo? (≤ 2 Mo), banner? (≤ 4 Mo), publicDescription?, collecteAddress?
+   * (chaîne vide = effacement, omise = inchangée). Le serveur arbitre (magic
+   * bytes, tailles) — le client n'est qu'un indice.
+   */
+  saveProfile(formData: FormData): Promise<StorefrontProfileResponse> {
+    return request<StorefrontProfileResponse>('/api/storefront/profile', {
+      method: 'PUT',
+      body: formData,
+    })
+  },
+
+  /** DELETE /api/storefront/profile/logo — retire le logo (octets supprimés côté serveur, best-effort). */
+  deleteLogo(): Promise<{ ok: true }> {
+    return request<{ ok: true }>('/api/storefront/profile/logo', { method: 'DELETE' })
+  },
+
+  /** DELETE /api/storefront/profile/banner — retire la bannière. */
+  deleteBanner(): Promise<{ ok: true }> {
+    return request<{ ok: true }>('/api/storefront/profile/banner', { method: 'DELETE' })
+  },
+
+  /** GET /api/subscriptions/me/stats — onglet Statistiques (R4). */
+  getMyStats(): Promise<MyStatsResponse> {
+    return request<MyStatsResponse>('/api/subscriptions/me/stats')
   },
 
   /** POST /api/storefront/listings — ajout d'une annonce (seul point de contrôle du quota). */
@@ -115,6 +148,13 @@ const V7_MESSAGES: Record<string, string> = {
   FORBIDDEN: 'Cette action est impossible avec ce compte.',
   UNAUTHENTICATED: 'Votre session a expiré. Reconnectez-vous.',
   NETWORK_ERROR: 'La connexion a échoué. Rien n’a été envoyé — vérifiez votre réseau et réessayez.',
+  /* V8 (contrat v2.8 §3.10) */
+  PAYMENT_REFERENCE_REQUIRED: 'Indiquez la référence de votre paiement (Wave, Orange Money ou virement).',
+  INVALID_PAYMENT_METHOD: 'Choisissez votre mode de paiement : Wave, Orange Money ou virement bancaire.',
+  INVALID_PAYMENT_REFERENCE:
+    'Référence invalide — lettres, chiffres, espaces, tirets, points, slashes ou « _ » (4 à 64 caractères).',
+  INVALID_IMAGE: 'Formats acceptés : JPEG, PNG ou WebP — le fichier envoyé n’est pas une image lisible.',
+  FILE_TOO_LARGE: 'Fichier trop lourd — le logo fait au plus 2 Mo, la bannière au plus 4 Mo.',
 }
 
 /**
@@ -139,6 +179,51 @@ export function storefrontError(error: unknown, fallback = 'Quelque chose n’a 
   const known = V7_MESSAGES[error.code]
   if (known) return known
   return friendlyError(error, fallback)
+}
+
+/* ------------------------------------------------------------------ */
+/* Téléchargement PDF du bilan — GET /api/subscriptions/me/report     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Télécharge le PDF du bilan d'un mois donné (`period` = « YYYY-MM »).
+ *
+ * ⚠️ ÉCART CONSIGNÉ (v2.8) : ce endpoint n'existe pas encore côté serveur —
+ * le contrat v2.8 ne livre le PDF du bilan qu'en pièce jointe de l'e-mail.
+ * La fonction est câblée ici telle quelle et dégradera proprement :
+ * toute réponse non-2xx lève une `ApiError` (le front affiche un message
+ * humain, jamais un code). À faire évoluer côté `@backend` : exposer
+ * `GET /api/subscriptions/me/report?period=YYYY-MM` (propriétaire uniquement).
+ */
+export async function downloadReportPdf(period: string): Promise<void> {
+  const res = await fetch(`/api/subscriptions/me/report?period=${encodeURIComponent(period)}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    let code = 'INTERNAL_ERROR'
+    let message = 'Le bilan n’a pas pu être téléchargé.'
+    try {
+      const body = (await res.json()) as { error?: { code?: string; message?: string } }
+      if (body.error?.code) code = body.error.code
+      if (body.error?.message) message = body.error.message
+    } catch {
+      // corps non-JSON (ex. 404 HTML) : on garde le message par défaut
+      if (res.status === 404) {
+        code = 'NOT_FOUND'
+        message = 'Le téléchargement n’est pas encore disponible — le bilan vous est aussi envoyé par e-mail.'
+      }
+    }
+    throw new ApiError(res.status, code, message)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `bilan-${period}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 /* ------------------------------------------------------------------ */

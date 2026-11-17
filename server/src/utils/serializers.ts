@@ -222,13 +222,20 @@ export interface SerializeProductOptions {
   seller?: Record<string, unknown> | null;
 }
 
-export function serializeProductDetail(row: ProductRow, images: ImageRow[], seller: Record<string, unknown> | null): Record<string, unknown> {
+/** Vue détail public. `sellerBadge` (V8-D3) : dérivé en lecture, absent ⇒ null. */
+export function serializeProductDetail(
+  row: ProductRow,
+  images: ImageRow[],
+  seller: Record<string, unknown> | null,
+  sellerBadge: 'pro' | 'verifiee' | 'boutique' | null = null,
+): Record<string, unknown> {
   return {
     ...baseProductFields(row),
     status: row.status,
     reservedUntil: toIsoOrNull(row.reserved_until),
     images: images.map(serializeImage),
     seller,
+    sellerBadge,
   };
 }
 
@@ -292,6 +299,8 @@ export function serializeProductCard(row: ProductRow, primaryImage: ImageRow | n
     // Le vendeur est exposé par `queryCatalogPage` (jointure users) ; absent sur
     // les autres sources (ex. mode `ids`), où le front retombe sur son repli.
     seller: sellerOf(row),
+    // V8-D3 — badge palier dérivé en lecture (queryCatalogPage) ; null ailleurs.
+    sellerBadge: (row as { seller_badge?: 'pro' | 'verifiee' | 'boutique' | null }).seller_badge ?? null,
     ...categorySection(row),
   };
 }

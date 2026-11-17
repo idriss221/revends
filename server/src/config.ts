@@ -43,6 +43,14 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // V8 — Publication directe pour les vendeurs éligibles (V8-D2). `false` restaure V7 (PENDING).
+  AUTO_APPROVE_V8: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // V8 — Secret du endpoint cron `/api/cron/monthly-report` (dual-auth Vercel Cron).
+  // Jamais de valeur par défaut : absent ⇒ 401 systématique (fail-closed).
+  CRON_SECRET: z.string().optional(),
   ADMIN_EMAIL: z.string().default('admin@revends.com'),
   ADMIN_PASSWORD: z.string().default(''),
   // Adresses supplémentaires à alerter (produit en attente, nouvelle commande).
@@ -341,6 +349,8 @@ export const config = {
   commissionRate: env.COMMISSION_RATE,
   reservationDays: env.RESERVATION_DAYS,
   disableCron: env.DISABLE_CRON,
+  autoApproveV8: env.AUTO_APPROVE_V8,
+  cronSecret: env.CRON_SECRET,
   adminEmail: env.ADMIN_EMAIL,
   adminPassword: env.ADMIN_PASSWORD,
   /** Adresses admin supplémentaires (en plus des comptes `role = admin`). */

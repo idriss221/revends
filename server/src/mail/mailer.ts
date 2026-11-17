@@ -53,12 +53,21 @@ const RETRYABLE_CODES = new Set([
   'EAI_AGAIN',
 ]);
 
+/** Pièce jointe (V8) — transmise telle quelle à nodemailer. */
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 export interface SentMail {
   event: MailEvent;
   to: string;
   subject: string;
   transport: MailTransportKind;
   ok: boolean;
+  /** Nombre de pièces jointes (0 si aucune) — observabilité test (V8 bilan PDF). */
+  attachmentCount?: number;
 }
 
 /**
@@ -162,7 +171,13 @@ function getTransporter(): { transporter: Transporter; kind: MailTransportKind }
  * @returns `true` si l'envoi a réussi, `false` sinon. L'action métier ignore
  *   ce booléen : elle a déjà été validée en base.
  */
-export async function sendMail(userId: number, to: string | null, event: MailEvent, vars: TemplateVars = {}): Promise<boolean> {
+export async function sendMail(
+  userId: number,
+  to: string | null,
+  event: MailEvent,
+  vars: TemplateVars = {},
+  attachments?: MailAttachment[],
+): Promise<boolean> {
   // CA-V5-012 : le compte a disparu entre la résolution et l'envoi (ou n'a pas
   // d'adresse) → on IGNORE et on JOURNALISE, l'action métier réussit.
   if (!to) {
@@ -188,6 +203,7 @@ export async function sendMail(userId: number, to: string | null, event: MailEve
         subject: content.subject,
         text: content.text,
         html: content.html,
+        ...(attachments && attachments.length > 0 ? { attachments } : {}),
       });
       // CA-V5-013 : type d'événement, id destinataire, sujet, transporteur.
       // JAMAIS le corps complet, JAMAIS le mot de passe SMTP, JAMAIS l'adresse
@@ -200,7 +216,7 @@ export async function sendMail(userId: number, to: string | null, event: MailEve
         attempt,
         durationMs: Date.now() - startedAt,
       });
-      pushSent({ event, to, subject: content.subject, transport: kind, ok: true });
+      pushSent({ event, to, subject: content.subject, transport: kind, ok: true, attachmentCount: attachments?.length ?? 0 });
       return true;
     } catch (err) {
       lastReason = err instanceof Error ? err.message : String(err);
@@ -228,7 +244,7 @@ export async function sendMail(userId: number, to: string | null, event: MailEve
     attempts: MAX_ATTEMPTS,
     errorMessage: lastReason,
   });
-  pushSent({ event, to, subject: content.subject, transport: kind, ok: false });
+  pushSent({ event, to, subject: content.subject, transport: kind, ok: false, attachmentCount: attachments?.length ?? 0 });
   return false;
 }
 
@@ -263,6 +279,9 @@ function subjectOf(event: MailEvent): string {
     announcement_sell: 'Ce que vous n\'utilisez plus peut devenir de l\'argent',
     referral_program_launch: '10 amis, un mois de vitrine offert',
     referral_milestone: 'Votre récompense de parrainage',
+    subscription_activated: 'Votre boutique est active sur ReVends',
+    subscription_expiry_reminder: 'Votre abonnement ReVends expire dans 3 jours',
+    storefront_monthly_report: 'Votre bilan ReVends du mois',
   };
   return map[event];
 }

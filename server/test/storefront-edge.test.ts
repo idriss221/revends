@@ -102,12 +102,16 @@ describe('CA-V7-001/002/014 — audit runtime : schéma additif, rôles, aucune 
         WHERE table_schema = 'public' AND table_name = 'seller_subscriptions'`,
     );
     const names = cols.map((c) => c.column_name);
-    for (const forbidden of ['card', 'credit_card', 'cvv', 'iban', 'pan', 'stripe', 'payment_method']) {
+    for (const forbidden of ['card', 'credit_card', 'cvv', 'iban', 'pan', 'stripe']) {
       assert.ok(
         !names.some((n) => n.toLowerCase().includes(forbidden)),
         `colonne bancaire "${forbidden}" détectée dans seller_subscriptions`,
       );
     }
+    // Note : `payment_reference` / `payment_method` sont **volontairement**
+    // présentes depuis la V8 (décision V8-D8 — référence Wave/OM/virement à
+    // vérifier par l'admin) ; elles ne contiennent aucun numéro de carte ni
+    // donnée bancaire — ce verrou couvre le périmètre bancaire uniquement.
   });
 });
 

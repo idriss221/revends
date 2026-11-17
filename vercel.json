@@ -21,5 +21,11 @@
     "**": {
       "includeFiles": "public/**"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/monthly-report",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

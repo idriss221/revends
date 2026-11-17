@@ -124,6 +124,11 @@ export interface ProductCardItem {
    * (DA §3.3.7). Champ absent → comportement `default`.
    */
   status?: ProductStatus
+  /**
+   * V8-D3 / contrat v2.8 (E5) : badge palier dérivé en lecture côté serveur
+   * (`pro | verifiee | boutique | null`). Absent/null ⇒ aucun badge.
+   */
+  sellerBadge?: 'pro' | 'verifiee' | 'boutique' | null
 }
 
 export interface ProductDetail {
@@ -151,6 +156,11 @@ export interface ProductDetail {
   /** V4-Accueil : ancien prix + compteur de vues (fiche publique, D-ACC-3). */
   oldPrice?: number | null
   viewCount?: number
+  /**
+   * V8-D3 / contrat v2.8 (E5) : badge palier du vendeur (dérivé en lecture,
+   * présent sur la fiche publique). Absent/null ⇒ aucun badge.
+   */
+  sellerBadge?: 'pro' | 'verifiee' | 'boutique' | null
 }
 
 /** Fiche côté propriétaire — « Mes articles » / réponse POST-PUT (§2.4) */

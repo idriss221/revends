@@ -1,6 +1,7 @@
 import { query } from '../db/pool.js';
 import { pool, type Queryable } from '../db/pool.js';
 import type { ImageRow, ProductRow } from '../utils/serializers.js';
+import { BADGE_CASE_SQL, BADGE_LATERAL_JOIN, BADGE_RANK_SQL } from '../utils/storefront-badges.js';
 
 // ---------------------------------------------------------------------------
 // Fragments SQL partagés
@@ -189,12 +190,13 @@ export async function insertProduct(
   ownerId: number,
   fields: ProductFields,
   slug: string,
-): Promise<number> {
-  const { rows } = await client.query<{ id: number }>(
+  initialStatus: 'PENDING' | 'AVAILABLE' = 'PENDING',
+): Promise<{ id: number; status: string }> {
+  const { rows } = await client.query<{ id: number; status: string }>(
     `INSERT INTO products (owner_id, category_id, name, slug, description, condition, price, old_price, location,
-                           brand, model, age_years, defects, accessories, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-     RETURNING id`,
+                           brand, model, age_years, defects, accessories, notes, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+     RETURNING id, status`,
     [
       ownerId,
       fields.subcategoryId,
@@ -211,9 +213,10 @@ export async function insertProduct(
       fields.defects ?? null,
       fields.accessories ?? null,
       fields.notes ?? null,
+      initialStatus,
     ],
   );
-  return rows[0]!.id;
+  return rows[0]!;
 }
 
 export async function insertImage(
@@ -394,16 +397,19 @@ export async function selectAvailableByIds(ids: number[], q: Queryable = pool): 
  */
 export interface CatalogCardRow extends ProductRow {
   seller_display_name: string;
+  /** V8-D3 — badge palier dérivé en lecture (pro|verifiee|boutique|NULL). */
+  seller_badge: 'pro' | 'verifiee' | 'boutique' | null;
 }
 
-/** Fragment des champs carte (préfixés) — identique à PRODUCT_FIELDS + vendeur. */
+/** Fragment des champs carte (préfixés) — identique à PRODUCT_FIELDS + vendeur + badge (V8). */
 const CARD_SELECT = `
   SELECT ${PRODUCT_FIELDS},
-         w.display_name AS seller_display_name
+         w.display_name AS seller_display_name,
+         ${BADGE_CASE_SQL}
     FROM products p
     JOIN categories sc ON sc.id = p.category_id
     JOIN categories c  ON c.id  = sc.parent_id
-    JOIN users w       ON w.id  = p.owner_id`;
+    JOIN users w       ON w.id  = p.owner_id${BADGE_LATERAL_JOIN}`;
 
 /** Compteur parallèle du catalogue (même `where`, sans le ORDER BY). */
 const CARD_COUNT = `
@@ -494,10 +500,12 @@ export async function queryCatalogPage(
   }
 
   // Vitrine (parrainage) : les vendeurs « Cercle des 10 » passent devant sur le
-  // tri par défaut. On ne touche PAS aux tris explicites (prix, popularité) :
-  // un classement payant qui fausse un tri choisi par l'acheteur serait trompeur.
+  // tri par défaut — mais APRÈS les paliers payants (V8-D4). On ne touche PAS
+  // aux tris explicites : un classement payant qui fausse un tri choisi par
+  // l'acheteur serait trompeur.
+  // V8-D4 / F3 / CA-V8-030..038 — UNIQUEMENT tri par défaut (section absente && sort==='recent')
   if (filters.section === undefined && sort === 'recent') {
-    orderBy = `EXISTS (
+    orderBy = `${BADGE_RANK_SQL} ASC, EXISTS (
       SELECT 1 FROM users wv
        WHERE wv.id = p.owner_id AND wv.vitrine_until > now()
     ) DESC, ${orderBy}`;
@@ -521,6 +529,23 @@ export async function queryCatalogPage(
 export async function selectProductBySlugOrId(ident: string | number, q: Queryable = pool): Promise<ProductRow | undefined> {
   const lookup = typeof ident === 'number' ? 'p.id = $1' : 'p.slug = $1';
   const { rows } = await q.query<ProductRow>(`${PRODUCT_SELECT} AND ${lookup}`, [ident]);
+  return rows[0];
+}
+
+/** Fiche produit + badge de palier dérivé EN LA MÊME requête (V8-D3) — budget constant. */
+export interface ProductWithBadgeRow extends ProductRow {
+  seller_badge: 'pro' | 'verifiee' | 'boutique' | null;
+}
+
+export async function selectProductBySlugOrIdWithBadge(
+  ident: string | number,
+  q: Queryable = pool,
+): Promise<ProductWithBadgeRow | undefined> {
+  const lookup = typeof ident === 'number' ? 'p.id = $1' : 'p.slug = $1';
+  const { rows } = await q.query<ProductWithBadgeRow>(
+    `SELECT ${PRODUCT_FIELDS}, ${BADGE_CASE_SQL} ${PRODUCT_FROM}${BADGE_LATERAL_JOIN} WHERE p.deleted_at IS NULL AND ${lookup}`,
+    [ident],
+  );
   return rows[0];
 }
 

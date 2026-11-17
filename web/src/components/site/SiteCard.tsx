@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { Ico } from '../brand/Ico'
 import { SiteImage, artKindFor } from './SiteImage'
 import { ZoomButton } from './Lightbox'
+import { SellerBadge } from '../storefront/SellerBadge'
 import { catLabel, fmt, text } from './SiteBits'
 import { formatDiscountPct } from '../../lib/format'
 import { useFavorites } from '../../context/FavoritesContext'
@@ -76,6 +77,11 @@ export function SiteCard({ product, index = 0 }: { product: ProductCardItem; ind
         <div className="meta">
           {product.condition} · {product.location}
         </div>
+        {product.sellerBadge ? (
+          <div className="card-badge-row">
+            <SellerBadge badge={product.sellerBadge} />
+          </div>
+        ) : null}
         <div className="price">
           {fmt(product.price)}
           {pct ? <s>{fmt(product.oldPrice!)}</s> : null}

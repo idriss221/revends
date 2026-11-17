@@ -1935,6 +1935,30 @@
 }
 .market-site .amb-badge .i{width:12px;height:12px}
 
+/* =====================================================================
+   §24 — V8 « Hébergement Boutique » — BADGES DE PALIER (CA-V8-020/027)
+   « Boutique » (neutre) · « Boutique Vérifiée » (accent + coche) ·
+   « Boutique Pro » (or/champagne). Tokens uniquement, contraste AA :
+   · pro      : --champagne sur --surface-raised + filet --champagne
+                (clair 4,95:1 · sombre ≈ 11:1 — --champagne direct sur
+                --champagne-soft échoue à 4,25 en clair, d'où ce choix) ;
+   · verifiee : --accent-text sur --accent-soft (≥ 7,7:1) ;
+   · boutique : --text-secondary sur --surface-sunken (≥ 6,2:1).
+   ===================================================================== */
+.market-site .badge-boutique{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:999px; border:1px solid transparent;
+  font-size:10.5px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; vertical-align:middle; white-space:nowrap;
+}
+.market-site .badge-boutique .i{width:12px;height:12px;flex:none}
+.market-site .badge-boutique--pro{ background:var(--surface-raised); border-color:var(--champagne); color:var(--champagne) }
+.market-site .badge-boutique--verifiee{ background:var(--accent-soft); border-color:var(--accent-soft); color:var(--accent-text) }
+.market-site .badge-boutique--boutique{ background:var(--surface-sunken); border-color:var(--line); color:var(--text-secondary) }
+@media (prefers-reduced-motion: reduce){
+  .market-site .badge-boutique{ transition:none }
+}
+
 .market-site .rv-ref{
   background:var(--surface-raised); border:1px solid var(--line);
   border-radius:var(--r-lg); padding:clamp(20px,3vw,30px);

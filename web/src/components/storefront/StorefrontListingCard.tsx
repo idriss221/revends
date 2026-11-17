@@ -4,6 +4,7 @@ import { SiteImage } from '../site/SiteImage'
 import { ZoomButton } from '../site/Lightbox'
 import { useFavorites } from '../../context/FavoritesContext'
 import { fmt, text } from '../site/SiteBits'
+import { SellerBadge } from './SellerBadge'
 import type { StorefrontItemPublic } from '../../lib/storefront.types'
 
 /* ============================================================================
@@ -77,6 +78,11 @@ export function StorefrontListingCard({ item, index = 0 }: { item: StorefrontIte
           <Link to={`/catalogue/${item.id}`}>{name}</Link>
         </h3>
         <div className="price">{fmt(item.price)}</div>
+        {item.sellerBadge ? (
+          <div className="card-badge-row">
+            <SellerBadge badge={item.sellerBadge} />
+          </div>
+        ) : null}
       </div>
     </article>
   )

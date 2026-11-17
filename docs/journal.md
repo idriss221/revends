@@ -4604,3 +4604,20 @@ boutique publique après activation → **200** avec `memberSince` ; health 200 
 cargo (45/45, axe clean, 650+239 tests) tient sur la branche fusionnée.
 **À décider** — délai d'annonce « Élargir l'offre Hébergement vendeurs » (après
 clôture de la campagne parrainage 16/12 ?) + SLA activation admin (PO-V7-08).
+
+## 18/11/2026 — V8 « Hébergement Boutique » : backend + web implémentés (branche `feat/v8-hebergement-boutique`)
+
+**Code** : migration 020 (ALTER payment_reference/payment_method, tables
+`storefront_profiles`, `auto_approved_products`, `monthly_metrics` — BIGINT) ;
+auto-approbation ACTIVE + `+221 7XXXXXXXX` ; `storeBadge` dérivé ACTIVE ; tri
+défaut `Atelier > Boutique > Découverte > Vitrine` ; upload logo/bannière Blob ;
+`/api/subscriptions/me/stats` ; 3 e-mails (`subscription_activated`,
+`subscription_expiry_reminder` J-3, `storefront_monthly_report` + PDF pdfkit joint
+au 1er) ; cron GET+POST `/api/cron/monthly-report` (Bearer/x-cron-secret,
+fail-closed, 06:00 UTC, dispatch 1er/dernier jour) ; `vercel.json crons`.
+**Tests** : `test/storefront-v8.test.ts` (49) ; cuidis 1 verrou V7 historiquement
+vidé (`CA-V7-014` excluait method card, acquise : paiement `payment_method`
+**volontairement** stocké pour vérification — décision V8-D8). **Suite serveur
+complète verte** (`ALL SUITES GREEN`) ; web 270/270 vert.
+**Docs** : `api.md` v2.8 ; cahiers/architectures V8 validés après arbitrages.
+**Deploy** : migration 020 (manuelle) à appliquer AVANT tout déploiement.
