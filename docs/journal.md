@@ -4418,3 +4418,43 @@ accord explicite pour ouvrir l'étape architecture.
 - Reste pour recette : parcours E2E, Playwright/accessibilité, `information_schema`
   complet, migration `019` à appliquer **avant** tout déploiement (manuelle),
   reviewer + securite. **Non déployé, non fusionné sur la branche de prod.**
+
+**Recette V7 — couverture de tests et mutations (17/11/2026, `@tester`)**
+- Suites existantes vérifiées : **serveur 609→646 tests** (`npm test`, base
+  `revends_test`), **web 236/236** verts, `tsc --noEmit` / `tsc -b` = 0, build web OK.
+  Les artefacts `*.tsbuildinfo` furent restaurés (git status propre hors fichiers de test).
+- Nouveaux tests (non-amendement) : `server/test/storefront-edge.test.ts` (**37 cas**) :
+  concurrence du quota (verrou `FOR UPDATE`, 3 ajouts simultanés à 9/10 → 1×201/2×409),
+  activation admin concurrente (1×200/1×409 ; deux demandes indépendantes → `SUBSCRIPTION_ALREADY_ACTIVE`),
+  bornes exactes slug 3/40, réservé à vie après `CANCELLED`, casse normalisée, `PLAN_NOT_FOUND`,
+  `supersedesId` (autrui 404 / non-ACTIVE 400), RESERVED compte, soft-delete libère,
+  `STOREFRONT_ALREADY_LISTED` + ré-ajout après retrait, bornes contact 10/2000,
+  e-mail 254/255, pagination (per_page 0/49/48, page 0/99) storefront + admin,
+  `UNAUTHENTICATED` sur routes privées, audit runtime (aucun colonne V7 dans users/products/
+  orders/notifications/referral_qualifications, enum `user_role` = user/admin, 0 donnée bancaire).
+- **Mutations prouvées** (puis revertées) : (1) compteur non dérivé (ignore `products.status`)
+  → CA-V7-037/031 ROUGES ; (2) quota hors de contrôle → 5+3 tests ROUGES ;
+  (3) verrou `FOR UPDATE` retiré → le test de concurrence ROUGE (probabiliste, 2/3 runs).
+- E2E navigateur Playwright **local** (`revends_test` neuve, API `NODE_ENV=test` port 4050 +
+  Vite port 5180, `e2e/functional/v7-hebergement.spec.ts`, config dédiée `e2e/v7.config.ts`) :
+  (a) inscription → souscription → PENDING, (b) admin active → ACTIVE (file /admin/abonnements),
+  (c) ajout de 3 annonces boutique via le sheet, (d) boutique anonyme 200 (displayName +
+  memberSince 2026 + 3 cartes, 0 coordonnée) et 404 pour slug inconnu, (e) contact → 201 +
+  toast de confirmation, (f) mobile 375 px : scrollWidth ≤ 375 sur les deux pages.
+  0 pageerror/console inattendue (401 /auth/me et 404 volontaire = bruit attendu filtré).
+  Screenshots : /tmp/opencode/v7-screenshots/ (01→07). **Prod NON touchée.**
+- **Ce qui n'a PAS pu être prouvé** : axe/violations critiques ou sérieuses (CA-V7-027/062,
+  nécessite `@axe-core/playwright` + focus visible complet) ; le diff `information_schema`
+  avant/après migration complet (EXEC pré-migration à faire au runbook) ; accès à la clé/commit
+  de prod (non pertinent) ; la rédirection front d'un `user` sur `/admin/abonnements`
+  (RequireAdmin — API prouve 403 ; la redirection existe mais n'a pas de test e2e ciblé).
+  Suites préexistantes : 1 cas `emails.test.ts` (CA-V5-002, « aucun envoi tenté », journal mail
+  partagé) est **flaky** sous charge du run complet (vert 8/8 standalone ; échoué 1× en full run
+  sans modification de la suite, non liée à V7 — à surveiller, ne pas « corriger » par amendement).
+- **Pour le déploiement** : 1) appliquer la migration `019_storefront.sql` **AVANT** le code
+  (RUN_MIGRATIONS=false en prod ; sinon les routes V7 renvoient 500) ; 2) **feature flag V7
+  ABSENT** — le rollback = retrait de l'image + DROP des 3 nouvelles tables (additif, aucun
+  impact sur l'existant) ; 3) `revends_e2e` reste la cible e2e docker ; `revends_test` est la
+  base des suites ; 4) audit e2e `menus.test.ts`/`adminDesignInvariants.test.ts` : amendés par
+  l'implémentation V7 (ajout Abonnements au menu + compteur), PAS affaiblis — à valider en review ;
+  5) suite serveur verte hors le flake emails. **Non poussé, non fusionné, prod intacte.**
