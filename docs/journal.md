@@ -4527,3 +4527,57 @@ amendements web par le chef de projet ; ⑧ surveiller le flake `emails.test.ts`
 - **CA-V7-037a** : test « commande → confirm-payment → SOLD → quota 0/10 relu via `/api/subscriptions/me` », vert.
 - **CA-V7-005** : les 2 amendements web (`menus.test.ts`, `adminDesignInvariants.test.ts`) sont **acté-gressives, non affaiblis** — assertions resserrées, aucune règle assouplie. Acceptées par le chef de projet.
 - **CA-V7-061** : e2e local a→f vert (hérité) ; **239/239 tests web verts**, 648+4 tests serveur verts (correctif revue I-2/I-1/I-3 inclus).
+
+## 17/11/2026 (suite) — RE-VALIDATION V7 après clôture des 7 critères — verdict PASSAGE
+
+**Verdict : V7 PRÊTE POUR FUSION PROD (sous conditions de déploiement).** Les 7 critères
+ouverts par la recette précédente sont maintenant PROUVÉS. Recette rejouée par l'agent
+sur `feat/v7-hebergement-vendeurs` @ `32199f6`, le 17/11/2026, sans toucher à la prod,
+sans modifier de code.
+
+**Suites rejouées (17/11/2026)** : serveur **650/650 verts** (edge 41/41 dont les 2 nouveaux
+bout-en-bout CA-V7-033/037a ; `emails.test.ts` 43/43 vert — flake absent ce run) ; web
+**239/239 verts** (+3 `sellCtaInvariants.test.ts`) ; `tsc --noEmit` serveur = 0 ;
+`tsc -b` web = 0. Git status propre. Note de précision factuelle : la clôture précédente
+annonce « 648+4 tests serveur » et « 652 attendus » — le compte réel rejoué est **650**
+(648 + 2 nouveaux cas edge, pas 4). Chiffre corrigé ici, l'historique n'est pas réécrit.
+
+**Clôture des 7 critères (preuves revérifiées par l'agent)** :
+- **CA-V7-027 / CA-V7-062** — `v7-axe.config.ts` + `v7-accessibility.spec.ts` commités ;
+  **rejoué ce jour : 1/1 vert (25,8 s)** — 0 violation critique/sérieuse axe sur
+  `/boutique/:slug`, `/mon-abonnement`, `/admin/abonnements` (instance locale 4050/5180,
+  base `revends_test` neuve). Résidu honnête : pas de parcours clavier scripté complet
+  (Tab/Entrée bout-en-bout), la gate exigée par le cahier (axe) est verte ; alt/aria-label
+  /aria-live constatés en code. **Écart O6 levé.**
+- **CA-V7-001** — EXEC `information_schema` **reproduit ce jour** sur base scratch
+  `revends_schema_check` (001→018 snapshot → 019 → snapshot) : **0 colonne supprimée,
+  0 type modifié, 23 colonnes ajoutées TOUTES dans les 3 nouvelles tables** ;
+  `users`/`products`/`orders`/`notifications`/`referral_qualifications` **identiques** ;
+  3 forfaits seed (2000/10, 5000/30, 10000/100) ; enum `subscription_status` =
+  PENDING/ACTIVE/EXPIRED/CANCELLED ; `notification_type` inchangé (22 valeurs,
+  `product.contact` présente). Scratch DB droppée après preuve.
+- **CA-V7-004** — `sellCtaInvariants.test.ts` (3 tests, verts dans la suite 239) : CTA
+  desktop + menu mobile présents, pointent `/sell`, aucune lecture abonnement/quota/statut.
+- **CA-V7-033** — test bout-en-bout « quota plein → 11e article refusé 409 → commande →
+  confirm-payment → commission = 8 000 = floor(80 000×10 %) » vert (edge:41).
+- **CA-V7-037 (a)** — test « commande → confirm-payment → SOLD → quota relu 0/10 via
+  `/api/subscriptions/me` ; produit SOLD conservé, fiche 200 » vert (edge:41).
+  (b)(c)(d) déjà prouvés (greps rejoués, diff pipeline 0 ligne, liaison sans statut).
+- **CA-V7-005** — arbitrage chef de projet consigné : 2 amendements web additifs,
+  non affaiblis, acceptés. « 0 amendement » non respecté à la lettre mais arbitré et acté.
+- **CA-V7-061** — e2e a→f vert (hérité 17/11, screenshots `/tmp/opencode/v7-screenshots/`) ;
+  rejoué indirectement via la recette axe (même instance locale neuve).
+
+**Grille §9 mise à jour** : 2,3,4,5,6,8,9,10 **✅** · 1,7,11,12 **PARTIEL → PROUVÉS**
+(tous les critères de ces scénarios sont désormais prouvés ; 061 hérité). Les 12 scénarios
+sont ✅ ; le détail par critère : 45/45 prouvés, 0 non mesuré, 0 partiel non arbitré.
+
+**Conditions de mise en production (inchangées, à appliquer dans l'ordre)** : ① backup
+PostgreSQL complet ; ② migration `019_storefront.sql` AVANT le code (RUN_MIGRATIONS=false,
+serverless ne migre pas) ; ③ vérification post-migration (3 tables, 3 forfaits, enum,
+information_schema identique) ; ④ deploy code + health check + smoke PENDING→activation→
+boutique 200 ; ⑤ rollback = redeploy commit précédent + DROP des 3 tables (aucun feature
+flag) ; ⑥ accord utilisateur explicite pour déploiement ; ⑦ surveiller `emails.test.ts`
+(CA-V5-002 hors V7). Note d'hygiène : la re-vérification a remis `revends_test` à zéro
+(drop schema → migrate → seed admin) — base de test jetable, l'état n'affecte pas la prod.
+**Prod NON touchée à aucune étape.**
