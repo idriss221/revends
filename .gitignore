@@ -67,3 +67,5 @@ web/public/catalog/
 
 # Copie locale accidentelle (ne pas versionner)
 /revends/
+
+web/*.tsbuildinfo
