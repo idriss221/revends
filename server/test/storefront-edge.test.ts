@@ -25,6 +25,7 @@ import {
   registerUser,
   createProduct,
   createApprovedProduct,
+  createOrder,
   dbQuery,
   errorCode,
 } from './helpers.js';
@@ -685,5 +686,78 @@ describe('Revue V7 — correctifs I-2/I-3 : plan change après expiration, cours
       [slug],
     );
     assert.equal(rows[0]?.n, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CA-V7-033 / CA-V7-037a — bout-en-bout commande réelle : quota libéré en
+// lecture via le VRAI parcours d'achat, commission 10 % intacte
+// ---------------------------------------------------------------------------
+describe('CA-V7-033/037a — parcours commande réel : commission 10 % + libération du quota en lecture', () => {
+  it('commande → confirm-payment → SOLD → le vendeur récupère sa place (0/10), commission exactement 10 %', async () => {
+    const seller = await registerUser(server, 'cv7covA');
+    const buyer = (await registerUser(server, 'cv7buyerA')).client;
+    const price = 100_000; // commission attendue : floor(100 000 × 10 %) = 10 000
+    const product = await createApprovedProduct(seller.client, admin, {
+      name: `Produit commande boutique ${Date.now()}`,
+      price,
+    });
+    const sub = await subscribeAndActivate(seller, 1, 'boutique-commande');
+    const add = await seller.client.post('/api/storefront/listings', { productId: product.id });
+    assert.equal(add.status, 201);
+    const before = await seller.client.get('/api/subscriptions/me');
+    assert.equal((before.body as any).usage.used, 1);
+
+    const { status, body } = await createOrder(buyer, product.id);
+    assert.equal(status, 201, JSON.stringify(body));
+    assert.equal(body.order.amount, price);
+    assert.equal(body.order.commission, Math.floor(price * 0.1));
+    assert.equal(body.order.sellerAmount, price - Math.floor(price * 0.1));
+
+    const confirm = await admin.request(`/api/admin/orders/${body.order.id}/confirm-payment`, 'POST', {
+      json: { method: 'CASH' },
+    });
+    assert.equal(confirm.status, 200, `confirm-payment → ${confirm.status}`);
+
+    const after = await seller.client.get('/api/subscriptions/me');
+    assert.equal((after.body as any).usage.used, 0, 'SOLD via le parcours commande doit libérer la place en lecture');
+    // Le produit SOLD reste dans le catalogue et sa fiche répond 200.
+    const fiche = await server.newClient().get(`/api/products/${product.slug}`);
+    assert.equal(fiche.status, 200);
+  });
+
+  it('CA-V7-033 — au quota : annonce refusée créée (201), vendue via checkout, commission = COMMISSION_RATE', async () => {
+    const seller = await registerUser(server, 'cv7covB');
+    const buyer = (await registerUser(server, 'cv7buyerB')).client;
+    await subscribeAndActivate(seller, 1, 'boutique-quota-full-commande');
+    // Remplit la boutique (10/10) avec des articles approuvés.
+    const productIds: number[] = [];
+    for (let i = 1; i <= 10; i += 1) {
+      const p = await createApprovedProduct(seller.client, admin, {
+        name: `Article quota commande ${i} ${Date.now()}`,
+        price: 50_000,
+      });
+      productIds.push(p.id);
+      const res = await seller.client.post('/api/storefront/listings', { productId: p.id });
+      assert.equal(res.status, 201, `listing ${i} → ${res.status}`);
+    }
+    const full = await seller.client.get('/api/subscriptions/me');
+    assert.equal((full.body as any).usage.used, 10);
+
+    // CA-V7-033 : création d'un 11e article malgré le quota → 201, vendable.
+    const extra = await createApprovedProduct(seller.client, admin, {
+      name: `Article hors quota ${Date.now()}`,
+      price: 80_000,
+    });
+    const refused = await seller.client.post('/api/storefront/listings', { productId: extra.id });
+    assert.equal(refused.status, 409);
+    // … et il reste achetable via le parcours existant, commission 10 %.
+    const { status, body } = await createOrder(buyer, extra.id);
+    assert.equal(status, 201, JSON.stringify(body));
+    assert.equal(body.order.commission, 8_000); // floor(80 000 × 10 %)
+    const confirm = await admin.request(`/api/admin/orders/${body.order.id}/confirm-payment`, 'POST', {
+      json: { method: 'CASH' },
+    });
+    assert.equal(confirm.status, 200);
   });
 });

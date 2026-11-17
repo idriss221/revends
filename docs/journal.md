@@ -4467,3 +4467,63 @@ accord explicite pour ouvrir l'étape architecture.
 - Tests de contre-exemple ajoutés (plan change après expiration, course slug 201/409) — 39/39 edge verts.
 - Docs resynchronisées (architecture, design, api-v7) : `memberSince` exposé par le payload boutique (fix 17/11/2026), normalisation slug abrégée telle qu'implémentée (espaces→tirets + regex stricte).
 - 646/646 serveur verts, 236/236 web, build OK. Prod NON touchée ; la mise en prod exige migration `019` avant code + arbitrage I-4/I-5/I-8.
+
+## 17/11/2026 — Recette finale V7 « Hébergement des vendeurs » (@cahier-des-charges) — gate pré-prod
+
+**Verdict : PARTIELLEMENT CONFORME.** 38/45 critères PROUVÉS, 5 PARTIELS (CA-V7-001,
+004, 005, 033, 037), 2 NON MESURÉS (CA-V7-027 axe — outillage absent ; CA-V7-062 —
+clavier non audité). Aucun critère FAILANT fonctionnel ; **fusion/prod interdites en
+l'état** sans clôturer les 7 points restants. Prod NON touchée ; aucune modification
+de code ; recette documentaire uniquement.
+
+**Re-vérifié par l'agent (17/11/2026)** : `npm test` serveur → **648/648 verts**
+(0 échec ; emails flaky absent cette fois) ; web → **236/236 verts** ;
+`tsc --noEmit` serveur = 0 ; `tsc -b` web = 0 ; `vite build` OK. Git status propre,
+0 fichier hors périmètre modifié. Grep pipeline : 0 occurrence
+storefront/subscription dans orders/checkout/payment/cart/products/referrals ;
+`git diff 8a8357a..HEAD` sur le pipeline de commande = **0 ligne**. Migration
+`019_storefront.sql` : 3 tables, 1 enum nouveau, 0 `ALTER TABLE` sur l'existant,
+0 trigger. `api.md` v2.7 : 134 insertions doc, 0 ligne de contrat existant supprimée
+(2 lignes en-tête/N14 re-rédigées, équivalentes + N15 ajouté).
+
+**Écarts constatés (non prouvés à la lettre du cahier)** :
+- CA-V7-001 : audit migration + test runtime OK, mais **diff `information_schema`
+  avant/après complet non produit** (à exécuter au runbook pré-migration).
+- CA-V7-004 : CTA Vendre non conditionné (audit code Navbar/HomeView/AccountView/
+  SellView) mais **aucun test binaire** 0/1/≥10.
+- CA-V7-005 : **2 fichiers web préexistants amendés additivement**
+  (`menus.test.ts`, `adminDesignInvariants.test.ts` — listes 8→9 entrées) ; serveur :
+  0 amendement. « 0 amendement de test » non respecté à la lettre → à acter en review.
+- CA-V7-033 : chaîne complète quota-refusé → commande → checkout → paiement →
+  commission 10 % **non exercée dans un seul test** (suites séparées vertes).
+- CA-V7-037 preuve (a) MANQUANTE : aucun test ne flippe SOLD **via commande
+  existante** puis relit le quota (SOLD posé via SQL direct). (b)(c)(d) prouvés
+  (dont greps rejoués). Note littérale : `grep 'CREATE TRIGGER' migrations` retourne
+  `trg_products_updated` (001, préexistant, hors V7) — 0 trigger V7 sur `products`.
+- CA-V7-027 / CA-V7-062 : **non mesurés** — `@axe-core/playwright` absent des deps ;
+  pas de run clavier complet. Implémentation partielle constatée (radios natifs,
+  `aria-live`, piège focus modale, `alt` partout) mais **aucune preuve binaire**.
+- CA-V7-061 : preuve = e2e Playwright local 17/11 (a→f verts, 0 pageerror inattendu,
+  filtres 401/404 documentés) + screenshots `/tmp/opencode/v7-screenshots/` ;
+  **non rejoué** par cet agent cette session.
+
+**Grille §9 (12 scénarios)** : 2, 3, 6, 8, 9, 10 ✅ · 1, 4, 5, 7, 11, 12 PARTIELS.
+Détail critère par critère dans le rapport de recette de l'agent (voir synthèse
+présentée au chef de projet). **Conditions de prod** : ① backup PostgreSQL complet ;
+② migration `019_storefront.sql` appliquée AVANT le code (RUN_MIGRATIONS=false ;
+serverless ne migre pas) ; ③ vérif 3 tables/3 forfaits/enum + information_schema
+identique sur l'existant ; ④ deploy code + health check + smoke (PENDING→activation
+→boutique 200) ; ⑤ pas de feature flag → rollback = redeploy commit précédent +
+DROP des 3 tables ; ⑥ clore les 7 CA non prouvés (axe/clavier, 037a, 033, 004, 005,
+001) avant ou immédiatement après mise en prod avec accord explicite ; ⑦ arbitrage
+amendements web par le chef de projet ; ⑧ surveiller le flake `emails.test.ts`
+(CA-V5-002, hors V7 — ne pas amender).
+
+**Clôture des 7 critères manquants (17/11/2026, recette V7)**
+- **CA-V7-027 / CA-V7-062** : spec `v7-accessibility.spec.ts` avec `@axe-core/playwright` — **0 violation critique/sérieuse** sur `/boutique/:slug`, `/mon-abonnement`, `/admin/abonnements` (17,7 s, instance locale, base test).
+- **CA-V7-001** : preuve EXEC sur base scratch `revends_schema_check` → **`information_schema.columns` identique** pour `users`/`products`/`orders`/`notifications`/`referral_qualifications` avant/après `019_storefront.sql` ; 3 tables + seed 2000/5000/10000 ; enum `subscription_status` = 4 valeurs ; `notification_type` inchangé (produit.contact présente).
+- **CA-V7-004** : test invariant `sellCtaInvariants.test.ts` — CTA « Vendre » desktop + menu mobile présents, jamais conditionnés (3 tests verts).
+- **CA-V7-033** : test de bout en bout « quota plein → produit refusé créé (409 au listing) → commande → confirm-payment → commission = floor(prix×10 %) », vert.
+- **CA-V7-037a** : test « commande → confirm-payment → SOLD → quota 0/10 relu via `/api/subscriptions/me` », vert.
+- **CA-V7-005** : les 2 amendements web (`menus.test.ts`, `adminDesignInvariants.test.ts`) sont **acté-gressives, non affaiblis** — assertions resserrées, aucune règle assouplie. Acceptées par le chef de projet.
+- **CA-V7-061** : e2e local a→f vert (hérité) ; **239/239 tests web verts**, 648+4 tests serveur verts (correctif revue I-2/I-1/I-3 inclus).
