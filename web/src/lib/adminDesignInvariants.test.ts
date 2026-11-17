@@ -69,8 +69,8 @@ function faIcons(code: string): string[] {
 
 describe('Anti-dérive DA §9.1/§9.2 sur les écrans et composants admin', () => {
   it('la liste des fichiers soumis est bien couverte (garde-fou du test)', () => {
-    // 9 écrans + 5 composants (`components/admin/*`) + DashboardLayout + Sidebar.
-    expect(SUBJECT).toHaveLength(16)
+    // 10 écrans + 5 composants (`components/admin/*`) + DashboardLayout + Sidebar.
+    expect(SUBJECT).toHaveLength(17)
     expect(rel(ADMIN_DIR)).toBe('pages/admin')
     expect(rel(ADMIN_COMPONENTS_DIR)).toBe('components/admin')
   })
@@ -163,8 +163,8 @@ describe('Palette REVENDS — aucune couleur décorative hors tokens (DA §9.5)'
 
   it('les badges de statut passent bien par StatusBadge (pas de pastille manuelle)', () => {
     const pagesWithStatus = SUBJECT.filter((f) => code(f).includes('<StatusBadge'))
-    // 8 écrans sur 9 (Users est en lecture seule) + AdminProductSheet.
-    expect(pagesWithStatus.length).toBe(9)
+    // 9 écrans sur 10 (Users est en lecture seule) + AdminProductSheet.
+    expect(pagesWithStatus.length).toBe(10)
     for (const file of pagesWithStatus) {
       expect(faIcons(code(file)), rel(file)).not.toContain('fa-circle')
     }

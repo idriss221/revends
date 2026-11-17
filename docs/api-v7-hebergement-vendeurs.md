@@ -81,7 +81,7 @@ Le quota porte **uniquement sur les annonces actives affichées dans la boutique
 
 - **`error.message` est rédigé en français, affichable tel quel dans un Toast** (le front n'a pas de table `code → message`). Les détails techniques vont dans les logs serveur.
 - **Pagination** (§1.5 v2.6) : `page` (≥ 1, défaut `1`), `per_page` (1..48, défaut `12`) ; enveloppe `{ items, page, perPage, total, totalPages }` ; filtre sans résultat → `200` + `items: []` ; `per_page`/`page` hors bornes → `400 VALIDATION_ERROR`.
-- **RG 7.7** (§1.6 v2.6) : V7 n'expose côté public que la vue `displayName`. **Jamais** `name`, `email`, `phone`, `whatsapp` dans la boutique publique (§8.3, §6).
+- **RG 7.7** (§1.6 v2.6) : V7 n'expose côté public que `displayName` + `memberSince` (année). **Jamais** `name`, `email`, `phone`, `whatsapp` dans la boutique publique (§8.3, §6).
 - **Rate limiting** (§8 v2.6) : global `300 req / IP / 1 min` ; admin `/api/admin/*` déjà limité à `60 req / min` (`skipAdmin`) ; **nouveau scope `storefront-contact` : `10 req / IP / 10 min`** sur la route de contact uniquement (§10.4, clé Redis `rl:storefront-contact:<ip>`). Dépassement → `429 RATE_LIMITED` + header `Retry-After` (secondes). En `NODE_ENV=test`, le limiteur est bypassé. Une instance ≥ 2 exige un compteur partagé (dette déjà tracée PO-V5-17).
 - **`Cache-Control`** : V7 n'ajoute **aucune** route au cache public de v2.6 (réservé à `/api/categories` et `/api/banners`). **Toute réponse V7 est `private, no-store`** — y compris la boutique publique `GET /api/storefront/:slug` (décision explicite §10.3, §8.3).
 - **Lecture publique non divulgatrice** : les réponses `404` de boutique sont **strictement identiques** quel que soit le motif (§5).
@@ -210,7 +210,7 @@ Sur `POST /api/storefront/listings` (route 3), un produit appartenant à **un au
 - **Unicité à vie** (cross-sellers, tous statuts confondus, y compris `EXPIRED`/`CANCELLED`) vérifiée dans la fonction d'écriture unique : slug déjà pris par un **autre** vendeur → `409 SLUG_TAKEN` (CA-V7-020). Un même vendeur peut réutiliser **son** slug (changement de forfait / ré-abonnement, CA-V7-015).
 - Filet DB : index partiel `uq_active_subscription_slug` (une seule boutique `ACTIVE` par slug) — violation `23505` → `409 SLUG_TAKEN` (mapping erreurs §11.3).
 - **20 mots réservés** → `400 SLUG_RESERVED` (CA-V7-021) : `admin`, `api`, `boutique`, `catalogue`, `vendre`, `mes-articles`, `mon-abonnement`, `parrainage`, `panier`, `profil`, `login`, `register`, `search`, `static`, `assets`, `health`, `www`, `help`, `contact`, `legal`.
-- **Format** : `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 3 à 40 caractères. Normalisation **serveur** (autorité) : `NFD` → suppression diacritiques → minuscules → espaces/non-alphanumériques → `-` → trim des `-`. `Mode Dakar` ≡ `mode-dakar` (CA-V7-020/022).
+- **Format** : `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 3 à 40 caractères. Normalisation **serveur** (autorité) : `trim().toLowerCase()` → espaces → `-`, puis regex stricte : tout caractère hors `[a-z0-9-]` → `400` (ex. `république`, `mode_dakar`, `x--y`). `Mode Dakar` ≡ `mode-dakar` (CA-V7-020/022).
 
 ---
 
@@ -284,7 +284,7 @@ Sans abonnement : `subscription: null`, `usage: null`, `listings: []`, `plans: [
 
 ```json
 {
-  "storefront": { "slug": "mode-dakar", "displayName": "Aïcha M." },
+  "storefront": { "slug": "mode-dakar", "displayName": "Aïcha M.", "memberSince": 2024 },
   "items": [
     { "id": 88, "name": "Veste en jean — taille M", "price": 12000,
       "primaryPhotoUrl": "/uploads/products/9f1c3d2a.jpg", "effectiveStatus": "AVAILABLE" }
@@ -296,7 +296,8 @@ Sans abonnement : `subscription: null`, `usage: null`, `listings: []`, `plans: [
 | Champ (`storefront`) | Type | Règle |
 |---|---|---|
 | `slug` | string | Slug normalisé demandé |
-| `displayName` | string | `users.display_name` **uniquement**. **Jamais** `name`, `email`, `phone`, `whatsapp`, `tel:`, `mailto:` (CA-V7-026) — le sérialiseur public V7 (`serializeStorefrontPublic`) ne lit que `display_name` |
+| `displayName` | string | `users.display_name`. **Jamais** `name`, `email`, `phone`, `whatsapp`, `tel:`, `mailto:` (CA-V7-026) — le sérialiseur public V7 (`serializeStorefrontPublic`) ne lit que `display_name` et `created_at` |
+| `memberSince` | int | Année d'inscription du vendeur (`users.created_at`, `getUTCFullYear()`) — exposition publique mono-parallèle ajoutée par le fix du 17/11/2026 ; aucune autre donnée personnelle n'est exposée |
 
 | Champ (`items[]`) | Type | Règle |
 |---|---|---|
@@ -599,7 +600,7 @@ L'`email` du demandeur n'apparaît **que** dans la notification destinée au ven
 
 ```json
 {
-  "storefront": { "slug": "mode-dakar", "displayName": "Aïcha M." },
+  "storefront": { "slug": "mode-dakar", "displayName": "Aïcha M.", "memberSince": 2024 },
   "items": [
     { "id": 88, "name": "Veste en jean — taille M", "price": 12000,
       "primaryPhotoUrl": "/uploads/products/9f1c3d2a.jpg", "effectiveStatus": "AVAILABLE" },
@@ -616,7 +617,7 @@ L'`email` du demandeur n'apparaît **que** dans la notification destinée au ven
 
 - Uniquement les listings non retirés (`withdrawn_at IS NULL`) dont `products.status ∈ ('PENDING','AVAILABLE','RESERVED')` et `products.deleted_at IS NULL`.
 - **`Cache-Control: private, no-store`** (décision explicite V7 — §10.3) : même si la réponse est identique pour tous, elle reste hors du cache public v2.6 ; une réponse `404` ne doit jamais être cachée non plus.
-- **Aucune donnée personnelle** : `storefront` = `displayName` uniquement ; `items` = champs produit publics (même sérialiseur d'esprit que `ProductCard` v2.6 §2.2, sans les données de commande). **Zéro occurrence possible de `phone`, `whatsapp`, `email`, `tel:`, `mailto:`** dans le corps (CA-V7-026) — vérifiable par regex en test.
+- **Aucune donnée personnelle** : `storefront` = `displayName` + `memberSince` uniquement ; `items` = champs produit publics (même sérialiseur d'esprit que `ProductCard` v2.6 §2.2, sans les données de commande). **Zéro occurrence possible de `phone`, `whatsapp`, `email`, `tel:`, `mailto:`** dans le corps (CA-V7-026) — vérifiable par regex en test.
 - Les ids renvoyés sont des **`products.id`** (CA-V7-035 — même id catalogue/boutique, une seule ligne `products`).
 
 **Simulation des chemins :**
@@ -822,7 +823,7 @@ L'`email` du demandeur n'apparaît **que** dans la notification destinée au ven
 |---|---|
 | Source des annonces | **Table `products` uniquement** (jointure `storefront_listings → products`) — aucune copie, aucune dénormalisation, une seule ligne `products` par annonce |
 | Contenu affiché | Listings non retirés, `products.status ∈ ('PENDING','AVAILABLE','RESERVED')`, `deleted_at IS NULL` — rien d'autre |
-| Coordonnées vendeur | **Aucune** — ni dans le JSON, ni via un header, ni via un lien (`displayName` uniquement, §6.4) |
+| Coordonnées vendeur | **Aucune** — ni dans le JSON, ni via un header, ni via un lien (`displayName` + `memberSince` uniquement, §6.4) |
 | `Cache-Control` | **`private, no-store`** — décision explicite (§10.3) |
 | Statut non-ouvert | `404 NOT_FOUND`, payload unique, indistinguable d'un slug inconnu (§5.1) |
 | Cohérence catalogue | Même `products.id`, même titre, même prix dans les deux vues (CA-V7-035) |
@@ -959,9 +960,9 @@ Clé `rl:storefront-contact:<ip>`. En `NODE_ENV=test`, bypassé (comportement v2
 |---|---|---|
 | **Ownership** | `productId` vérifié `owner_id = session.userId` (route 3) ; listing vérifié via jointure `subscription.seller_id` (route 4) ; abonnement toujours résolu depuis `session.userId`, jamais depuis un paramètre | CA-V7-030/034 |
 | **RBAC** | `requireAuth` (vendeur) / `requireAdmin` (admin) réutilisés ; aucun `role` nouveau, aucune écriture `users.role`, aucune élévation | CA-V7-002/013/050/052 |
-| **Slug** | Normalisation NFD + regex stricte + longueur 3–40 + 20 mots réservés **côté serveur (autorité)** ; échappement React ; requêtes paramétrées uniquement | CA-V7-020/021/022 |
+| **Slug** | Normalisation stricte (`trim → minuscules → espaces → `-`) + regex stricte + longueur 3–40 + 20 mots réservés **côté serveur (autorité)** ; échappement React ; requêtes paramétrées uniquement | CA-V7-020/021/022 |
 | **Non-divulgation** | `404 NOT_FOUND` unique (§5.1) ; exception unique et documentée `403 NOT_PRODUCT_OWNER` (§5.2) ; aucun `currentStatus`/`hint` dans les 404 | CA-V7-024/030 |
-| **Coordonnées privées** | Sérialiseur public V7 = `displayName` uniquement ; 0 occurrence de `phone`/`whatsapp`/`email`/`tel:`/`mailto:` dans la boutique ; email du **demandeur** transmis uniquement au vendeur (route 6) | CA-V7-026/045/046/047, D2 |
+| **Coordonnées privées** | Sérialiseur public V7 = `displayName` + `memberSince` ; 0 occurrence de `phone`/`whatsapp`/`email`/`tel:`/`mailto:` dans la boutique ; email du **demandeur** transmis uniquement au vendeur (route 6) | CA-V7-026/045/046/047, D2 |
 | **Injection / XSS** | zod sur toutes les entrées ; React échappe le contenu ; `message` rendu comme texte (jamais `dangerouslySetInnerHTML`) | CA-V7-045 |
 | **Paiement / fraude** | Aucune route de paiement d'abonnement, aucun webhook, aucun champ bancaire ; `status='ACTIVE'` client ignoré (CA-V7-014) | CA-V7-014, §9 |
 | **CSRF / cookie** | Double soumission existante sur POST/DELETE ; cookie `httpOnly`, `SameSite=Lax`, `Secure` en prod, same-origin | §2 |

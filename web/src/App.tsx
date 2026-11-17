@@ -28,6 +28,10 @@ import { NotificationsPage } from './pages/NotificationsPage'
 import { ConditionsPage } from './pages/ConditionsPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 
+/* V7 « Hébergement des vendeurs » — ajouts purs (design-v7 §5.6). */
+import { Boutique } from './pages/Boutique'
+import { MonAbonnement } from './pages/MonAbonnement'
+
 /* Espace administrateur — conservé tel quel (hors SiteShell, coquille dédiée). */
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
 import { AdminPendingPage } from './pages/admin/AdminPendingPage'
@@ -38,6 +42,7 @@ import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage'
 import { AdminCategoriesPage } from './pages/admin/AdminCategoriesPage'
 import { AdminHistoryPage } from './pages/admin/AdminHistoryPage'
+import { Abonnements } from './pages/admin/Abonnements'
 
 /**
  * Routes du SITE PUBLIC — toutes servies par `SiteShell` (coquille de
@@ -119,6 +124,10 @@ export function App() {
         <Route path="/mes-articles" element={<RequireUser><MyArticlesPage /></RequireUser>} />
         <Route path="/notifications" element={<RequireUser><NotificationsPage /></RequireUser>} />
 
+        {/* ── V7 « Hébergement des vendeurs » — ajouts (aucune route existante modifiée) ── */}
+        <Route path="/boutique/:slug" element={<Boutique />} />
+        <Route path="/mon-abonnement" element={<RequireUser><MonAbonnement /></RequireUser>} />
+
         {/* ── Liens légaux du pied de page (CA-V5-142, PO-V5-20) ───── */}
         <Route path="/conditions" element={<ConditionsPage />} />
         <Route path="/confidentialite" element={<PrivacyPage />} />
@@ -139,6 +148,7 @@ export function App() {
       <Route path="/admin/utilisateurs" element={<RequireAdmin><AdminUsersPage /></RequireAdmin>} />
       <Route path="/admin/categories" element={<RequireAdmin><AdminCategoriesPage /></RequireAdmin>} />
       <Route path="/admin/historique" element={<RequireAdmin><AdminHistoryPage /></RequireAdmin>} />
+      <Route path="/admin/abonnements" element={<RequireAdmin><Abonnements /></RequireAdmin>} />
     </Routes>
   )
 }

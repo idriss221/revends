@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | **2.6 (2026-11-15)** — **Parrainage « Le Cercle des 10 »** : `GET /api/referrals/me` (privé), champ `ref` facultatif à l'inscription, `referralCode` dans le profil, `seller.ambassador` (badge) et priorité Vitrine au tri par défaut. Les encarts **v2.4 (Évolution V5)** et **v2.5 (Évolution V6 — WhatsApp, preuve de paiement, numéros +221)** restent applicables, non répétés ici. Les versions 2.0 → 2.3 restent également applicables. |
+| **Version** | **2.7 (2026-11-17)** — **fusion du contrat additif v7** (`docs/api-v7-hebergement-vendeurs.md`, contrat « 2.7 — V7 Hébergement vendeurs ») : 8 nouvelles routes (souscription, espace abonné, boutique publique, annonces de boutique, contact interne boutique, gouvernance admin des abonnements), 3 nouvelles tables (migration `019_storefront.sql`), enum `subscription_status`. Les encarts **v2.4 (Évolution V5)**, **v2.5 (Évolution V6 — WhatsApp, preuve de paiement, numéros +221)** et **v2.6 (V6 — Parrainage « Le Cercle des 10 »)** restent applicables, non répétés ici. Les versions 2.0 → 2.3 restent également applicables. |
 | **Auteur** | Agent api-designer, pour l'équipe projet |
 | **Statut** | Source de vérité du contrat d'API — implémentation `@backend`, consommation `@frontend` |
 | **Sources** | `docs/cahier-des-charges-v5.md` (C1–C9, PO-V5-01…20, §5.1, §5.9) · `docs/architecture-v5.md` (§4.3 catégories d'index, §4.4, §5, §6.1–6.2 budgets, §10 décisions D2–D9) · `server/migrations/009_soft_delete_perf.sql` (index `idx_products_owner_deleted`, index partiel `uq_one_active_order_per_product`) · `server/src/mail/` (9 déclencheurs / 11 envois) · docs antérieures conservées : `docs/cahier-des-charges-v2.md` (base conservée hors périmètre V3) · `docs/cahier-des-charges-v3.md` (S1 — US E1/E2, CA-AUTH04/05, CA-ORD01..12, §5/§6/§7, Annexe A/B) · `docs/architecture.md` §11 (S2 — DDL 003, règles `order_events`, matrice, contrat esquissé) · `server/migrations/003_order_events.sql` (enum `order_status` 11 valeurs, table `order_events`, trigger de matrice) · `server/migrations/006_order_shipped.sql` + `007_order_shipped_cycle.sql` (**Évolution V4** : enum `order_status` 12 valeurs avec `SHIPPED`, `payout_status` `DUE`, `notification_type` `order_shipped`, matrice `PREPARING → SHIPPED → IN_DELIVERY`) · `docs/cahier-des-charges-v4-accueil.md` (**V4-Accueil** : D-ACC-1..8, PO-ACC-1..6 arbitrés, RG-PROD-1..8, §5 US/CA-ACC, §7.1 contrat cible, §8 « Voir plus ») · **DDL 008** (créé et appliqué : `server/migrations/008_accueil_v3.sql` — `products.old_price`, `products.view_count`, table `banners` + seed, `notification_type` + `product.contact`) |
@@ -147,6 +147,20 @@
 > - `GET /api/products` (tri par défaut uniquement) : les articles d'un vendeur en **Vitrine active** passent devant. Les tris explicites de l'acheteur (`price_asc`, `price_desc`, `oldest`, `popular`, `relevance`) sont **inchangés** — un classement payant ne doit jamais fausser un tri choisi.
 > - `POST /api/admin/products/:id/approve` : si c'est le **premier** article approuvé d'un filleul, le parrain est crédité (idempotent) — e-mail `referral_milestone` au franchissement des paliers 5 et 10, jamais à chaque article.
 
+> ## Évolution V7 — Hébergement des vendeurs (encart, v2.7)
+>
+> **fusion du contrat additif v7** — source détaillée : `docs/api-v7-hebergement-vendeurs.md` (contrat **2.7 — V7 Hébergement vendeurs**, 2026-11-17). Conformément à ce document et à `docs/architecture-v7-hebergement-vendeurs.md`, **rien d'existant n'est amendé** :
+>
+> - **8 nouvelles routes uniquement** (§3.9) : `POST /api/subscriptions` · `GET /api/subscriptions/me` · `POST /api/storefront/listings` · `DELETE /api/storefront/listings/:id` · `GET /api/storefront/:slug` (public) · `POST /api/storefront/:slug/contact` (authentifié) · `GET /api/admin/subscriptions` · `POST /api/admin/subscriptions/:id/activate` (admin). Aucune route existante n'est modifiée, renommée ou supprimée.
+> - **3 nouvelles tables** (`subscription_plans` + seed 2000/5000/10000 FCFA · 10/30/100 annonces — validés le 17/11/2026, PO-V7-01/02 ; `seller_subscriptions` ; `storefront_listings` **sans colonne `status`**) et **1 nouvel enum** `subscription_status` (`PENDING | ACTIVE | EXPIRED | CANCELLED`). **0 colonne ajoutée** aux tables existantes ; `notification_type` **inchangé** (la valeur existante `product.contact` est réutilisée pour le contact boutique, titre précisant la boutique et l'expéditeur — N15, §5).
+> - **Aucun paiement, aucun cron, aucun trigger** : activation `PENDING → ACTIVE` **manuelle par un admin** (`activated_by`/`activated_at` tracés, route 8 uniquement) ; expiration **paresseuse en lecture** (30 jours glissants) ; unicité ACTIVE par vendeur via index partiel.
+> - **Le quota ne porte que sur la boutique** : annonces actives dérivées de `products.status` par jointure (`PENDING|AVAILABLE|RESERVED`, `deleted_at IS NULL`), contrôlé **uniquement** à l'ajout (`POST /api/storefront/listings`). `POST /api/products`, catalogue, fiche, commandes, checkout, paiement, payouts, commission 10 %, parrainage / `vitrine_until` : **aucun changement de comportement**.
+> - **Slugs** : unicité à vie par vendeur (tous statuts, normalisation serveur), 20 mots réservés, format `^[a-z0-9]+(?:-[a-z0-9]+)*$` (3–40). Boutique publique **non divulgatrice** : `404 NOT_FOUND` identique pour slug inconnu / `PENDING` / `EXPIRED` / `CANCELLED`. Exception assumée : `403 NOT_PRODUCT_OWNER` sur la route d'ajout pour un produit d'autrui (§1.4).
+> - **Codes d'erreur nouveaux** : `SLUG_RESERVED`, `INVALID_SUPERSEDES`, `SUBSCRIPTION_REQUIRED`, `SUBSCRIPTION_ALREADY_ACTIVE`, `STOREFRONT_QUOTA_EXCEEDED`, `STOREFRONT_ALREADY_LISTED`, `NOT_PRODUCT_OWNER`, `PLAN_NOT_FOUND`, `INVALID_STATUS` (réutilisés : `SLUG_TAKEN`, `CONTACT_SELF`, … — §3.9). Mapping `23505` traité **dans le service** V7, `middleware/errors.ts` inchangé.
+> - **`POST /api/products/:id/contact` (v2.4) n'est ni modifié ni réactivé** : le contact V7 est la route dédiée et strictement boutique-scopée `POST /api/storefront/:slug/contact` (rate limit dédié `storefront-contact`, 10 req / IP / 10 min).
+> - **Implémentation** : la migration `019_storefront.sql` doit être appliquée **avant** le code en prod (`RUN_MIGRATIONS=false` en prod). Le feature flag recommandé `FEATURE_STOREFRONT` n'est **pas** implémenté en V7 initiale (aucun fichier de configuration existant édité) — l'ordre migration → code reste obligatoire.
+> - **Cahier des charges** : `docs/cahier-des-charges-v7-hebergement-vendeurs.md` (45 critères CA-V7-xxx, validés le 17/11/2026).
+
 ## 1. Vue d'ensemble et conventions
 
 ### 1.1 Principes
@@ -237,6 +251,7 @@ Middlewares serveur (miroir `architecture.md` §6.1) : chaque route embarque son
 | Rôle insuffisant (user sur route admin, admin sur route user) | `403 FORBIDDEN` | L'utilisateur est identifié ; le refus de rôle est assumé (CA-AUTH02-04). |
 | Ressource privée **d'autrui** (produit d'un autre vendeur, commande d'un autre acheteur, notification d'un autre user) | `404 NOT_FOUND` | Ne pas révéler l'existence de la ressource ni de son propriétaire (§9.3, T22). |
 | Ressource inexistante | `404 NOT_FOUND` | Même payload que ci-dessus, indistinguable. |
+| Produit d'un **autre vendeur** sur `POST /api/storefront/listings` (**V7**) — **exception assumée** (arbitrage chef de projet 17/11/2026) | `403 NOT_PRODUCT_OWNER` | Le demandeur est **authentifié** et le produit lui est déjà connu via le catalogue public. Partout ailleurs, `404 NOT_FOUND` s'applique (ressource d'autrui / boutique `PENDING`/`EXPIRED`/`CANCELLED`/inconnue sur `GET /api/storefront/:slug` et `POST …/:slug/contact` — payload unique, §3.9). |
 
 ### 1.5 Pagination et filtrage (convention commune)
 
@@ -406,6 +421,7 @@ Forme `OwnerProduct` + `owner` en vue `AdminUser` (l'admin voit tout, §7.7) ; l
 | `seller_payouts.status` | `PENDING` · `PAID` |
 | `notifications.type` | `article_submitted` · `article_approved` · `article_rejected` · `order_created` · `payment_confirmed` · `article_reserved` · `reservation_expired` · `seller_paid` · `article_sold` (N1→N8) **+** `order_product_waiting` · `order_product_received` · `order_preparing` · `order_in_delivery` · `order_delivered` · `order_completed` (DDL 003 — émission : §5) **+** `order_shipped` (DDL 006 **V4** — N11bis) **+** `product.contact` (DDL 008 **V4-Accueil** — N14, vendeur, §3.2 quater) |
 | `admin_actions.action` | `product.approved` · `product.rejected` · `payment.confirmed` · `seller.paid` |
+| `subscription_status` (**V7**, DDL 019) | `PENDING` · `ACTIVE` · `EXPIRED` · `CANCELLED` — enum dédié ; `notification_type` **inchangé** (la valeur `product.contact` existante est réutilisée par le contact boutique, N15 §5) |
 
 ### 2.7 `Order` — vue acheteur (résumé, `GET /api/me/orders`)
 
@@ -499,6 +515,65 @@ Forme `OwnerProduct` + `owner` en vue `AdminUser` (l'admin voit tout, §7.7) ; l
 
 - Source : table `banners` du **DDL 008** (colonnes `title`, `subtitle`, `image_path`, `link_url`, `position` UNIQUE, `active` BOOLEAN défaut `true`, `created_at` — structure §7.2 du cahier V4). Le **seed** (≥ 3 bannières actives) et le futur CRUD admin sont hors périmètre API (§2.2 cahier V4, PO-ACC-4).
 - Le carrousel front consomme **uniquement** cette ressource : aucun contenu de bannière codé en dur (D-ACC-5, CA-ACC-07/73).
+
+
+### 2.11 `SubscriptionPlan` (palier — lecture seule, **V7**, issu de `subscription_plans`)
+
+```json
+{ "id": 1, "name": "Découverte", "priceFcfa": 2000, "quota": 10, "durationDays": 30 }
+```
+
+| Champ | Type | Contraintes |
+|---|---|---|
+| `id` | int ≥ 1 | PK ; 1 = Découverte · 2 = Boutique · 3 = Atelier (IDs stables, seed migration `019`) |
+| `name` | string (≤ 40) | `Découverte` · `Boutique` · `Atelier` |
+| `priceFcfa` | int > 0 | Entier FCFA/mois. **Jamais codé en dur dans le front** — toujours servi par l'API (CA-V7-010) |
+| `quota` | int > 0 | Annonces de **boutique** simultanées : 10 · 30 · 100 |
+| `durationDays` | int = 30 | Figé en base (`CHECK (duration_days = 30)`, 30 j glissants, PO-V7-03) |
+
+### 2.12 `Subscription` (vue propriétaire — **V7** ; `GET /api/subscriptions/me`, réponses de souscription et d'activation)
+
+`status` ∈ `PENDING · ACTIVE · EXPIRED · CANCELLED` (enum `subscription_status`, §2.6). `PENDING → ACTIVE` : **admin uniquement** (route `§3.9(8)`). `startedAt` = `activatedAt` = `activated_at` ; `endsAt` = `activated_at + 30 jours` ; `daysRemaining` = `ceil((endsAt − now()) / 86400s)`, `0` sinon ; `activatedBy` = `users.id` de l'admin ayant activé (tracé, jamais posé ailleurs). Une souscription sans `supersedesId` après `EXPIRED`/`CANCELLED` est une ligne fraîche — le slug réservé au vendeur est récupéré automatiquement.
+
+```json
+{ "id": 41, "status": "ACTIVE", "slug": "mode-dakar",
+  "plan": { "id": 1, "name": "Découverte", "priceFcfa": 2000, "quota": 10, "durationDays": 30 },
+  "supersedesId": null, "startedAt": "2026-11-17T10:15:00.000Z", "endsAt": "2026-12-17T10:15:00.000Z",
+  "daysRemaining": 30, "activatedBy": 7, "activatedAt": "2026-11-17T10:15:00.000Z",
+  "createdAt": "2026-11-16T18:02:00.000Z" }
+```
+
+Sans abonnement : `{ "subscription": null, "usage": null, "listings": [], "plans": [ …3 paliers ] }` (200 — l'espace privé existe toujours, il affiche l'écran de choix). `EXPIRED` : `message` clair affichable tel quel (CA-V7-016). Prix/quotas toujours issus de `subscription_plans` (aucun tarif en dur).
+
+### 2.13 `SubscriptionUsage` et `ListingView` (**V7** — espace abonné)
+
+```json
+{ "usage": { "used": 3, "quota": 10, "remaining": 7 },
+  "listings": [ { "id": 12, "productId": 88, "title": "Veste en jean — taille M",
+                  "price": 12000, "effectiveStatus": "AVAILABLE",
+                  "createdAt": "2026-11-17T10:20:00.000Z" } ] }
+```
+
+`used` est **dérivé en lecture** de `products.status` par jointure (`PENDING|AVAILABLE|RESERVED`, `p.deleted_at IS NULL`, `l.withdrawn_at IS NULL`) — jamais un compteur stocké. `effectiveStatus` idem (jamais stockée sur la liaison). `quota` = quota du forfait **`ACTIVE`**. `remaining` = `max(0, quota − used)`.
+
+### 2.14 `StorefrontPublic` (boutique publique — **V7**, `GET /api/storefront/:slug`)
+
+```json
+{ "storefront": { "slug": "mode-dakar", "displayName": "Aïcha M.", "memberSince": 2024 },
+  "items": [ { "id": 88, "name": "Veste en jean — taille M", "price": 12000,
+               "primaryPhotoUrl": "/uploads/products/9f1c3d2a.jpg", "effectiveStatus": "AVAILABLE" } ],
+  "page": 1, "perPage": 12, "total": 3, "totalPages": 1 }
+```
+
+`storefront` = `displayName` + `memberSince` (année d'inscription, `users.created_at`) — **uniquement**. **Jamais** `name`/`email`/`phone`/`whatsapp`/`tel:`/`mailto:` (CA-V7-026). `items[]` : `id` = **`products.id`** (même id que le catalogue — aucune duplication), `name` = `products.name`, `price` en FCFA entier, `primaryPhotoUrl` = photo primaire (`null` si aucune), `effectiveStatus` dérivé par jointure. Réponse pour toute boutique ouverte (vide → `items: []`). Enveloppe paginée standard §1.5 ; `Cache-Control: private, no-store`.
+
+### 2.15 `SubscriptionAdminItem` (file admin — **V7**, `GET /api/admin/subscriptions`)
+
+Enveloppe paginée `{ items, page, perPage, total, totalPages }`. Élément : `{ id, sellerId, sellerDisplayName, planName, priceFcfa, quota, slug, status, createdAt, activatedAt|null, activatedBy|null }` (vue **admin interne** — `sellerDisplayName` autorisé ici, ce n'est pas une vue publique).
+
+### 2.16 Effet de la route contact boutique (**V7**)
+
+La route `§3.9(6)` insère une ligne `notifications` **dans la même transaction** : `user_id` = vendeur de la boutique uniquement · `type` = **`product.contact`** (valeur d'enum **existante**, DDL 008 — aucun type créé) · `title` = `Nouveau message depuis la boutique « <slug> » — De : <displayName du demandeur>` · `message` = `De : <displayName>< — <email>>\n\n<message>` (l'email du **demandeur** n'est transmis qu'au vendeur ; jamais dans la réponse HTTP).
 
 ---
 
@@ -2050,6 +2125,37 @@ Route **privée** : un code de parrainage permet de rattacher des filleuls, il n
 
 ---
 
+
+### 3.9 V7 — Hébergement vendeurs (v2.7, additif)
+
+Source détaillée (corps, réponses JSON, simulation de tous les chemins 2xx/4xx/5xx) : **`docs/api-v7-hebergement-vendeurs.md`** (contrat **2.7 — V7 Hébergement vendeurs**, 2026-11-17) — **fusion du contrat additif v7**. Cette section en est la carte opérationnelle ; aucune route existante n'y est modifiée. Conventions : erreurs `{ error: { code, message, details? } }`, messages en français affichables, `private, no-store`, cookie HTTP-only + CSRF double soumission (comme v2.6 §1.1).
+
+| # | Méthode & chemin | Accès | Corps / Query | Succès |
+|---|---|---|---|---|
+| 1 | `POST /api/subscriptions` | `requireAuth` (user ou admin) | `{ planId, slug?, supersedesId? }` | `201` |
+| 2 | `GET /api/subscriptions/me` | `requireAuth` | — | `200` |
+| 3 | `POST /api/storefront/listings` | `requireAuth` + abonnement `ACTIVE` | `{ productId }` | `201` |
+| 4 | `DELETE /api/storefront/listings/:id` | `requireAuth` (propriétaire) | — | `200` |
+| 5 | `GET /api/storefront/:slug` | **public** | `page, per_page` | `200` / `404` |
+| 6 | `POST /api/storefront/:slug/contact` | `requireAuth` | `{ message, email? }` | `201` |
+| 7 | `GET /api/admin/subscriptions` | `requireAdmin` | `status (déf. PENDING), page, per_page` | `200` |
+| 8 | `POST /api/admin/subscriptions/:id/activate` | `requireAdmin` | `{}` (ignoré) | `200` |
+
+**Règles opposables :**
+
+1. **Souscription (1)** — crée TOUJOURS un `PENDING`. `planId` doit référencer un forfait `active = TRUE` (sinon `404 PLAN_NOT_FOUND`). `slug` normalisé **serveur** (`trim` → minuscules → espaces → `-` ; regex `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 3–40) puis validé : format invalide → `400 VALIDATION_ERROR` ; 20 mots réservés → `400 SLUG_RESERVED` ; slug réservé par un **autre vendeur** (tous statuts, à vie) → `409 SLUG_TAKEN` (le vendeur peut réutiliser **le sien**). Un vendeur qui possède déjà un slug récupère **son** slug à toute re-souscription. `supersedesId` (changement de forfait) : uniquement l'`ACTIVE` du connecté — d'autrui / inexistant → `404 NOT_FOUND` ; propre non-`ACTIVE` → `400 INVALID_SUPERSEDES` ; propre `ACTIVE` → changement valide (l'ancien passe `CANCELLED` à l'activation, ses listings actifs sont **réattachés** au nouvel abonnement). Aucun `status` envoyé n'est jamais lu (CA-V7-014).
+2. **Mon abonnement (2)** — matérialise paresseusement l'expiration `ACTIVE → EXPIRED` (sans cron) puis répond `200` ; sans abonnement : `subscription: null`, `usage: null`, `listings: []`, `plans: […3 paliers]`.
+3. **Ajout en boutique (3)** — **seul point de contrôle du quota** : abonnement `ACTIVE` non expiré exigé sinon `403 SUBSCRIPTION_REQUIRED` ; produit inexistant/supprimé → `404 PRODUCT_NOT_FOUND` ; produit d'autrui → `403 NOT_PRODUCT_OWNER` (exception assumée §1.4) ; verrou `SELECT … FOR UPDATE` sur l'abonnement puis comptage par jointure `storefront_listings JOIN products` (`PENDING|AVAILABLE|RESERVED`, `deleted_at IS NULL`, listing non retiré) : `used ≥ quota` → `409 STOREFRONT_QUOTA_EXCEEDED` (message « Quota de votre forfait atteint (n/quota). Retirez une annonce de votre boutique ou changez de forfait. ») ; produit déjà listé → `409 STOREFRONT_ALREADY_LISTED` (unicité partielle `uq_storefront_active_product`).
+4. **Retrait (4)** — `withdrawn_at = now()` sur la ligne de liaison ; **idempotent** (`200` même si déjà retiré) ; listing d'autrui ou inconnu → `404 NOT_FOUND` (jamais `403` ici) ; **aucune écriture sur `products`**, aucune annulation de commande.
+5. **Boutique publique (5)** — aucune session requise. Annonces = listings non retirés dont `products.status ∈ ('PENDING','AVAILABLE','RESERVED')` et `deleted_at IS NULL`. `404 NOT_FOUND` (« Boutique introuvable ») **unique et identique** pour slug inconnu / `PENDING` / `EXPIRED` / `CANCELLED`. `Cache-Control: private, no-store`.
+6. **Contact boutique (6)** — `message` 10–2000 (trimmé), `email` optionnel ≤ 254 (minuscules). Même garde-fou 404 que la boutique ; auto-contact → `400 CONTACT_SELF`. Une notification `product.contact` (existante) est insérée dans la même transaction (titre = « Nouveau message depuis la boutique « <slug> » — De : <displayName> »). **Rate limit dédié `storefront-contact` : 10 req / IP / 10 min** → `429 RATE_LIMITED` + `Retry-After`. Aucun canal privé (`tel:`, `mailto:`, `whatsapp:`) nulle part — le formulaire est strictement boutique-scopé et n'ajoute rien sur la fiche produit.
+7. **File admin (7)** — `requireAdmin` (un `user` → `403 FORBIDDEN`), tri `created_at DESC`, pagination standard §1.5, `status` ∈ enum (autre valeur → `400 VALIDATION_ERROR`).
+8. **Activation (8)** — **seul chemin `PENDING → ACTIVE`** : matérialisation paresseuse des `ACTIVE` expirés du vendeur ; si `supersedesId` : `CANCELLED` du prédécesseur + réattach de ses listings actifs ; sinon garde `409 SUBSCRIPTION_ALREADY_ACTIVE` si un `ACTIVE` existe. `started_at = activated_at = now()`, `ends_at = now() + 30 jours`, `activated_by` = admin connecté, `activated_at` = maintenant. Cible inexistante → `404 NOT_FOUND` ; cible pas `PENDING` → `409 INVALID_STATUS`. Corps `{}` — `status`/`activated_by`/`activated_at` envoyés sont **ignorés**.
+
+**Codes d'erreur nouveaux (récapitulatif)** : `SLUG_RESERVED` 400 · `INVALID_SUPERSEDES` 400 · `SUBSCRIPTION_REQUIRED` 403 · `NOT_PRODUCT_OWNER` 403 · `SUBSCRIPTION_ALREADY_ACTIVE` 409 · `STOREFRONT_QUOTA_EXCEEDED` 409 · `STOREFRONT_ALREADY_LISTED` 409 · `PLAN_NOT_FOUND` 404 · `INVALID_STATUS` 409. **Réutilisés** : `UNAUTHENTICATED`, `FORBIDDEN`, `VALIDATION_ERROR`, `NOT_FOUND`, `SLUG_TAKEN`, `PRODUCT_NOT_FOUND`, `CONTACT_SELF`, `RATE_LIMITED`, `INTERNAL_ERROR`. Les `23505` V7 sont traduits **dans le service** (`middleware/errors.ts` inchangé).
+
+**Ordre de déclaration** (`storefront.routes.ts`) : `POST /listings` et `DELETE /listings/:id` **avant** `GET /:slug` et `POST /:slug/contact`.
+
 ## 4. Matrice de validation des champs (miroir contraintes UI)
 
 Serveur = autorité (§9.5 : la validation client n'est qu'un confort). Le front reproduit ces bornes pour la saisie instantanée.
@@ -2093,6 +2199,12 @@ Serveur = autorité (§9.5 : la validation client n'est qu'un confort). Le front
 | `not_in` | 1..200 ints (CSV) | (**V4-Accueil**) exclusion — incompatible avec `ids` |
 | contact `message` | 10..2000 | (**V4-Accueil**) `POST /api/products/:id/contact`, trimmé |
 | contact `email` | ≤ 254 | (**V4-Accueil**) format e-mail, optionnel, minuscules |
+| `slug` (souscription) | 3..40 | (**V7**) `^[a-z0-9]+(?:-[a-z0-9]+)*$`, normalisation serveur (`trim` → minuscules → espaces → `-`) ; 20 mots réservés → `400 SLUG_RESERVED` |
+| `planId` / `productId` / `supersedesId` / `:id` | int ≥ 1 | (**V7**) `planId` → forfait `active = TRUE` sinon `404 PLAN_NOT_FOUND` ; `supersedesId` : propre `ACTIVE` sinon `400 INVALID_SUPERSEDES` / `404 NOT_FOUND` |
+| `message` (contact boutique) | 10..2000 | (**V7**) trimmé |
+| contact boutique `email` | ≤ 254 | (**V7**) format e-mail, optionnel, minuscules |
+| `status` (file admin) | enum 4 valeurs | (**V7**) `PENDING · ACTIVE · EXPIRED · CANCELLED`, défaut `PENDING` |
+| `durationDays` | = 30 | (**V7**) lecture seule (`subscription_plans`), 30 jours glissants |
 
 ---
 
@@ -2117,10 +2229,11 @@ Serveur = autorité (§9.5 : la validation client n'est qu'un confort). Le front
 | tâche planifiée / lazy (pas d'endpoint) | N7 — « Votre commande CMD-XXXXXX a expiré » | `reservation_expired` | acheteur |
 | `PUT /api/products/:id` | **aucune** (choix : la re-soumission suffit à ramener l'article dans la file admin) | — | — |
 | `POST /api/products/:id/contact` (**V4-Accueil**) | **N14** — « Nouveau message à propos de « <nom du produit> » » | `product.contact` | vendeur (propriétaire de l'annonce) |
+| `POST /api/storefront/:slug/contact` (**V7**) | **N15** — « Nouveau message depuis la boutique « <slug> » — De : <displayName> » | `product.contact` (type **existant** réutilisé, aucun type créé) | vendeur (propriétaire de la boutique abonnée) |
 
 Toute insertion de notification est faite **dans la même transaction** que l'événement (aucune notification orpheline).
 
-**Types ajoutés (6) au DDL 003 + (1) au DDL 006 (V4) + (1) au DDL 008 (V4-Accueil)** : `order_product_waiting`, `order_product_received`, `order_preparing`, `order_in_delivery`, `order_delivered`, `order_completed`, `order_shipped` (V4), `product.contact` (V4-Accueil). **7 événements émis** (N9–N13 + N11bis V4 + N14) ; `order_preparing` (`PRODUCT_RECEIVED → PREPARING`) **n'est émise par aucun endpoint par défaut** — réservée pour une future étape « en préparation » active. **Badge front** : se brancher **uniquement** sur `unreadCount`/`unreadNotifications` (inchangés §3.5) ; les `type` servent au libellé/icône et au lien « Suivre mon colis » pour les 5 types « colis » (`order_product_received`, `order_shipped`, `order_in_delivery`, `order_delivered`, `order_completed`). N14 (`product.contact`) : titre = « Nouveau message à propos de « <nom du produit> » », corps = `De : <expéditeur>< — <email>>\n\n<message>` — l'email du demandeur n'est transmis **qu'au vendeur** (T22, jamais ailleurs).
+**Types ajoutés (6) au DDL 003 + (1) au DDL 006 (V4) + (1) au DDL 008 (V4-Accueil)** : `order_product_waiting`, `order_product_received`, `order_preparing`, `order_in_delivery`, `order_delivered`, `order_completed`, `order_shipped` (V4), `product.contact` (V4-Accueil). **7 événements émis** (N9–N13 + N11bis V4 + N14) ; `order_preparing` (`PRODUCT_RECEIVED → PREPARING`) **n'est émise par aucun endpoint par défaut** — réservée pour une future étape « en préparation » active. **Badge front** : se brancher **uniquement** sur `unreadCount`/`unreadNotifications` (inchangés §3.5) ; les `type` servent au libellé/icône et au lien « Suivre mon colis » pour les 5 types « colis » (`order_product_received`, `order_shipped`, `order_in_delivery`, `order_delivered`, `order_completed`). N14 (`product.contact`) : titre = « Nouveau message à propos de « <nom du produit> » », corps = `De : <expéditeur>< — <email>>\n\n<message>` — l'email du demandeur n'est transmis **qu'au vendeur** (T22, jamais ailleurs). **V7 — N15** : le contact boutique réutilise le même type (`product.contact`, valeur existante du DDL 008 — **`notification_type` n'est pas modifié**) ; seul le **titre** porte le contexte V7 (« Nouveau message depuis la boutique « <slug> » — De : <displayName> »). Aucun canal privé (`tel:`, `mailto:`, `whatsapp:`) n'est ajouté, ni sur la boutique ni sur la fiche produit ; la fiche `/catalogue/:slug` est inchangée (verrou CA-V5-101).
 
 ---
 
@@ -2145,6 +2258,14 @@ Toute insertion de notification est faite **dans la même transaction** que l'é
 | `PUT /api/products/:id` | owner | multipart (champs + photo_order/remove_photo_ids/photos) | `200` |
 | `GET /api/me/products` | user | — | `200` |
 | `GET /api/referrals/me` (**V6**, parrainage) | session (`requireAuth`, admin admis) | — | `200` |
+| `POST /api/subscriptions` (**V7**) | session (`requireAuth`) | `{ planId, slug?, supersedesId? }` | `201` |
+| `GET /api/subscriptions/me` (**V7**) | session (`requireAuth`) | — | `200` |
+| `POST /api/storefront/listings` (**V7**) | session (`requireAuth`) + abonnement `ACTIVE` | `{ productId }` | `201` |
+| `DELETE /api/storefront/listings/:id` (**V7**) | session (`requireAuth`, propriétaire) | — | `200` |
+| `GET /api/storefront/:slug` (**V7**) | public | `page, per_page` | `200` / `404` |
+| `POST /api/storefront/:slug/contact` (**V7**) | session (`requireAuth`) | `{ message, email? }` | `201` |
+| `GET /api/admin/subscriptions` (**V7**) | admin | `status, page, per_page` | `200` |
+| `POST /api/admin/subscriptions/:id/activate` (**V7**) | admin | `{}` | `200` |
 | `POST /api/orders` | user | `{ productId, paymentMethod? }` | `201` |
 | `GET /api/me/orders` | user | — | `200` |
 | `GET /api/orders/:id` | session (buyer/seller/**admin**) | — | `200` |
@@ -2171,6 +2292,8 @@ Toute insertion de notification est faite **dans la même transaction** que l'é
 | `GET /api/admin/users` | admin | `q, page, per_page` | `200` |
 | `GET /api/admin/history` | admin | `action, target_type, page, per_page` | `200` |
 | `GET /health` | public | — | `200` |
+
+> **V7 — ordre de déclaration** : dans `storefront.routes.ts`, `POST /listings` et `DELETE /listings/:id` sont déclarées **avant** `GET /:slug` et `POST /:slug/contact` (le chemin littéral prime). Les routeurs V7 sont montés additivement dans `app.ts` **avant** `/api/admin` (`/api/admin/subscriptions`) ; un limiteur dédié `storefront-contact` (10 req / IP / 10 min) est monté avant le routeur `/api/storefront` pour la route de contact.
 
 ---
 
@@ -2272,6 +2395,15 @@ Côté **flux** (non modifié par ce contrat) : transactions + verrous (`FOR UPD
 - **V4-Accueil — rate-limit sur `/contact`** : middleware existant (§1.1, `RATE_LIMITED`) appliqué par IP — ex. 10 requêtes / 10 min (anti-spam recommandé) ; optionnel sur `GET /api/banners`/`locations` (publics, non sensibles).
 - **V4-Accueil — seed bannières** : ≥ 3 lignes `active = TRUE, position 1..n` (CRUD admin hors périmètre, PO-ACC-4) ; `position` UNIQUE.
 - **V4-Accueil — seed/catalogue** : au déploiement, renseigner `old_price`/`view_count` sur la donnée existante (**zéro migration destructive** : `ALTER TABLE … ADD COLUMN` avec défauts, aucune suppression).
+- **V7 — `019_storefront.sql` AVANT le code** : `RUN_MIGRATIONS=false` en prod, comme toute migration du projet — appliquer la migration **avant** de déployer le code V7, sinon toute route V7 renverrait `500` (tables absentes). Vérifier ensuite : 3 tables (`subscription_plans`, `seller_subscriptions`, `storefront_listings`), 3 lignes de forfaits (2000/10, 5000/30, 10000/100), enum `subscription_status` à 4 valeurs, `notification_type` **inchangé** (`product.contact` déjà présente).
+- **V7 — expiration paresseuse, sans cron** : `ACTIVE → EXPIRED` est matérialisée conditionnellement (`ends_at <= now()`, idempotent) à la lecture (`GET /api/subscriptions/me`, `POST /api/storefront/listings`, `GET /api/storefront/:slug`, activation admin) ; la lecture publique filtre `status = 'ACTIVE' AND ends_at > now()` — une ligne expirée non matérialisée répond déjà `404`. Aucune tâche planifiée, aucun trigger sur `products`, aucune colonne `status` sur `storefront_listings`.
+- **V7 — quota par jointure** : `SELECT COUNT(*) FROM storefront_listings l JOIN products p ON p.id = l.product_id WHERE l.subscription_id = $1 AND l.withdrawn_at IS NULL AND p.status IN ('PENDING','AVAILABLE','RESERVED') AND p.deleted_at IS NULL` — comptage **uniquement** dans `POST /api/storefront/listings`, précédé d'un `SELECT … FOR UPDATE` sur l'abonnement (sérialise les ajouts d'un même abonnement). `SOLD`/`REJECTED` libèrent une place **en lecture**, sans aucune écriture V7 dans le pipeline de commande/paiement.
+- **V7 — mapping `23505` dans le service** : `middleware/errors.ts` n'est **pas** modifié ; les violations `uq_active_subscription_slug` → `409 SLUG_TAKEN`, `uq_one_active_subscription_per_seller` → `409 SUBSCRIPTION_ALREADY_ACTIVE`, `uq_storefront_active_product` → `409 STOREFRONT_ALREADY_LISTED` sont traduites par try/catch dans `services/storefront.service.ts`.
+- **V7 — slug réservé à vie par vendeur** : à la re-souscription sans `supersedesId`, le service **remplace** le slug envoyé par le premier slug possédé par le vendeur (`ORDER BY created_at ASC`) ; avec `supersedesId` (propre `ACTIVE` uniquement), le slug est copié du prédécesseur. L'unicité cross-sellers est vérifiée dans l'unique fonction d'écriture (`409 SLUG_TAKEN` quel que soit le statut existant).
+- **V7 — `insertNotification` réutilisée telle quelle** : type `product.contact` existant via une constante locale typée (`utils/storefront.ts`) — **aucune** extension de l'union `NotificationType`, aucun fichier de notification édité ; le contact boutique exige `requireAuth` et refuse l'auto-contact (`400 CONTACT_SELF`).
+- **V7 — `rate-limit storefront-contact`** : `10 req / IP / 10 min` (scope `storefront-contact`, clé Redis `rl:storefront-contact:<ip>`), monté dans `app.ts` **avant** le routeur `/api/storefront` ; bypass `NODE_ENV=test` inchangé. `Cache-Control: private, no-store` sur toutes les réponses V7 (décision C-V7-1).
+- **V7 — `FEATURE_STOREFRONT` non implémenté** : le feature flag recommandé (montage conditionnel des 3 routeurs) n'a **pas** été livré en V7 initiale — aucun fichier de configuration existant édité. L'ordre migration → code reste **obligatoire** ; rollback = retirer le code V7 (les tables peuvent rester, elles sont inertes).
+- **V7 — feature-flag côté front** : hors périmètre de ce contrat ; voir `docs/architecture-v7-hebergement-vendeurs.md` §7.3 et `docs/cahier-des-charges-v7-hebergement-vendeurs.md` §8.
 
 ---
 

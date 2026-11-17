@@ -24,6 +24,9 @@ import { adminRouter } from './routes/admin.routes.js';
 import { cartRouter } from './routes/cart.routes.js';
 import { favoritesRouter } from './routes/favorites.routes.js';
 import { referralsRouter } from './routes/referrals.routes.js';
+import { subscriptionsRouter } from './routes/subscriptions.routes.js';
+import { storefrontRouter } from './routes/storefront.routes.js';
+import { adminSubscriptionsRouter } from './routes/admin-subscriptions.routes.js';
 import { listPublicCategories } from './services/categories.service.js';
 
 /**
@@ -184,6 +187,20 @@ export function createApp(): express.Express {
     }),
   );
 
+  // Rate limit DÉDIÉ au contact boutique (V7) : 10 req / IP / 10 min, scope
+  // propre `rl:storefront-contact:<ip>` (jamais partagé avec le global).
+  // Monté AVANT le routeur `/api/storefront` pour prévaloir sur le flux.
+  // Bypass intégral en NODE_ENV=test (rate-limit.ts), comme les autres scopes.
+  app.use(
+    '/api/storefront/:slug/contact',
+    rateLimit({
+      windowMs: 600_000,
+      max: 10,
+      scope: 'storefront-contact',
+      message: 'Trop de requêtes, réessayez dans 10 minute(s)',
+    }),
+  );
+
   // Rate limit ADMIN (plus strict) : 60 req/min/IP pour les mutations admin
   // Skip pour les admins (skipAdmin=true) — les admins légitimes ne doivent pas
   // être limités dans leurs actions de gestion.
@@ -220,6 +237,11 @@ export function createApp(): express.Express {
   app.use('/api/cart', cartRouter);
   app.use('/api/favorites', favoritesRouter);
   app.use('/api/referrals', referralsRouter);
+  // V7 — montage additif des routeurs Hébergement vendeurs (avant /api/admin
+  // pour que /api/admin/subscriptions ne traverse pas l'adminRouter existant).
+  app.use('/api/subscriptions', subscriptionsRouter);
+  app.use('/api/storefront', storefrontRouter);
+  app.use('/api/admin/subscriptions', adminSubscriptionsRouter);
   app.use('/api/admin', adminRouter);
 
   // 404 JSON pour les routes API inconnues (contrat §1.1)

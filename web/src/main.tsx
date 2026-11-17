@@ -13,6 +13,9 @@ import './styles/tokens.css'
 // Correctifs écrits à la main (a11y, états non couverts par la maquette) :
 // DOIT suivre bureau.css pour pouvoir les compléter.
 import './styles/bureau-fixes.css'
+// Écrans V7 « Hébergement des vendeurs » (additif, design-v7 §5.6 ; DOIT suivre
+// bureau-fixes.css : consomme les mêmes jetons .market-site).
+import './styles/storefront.css'
 import { App } from './App'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { ScrollToTop } from './components/layout/ScrollToTop'

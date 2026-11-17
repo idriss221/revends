@@ -145,6 +145,10 @@ export function AccountView() {
                 <Ico name="star" cls="sm" />
                 Parrainage
               </Link>
+              <Link to="/mon-abonnement">
+                <Ico name="store" cls="sm" />
+                Mon abonnement
+              </Link>
             </nav>
             <button
               className="btn ghost sm"

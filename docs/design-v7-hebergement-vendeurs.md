@@ -4,7 +4,7 @@
 |---|---|
 | **Projet** | ReVends — marketplace de revente d'articles d'occasion (Sénégal, cf. PO-V7-07) · **ReVendsen** |
 | **Version document** | 1.1 — **17/11/2026** |
-| **Journal des arbitrages** | **v1.1 — 17/11/2026** : intégration des deux arbitrages du chef de projet — **R-V7-D1 clos** (`memberSince` **déjà exposé** par la vue publique `PublicUser` : `id`, `displayName`, `memberSince`, `sales` — la boutique affiche « Membre depuis `<année>` » ; **aucun ajout au sérialiseur**) et **R-V7-D2 clos** (la boutique rend le **même skin** que le reste du site public : les tokens existants du scope `.market-site` — « Blanc Ivoire » clair dominant / « Bordeaux Nuit » clair/sombre, accent bordeaux `#7A1B2E`, surfaces `#FBF9F5`, texte `#1A1714`, typo « TOKENS REVENDS » de `docs/design-system.md`). La palette crème/terracotta mail est purgée de ce document (e-mails uniquement). |
+| **Journal des arbitrages** | **v1.1 — 17/11/2026** : intégration des deux arbitrages du chef de projet — **R-V7-D1 clos** (« Membre depuis <année> » via **`memberSince` ajouté au payload boutique le 17/11/2026** (sérialiseur V7 additif) — la maquette est tenue ; jamais une année devinée) et **R-V7-D2 clos** (la boutique rend le **même skin** que le reste du site public : les tokens existants du scope `.market-site` — « Blanc Ivoire » clair dominant / « Bordeaux Nuit » clair/sombre, accent bordeaux `#7A1B2E`, surfaces `#FBF9F5`, texte `#1A1714`, typo « TOKENS REVENDS » de `docs/design-system.md`). La palette crème/terracotta mail est purgée de ce document (e-mails uniquement). |
 | **Auteur** | Agent `@design` (Inkling 2 Small Free), sur instruction du chef de projet et de l'utilisateur |
 | **Statut** | **Soumis à validation** — spécification visuelle et interaction. Aucune ligne de code écrite, aucun écran implémenté |
 | **Nature** | **Design additif** : il spécifie les 3 nouveaux écrans V7 uniquement. **Aucune page existante n'est refondue, aucun composant existant n'est modifié** |
@@ -205,7 +205,7 @@ Découvre la boutique              Choisit un forfait               Voit la file
 **Comportement / contenu**
 
 - **Hero boutique** : eyebrow `BOUTIQUE` (`.eyebrow`), nom `displayName` (`--font-display`, `--fs-h1` clamp), baseline italique (une fois), puis méta `Membre depuis <année>` + ville si connue + `<n> annonces`. **Rien d'autre** : pas de slogan publicitaire, pas de stats commerciales, pas de badge Vitrine (le badge Ambassadeur est une mécanique catalogue, hors boutique).
-- **« Membre depuis »** : source **`memberSince` de `PublicUser`, déjà exposé par la vue publique** (`PublicUser` : `id`, `displayName`, `memberSince`, `sales` — arbitrage 17/11/2026, **aucun ajout au sérialiseur**). Format affiché : **année seule** — « Membre depuis 2024 ». Jamais de date précise, jamais de mois. **Toujours présent** dans la réponse publique : pas de repli, pas de placeholder.
+- **« Membre depuis »** : source **`memberSince` du payload boutique** — exposé depuis le 17/11/2026 (sérialiseur V7 additif, `users.created_at`), conforme à l'intention de l'arbitrage. Format affiché : **année seule** — « Membre depuis 2024 ». Jamais de date précise, jamais de mois. **Toujours présent** dans la réponse publique : pas de repli, pas de placeholder.
 - **Annonces** : **3 cartes = 3 listings** (CA-V7-025). Toujours `SiteCard` (mêmes `image`, `flag`, favori, lien vers `/catalogue/:slug`). Le produit boutique et le produit catalogue sont **le même objet** (même `id`, même titre, même prix — CA-V7-035) : la carte ne le sait pas, et c'est très bien.
 - **Formulaire contact** : ordre de tabulation (nom → message → email → submit), `aria-describedby` sur chaque champ, compteur `0 / 2000` (`aria-hidden`, l'info vit dans le hint), textarea en verre de champ existant (`.inp` pattern), hauteur min 108 px, `font-size ≥ 16px` (no iOS zoom).
 - **Bouton « Écrivez à la boutique » du hero** : ancre `#contact` vers le formulaire (pas un second canal). Pour un visiteur déconnecté, le formulaire reste **lisible** mais à l'envoi : panneau de connexion inline (§2.3), jamais un redirect muet.
@@ -587,7 +587,7 @@ Source unique : `friendlyError()` existant (`lib/errors.ts`), étendu de ces cas
 
 | Nouveau composant | Props clés | Notes d'implémentation |
 |---|---|---|
-| `StorefrontHero` | `{ displayName, memberSince, listingCount, slug }` | §2. Eyebrow + h1 `--font-display`. `memberSince` = **`PublicUser.memberSince`, déjà exposé** — champ requis, année seule (« 2024 »), aucun ajout au sérialiseur |
+| `StorefrontHero` | `{ displayName, memberSince, listingCount, slug }` | §2. Eyebrow + h1 `--font-display`. `memberSince` = **`memberSince` du payload boutique** (ajouté le 17/11/2026, fix additif) — année seule (« 2024 ») |
 | `StorefrontListingsGrid` | `{ items, page, total, onLoadMore }` | Wrapper `SiteCardGrid` + `.btn.quiet`. Comptage DOM = `items.length` (CA-V7-025) |
 | `ContactForm` | `{ slug, displayName }` | §2. Gère l'état déconnecté (§2.3), erreurs par champ, succès Toast |
 | `PlanPicker` | `{ plans, value, onChange, name }` | `fieldset/legend`, radios natifs, **prix/quota de l'API** uniquement |
@@ -809,7 +809,7 @@ Jamais d'écran muet : chaque erreur dit **ce qui n'a pas marché** en français
 | **CA-V7-060** | Gates verts (tsc, tests, build) | Hors design — consigné pour la recette : ce document n'introduit aucune dérogation TypeScript | §13 |
 | **CA-V7-061** | 0 erreur JavaScript sur boutique et mon-abonnement | Design sans logique cachée : états tous rendus déterministiquement ; pas de `JSON.parse` non protégé ; états `.loading` gérés par patterns existants | §8 |
 | **CA-V7-062** | Espace abonné accessible : clavier, focus, labels, `aria-live` | §6.1 (ordre), §6.2 (focus), §6.3 (labels), §6.5 (`aria-live` PENDING/ACTIVE), Jauge `aria-valuenow` | §6.5 |
-| **CA-V7-063** | Contrat documenté (api.md v2.7) | Design s'appuie **exactement** sur les 8 routes §4 de l'architecture + le champ public **`memberSince`, déjà exposé par `PublicUser`** (`id`, `displayName`, `memberSince`, `sales`) pour la ligne « Membre depuis `<année>` » du hero — **aucune route ni aucun champ ajouté** | §3, §4 |
+| **CA-V7-063** | Contrat documenté (api.md v2.7) | Design s'appuie **exactement** sur les 8 routes §4 de l'architecture + le champ public **`memberSince`, exposé par le payload boutique depuis le fix du 17/11/2026** (fix additif) — pour la ligne « Membre depuis `<année>` » du hero | §3, §4 |
 | **CA-V7-064** | Responsive 375 px, pas de débordement horizontal | §7 (grilles, tables défilantes `.rv-tab`, `scrollWidth <= 375`) | §7 |
 
 ### 11.2 Critères adjacents couverts par ce design (mêmes écrans)
@@ -831,7 +831,7 @@ Jamais d'écran muet : chaque erreur dit **ce qui n'a pas marché** en français
 
 - Chaque écran spécifie **ses trois états plus la 404** → CA-V7-024/061/062 couverts par construction.
 - Aucun critère n'exige une couleur ou un libellé **contraire** à ce document : ex. CA-V7-062 exige `aria-live` — posé (§6.5) ; CA-V7-027 exige `alt` — posé (§6.3) ; CA-V7-064 exige ≤ 375 px — posé (§7).
-- **memberSince** : déjà exposé par la vue publique (`PublicUser` : `id`, `displayName`, `memberSince`, `sales`) — le hero affiche « Membre depuis `<année>` », **aucun champ ni route ajouté** (arbitrage 17/11/2026).
+- **memberSince** : exposé par le payload boutique (fix additif du 17/11/2026) — le hero affiche « Membre depuis `<année>` » (arbitrage 17/11/2026, corrigé en v1.2).
 
 ---
 
@@ -839,7 +839,7 @@ Jamais d'écran muet : chaque erreur dit **ce qui n'a pas marché** en français
 
 | ID | Risque | Niveau | Action (propriétaire) | Plan B |
 |---|---|---|---|---|
-| **R-V7-D1** | ~~Le « Membre depuis » du hero exige un champ absent~~ — le contrat public expose déjà `memberSince` (`PublicUser` : `id`, `displayName`, `memberSince`, `sales`) | ✅ **Clos — arbitrage chef de projet 17/11/2026** | Le hero affiche « Membre depuis `<année>` » (année seule, jamais date précise) à partir de `PublicUser.memberSince` ; **aucun ajout au sérialiseur**, aucun repli, aucun placeholder | Aucun plan B : donnée déjà en production |
+| **R-V7-D1** | ~~Le « Membre depuis » du hero exige un champ absent~~ — exposé par le sérialiseur V7 (fix additif 17/11/2026 : `memberSince` dans `storefront`) | ✅ **Clos — arbitrage chef de projet 17/11/2026** | Le hero affiche « Membre depuis `<année>` » (année seule, jamais date précise) à partir du `memberSince` du payload boutique | Aucun plan B : donnée déjà en production |
 | **R-V7-D2** | ~~Double scope tokens (charte crème mail vs `.market-site`)~~ — la boutique est rendue par le **même skin** que le reste du site public | ✅ **Clos — arbitrage chef de projet 17/11/2026** | La boutique consomme `var(--surface-*)`, `var(--text-*)`, `var(--accent*)` du scope `.market-site` (« Blanc Ivoire » clair / « Bordeaux Nuit » sombre) ; **aucun hex nouveau** ; typo `var(--font-display)` (DM Serif Display, Georgia en repli) + Manrope ; la palette crème/terracotta mail n'est pas applicable au web | Aucun plan B : c'est la règle de production actuelle |
 | **R-V7-D3** | Régression anti-D2 : un `mailto:`/`tel:` glissé dans le formulaire ou la notification | ⚠️ Important | Checklist QA §6/§10.3 : `grep -nE 'mailto:|tel:|wa\.me|whatsapp' web/src/components/storefront web/src/views/StorefrontView.tsx` → 0 occurrence ; revue notification côté backend (`product.contact`, titre boutique) | CA-V7-046/047 en recette |
 | **R-V7-D4** | Jauge lue comme intimidation ; abandon silencieux au quota (10/10) sans compréhension | ⚠️ Important | Texte compagnon permanent + Notice warning + CTA alternatif visible (retirer **ou** monter de forfait) ; copy validée §3.3/3.5 | Le bandeau suffit : aucun modal bloquant |
@@ -850,7 +850,7 @@ Jamais d'écran muet : chaque erreur dit **ce qui n'a pas marché** en français
 | **R-V7-D9 (hérité)** | Liste des 20 mots réservés non définitive (PO-V7-06) | ℹ️ Mineur (PO) | Aucun impact design (le champ slug gère tout état d'erreur) | 1 ligne `utils/storefront.ts` |
 | **R-V7-D10 (hérité)** | Incohérence géo Sénégal/Côte d'Ivoire (PO-V7-07) | ℹ️ Mineur (PO) | Copy V7 sans mention de pays (« Dakar » en exemple seulement, jamais de géo-assertion) | Docs antérieurs inchangés |
 
-**Risques ouverts à ce jour** : R-V7-D8, R-V7-D9, R-V7-D10 (PO, existants). **R-V7-D1 et R-V7-D2 sont clos** par arbitrage du chef de projet le 17/11/2026 (memberSince déjà exposé ; skin `.market-site` unique). Les autres sont atténués par construction.
+**Risques ouverts à ce jour** : R-V7-D8, R-V7-D9, R-V7-D10 (PO, existants). **R-V7-D1 et R-V7-D2 sont clos** par arbitrage du chef de projet le 17/11/2026 (memberSince exposé par le sérialiseur V7 ; skin `.market-site` unique). Les autres sont atténués par construction.
 
 ---
 
@@ -871,7 +871,7 @@ Jamais d'écran muet : chaque erreur dit **ce qui n'a pas marché** en français
 | 9 | (6) États chargement/erreur/vide | ✅ | §8 (matrice unique des 6 contextes, HeartLoader partout, `role="alert"` + Réessayer) |
 | 10 | (7) Animations discrètes, aucune donnée distante | ✅ | §9 (table, durées ≤ 400 ms, aucune boucle hors cœur), §10 (interdits) |
 | 11 | (8) Anti-patterns proscrits (faux compte à rebours, fausse rareté, numéro direct, carte Tailwind étrangère) | ✅ | §10 (15 anti-patterns) |
-| 12 | (9) Mapping CA-V7-023 → 027 et CA-V7-060 → 064 | ✅ | §11.1 (table imposée), §11.2 (adjacents), §11.3 (auto-revue du mapping ; `memberSince` déjà exposé par `PublicUser`, 0 ajout) |
+| 12 | (9) Mapping CA-V7-023 → 027 et CA-V7-060 → 064 | ✅ | §11.1 (table imposée), §11.2 (adjacents), §11.3 (auto-revue du mapping ; `memberSince` exposé via sérialiseur V7, ajout additif du 17/11/2026) |
 | 13 | (10) Définition de Done + verdict binaire | ✅ | §13 |
 | 14 | Compétences appliquées (`design-exceptionnel`, `plan-le-first`, `gestion-risques`, `auto-revue`, `definition-done`) | ✅ | plan en §0/§1 · barème design (hiérarchie, tokens `.market-site` uniques §0.1 — 60/30/10 hérité de la charte publique, DM Serif Display/Manrope, ombres douces §5.5, polish §6) · risques §12 (R-V7-D1/D2 clos) · relecture §13.3 |
 
@@ -897,10 +897,10 @@ Jamais d'écran muet : chaque erreur dit **ce qui n'a pas marché** en français
 
 ### 13.3 Auto-revue (`auto-revue`)
 
-Relecture complète du document après v1.1 (arbitrages 17/11/2026) : (a) purgé **toutes** les occurrences des cinq hex de l'ancienne direction (crème / terracotta mail / sable / blanc cassé / encre mail) — elles n'apparaissent nulle part dans les écrans ni dans les tokens de ce document ; (b) contrastes §6.4 entièrement recalculés sur les tokens réels `.market-site`, clair **et** sombre — 22 combinaisons, 0 violation ; (c) `memberSince` traité comme champ **déjà exposé** (`PublicUser`) : hero « Membre depuis `<année>` », risque R-V7-D1 supprimé des risques ouverts ; (d) aucune référence résiduelle au « skin crème » de la boutique. Vérifié ensuite : 0 `tel:`/`mailto:` dans les maquettes, 0 prix en dur hors exemples de paliers (« 2 000/5 000/10 000 FCFA » = valeurs **validées PO le 17/11/2026**, consommées via l'API), 1 seul `<h1>` par écran, 404 boutique unique, `aria-valuenow` présent, texte des maquettes et des 3 écrans intacts (seules les annotations de jetons/typos y ont été alignées). **Dernier contrôle** : les libellés d'action tiennent en 4 mots max, zéro point d'exclamation. Historique v1.0 → v1.1 : 1 section réécrite (§0.1), 22 contrastes remplacés, 2 risques clos, annotations de maquette alignées sur `--font-display`/`--text-*`/`--fs-*` réels.
+Relecture complète du document après v1.1 (arbitrages 17/11/2026) : (a) purgé **toutes** les occurrences des cinq hex de l'ancienne direction (crème / terracotta mail / sable / blanc cassé / encre mail) — elles n'apparaissent nulle part dans les écrans ni dans les tokens de ce document ; (b) contrastes §6.4 entièrement recalculés sur les tokens réels `.market-site`, clair **et** sombre — 22 combinaisons, 0 violation ; (c) `memberSince` exposé par le sérialiseur V7 (fix additif 17/11/2026) : hero « Membre depuis `<année>` », risque R-V7-D1 supprimé des risques ouverts ; (d) aucune référence résiduelle au « skin crème » de la boutique. Vérifié ensuite : 0 `tel:`/`mailto:` dans les maquettes, 0 prix en dur hors exemples de paliers (« 2 000/5 000/10 000 FCFA » = valeurs **validées PO le 17/11/2026**, consommées via l'API), 1 seul `<h1>` par écran, 404 boutique unique, `aria-valuenow` présent, texte des maquettes et des 3 écrans intacts (seules les annotations de jetons/typos y ont été alignées). **Dernier contrôle** : les libellés d'action tiennent en 4 mots max, zéro point d'exclamation. Historique v1.0 → v1.1 : 1 section réécrite (§0.1), 22 contrastes remplacés, 2 risques clos, annotations de maquette alignées sur `--font-display`/`--text-*`/`--fs-*` réels.
 
 ### 13.4 VERDICT
 
 **DONE — spécification visuelle et UX V7 complète, additive et actionnable.** Verdict binaire sur ce document : **✅ DONE**.
 
-**Aucune réserve design.** Les deux arbitrages du chef de projet du 17/11/2026 sont intégrés — **R-V7-D1 clos** (`memberSince` déjà exposé par `PublicUser`, boutique = « Membre depuis `<année>` », 0 ajout au sérialiseur) et **R-V7-D2 clos** (la boutique rend le même skin `.market-site` que le reste du site public ; la palette crème/terracotta mail est purgée du web). Restent ouvertes, côté PO uniquement : R-V7-D8 (SLA admin, PO-V7-08), R-V7-D9 (mots réservés, PO-V7-06), R-V7-D10 (géo, PO-V7-07). La recette de 45 critères (grille §9 du cahier) reste **NON EXÉCUTÉE** tant que le code n'existe pas ; aucun critère n'est déclaré conforme sur intention.
+**Aucune réserve design.** Les deux arbitrages du chef de projet du 17/11/2026 sont intégrés — **R-V7-D1 clos** (`memberSince` exposé par le payload boutique via fix additif du 17/11/2026, boutique = « Membre depuis `<année>` ») et **R-V7-D2 clos** (la boutique rend le même skin `.market-site` que le reste du site public ; la palette crème/terracotta mail est purgée du web). Restent ouvertes, côté PO uniquement : R-V7-D8 (SLA admin, PO-V7-08), R-V7-D9 (mots réservés, PO-V7-06), R-V7-D10 (géo, PO-V7-07). La recette de 45 critères (grille §9 du cahier) reste **NON EXÉCUTÉE** tant que le code n'existe pas ; aucun critère n'est déclaré conforme sur intention.

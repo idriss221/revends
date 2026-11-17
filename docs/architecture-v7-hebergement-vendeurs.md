@@ -31,7 +31,7 @@ V7 doit ajouter, sans toucher au parcours de vente existant, (a) un **forfait d'
 | P5 | **Séparation des préoccupations** | Abonnement / listing boutique / catalogue sont trois flux indépendants. Une vente modifie `products.status` via le pipeline existant ; la boutique le **lit**. |
 | P6 | **Prix et quotas en base** | Les 3 paliers sont seedés dans la migration `019`. Aucun tarif codé en dur dans le front (CA-V7-010). |
 | P7 | **Pas de paiement, pas de nouveau rôle** | Aucun checkout abonnement, webhook ou cron. `user`/`admin` uniquement ; `requireAuth` / `requireAdmin` réutilisés (CA-V7-002/014/052). |
-| P8 | **Confidentialité par construction** | Le sérialiseur public de la boutique n'expose que `displayName`. Jamais `phone`, `email`, `whatsapp`, `tel:`, `mailto:` (CA-V7-026/046). |
+| P8 | **Confidentialité par construction** | Le sérialiseur public de la boutique n'expose que `displayName` + `memberSince` (année, `users.created_at`) depuis le fix du 17/11/2026. Jamais `phone`, `email`, `whatsapp`, `tel:`, `mailto:` (CA-V7-026/046). |
 | P9 | **Indépendance du parrainage** | Aucune lecture/écriture de `referred_by`, `ambassador_until`, `vitrine_until`, `referral_qualifications` (CA-V7-054). |
 | P10 | **Simplicité** | SQL brut via le pool `pg` existant, zod pour la validation, aucun ORM, aucune nouvelle librairie, aucun workspace npm. |
 
@@ -254,7 +254,7 @@ Le corps reste `De : <displayName>< — <email>>\n\n<message>` (§4.2(6)). Aucun
 
 | Élément | Règle |
 |---|---|
-| Normalisation | `NFD` → suppression diacritiques `[\u0300-\u036f]` → `toLowerCase()` → espaces et non-alphanumériques → `-` → trim des `-`. Même esprit que `slugify.ts` existant, mais **sans fallback `'article'`** et plafonné à 40 (pas 120). |
+| Normalisation | `trim().toLowerCase()` → espaces (`\s`) → `-` → puis **regex stricte** `^[a-z0-9]+(?:-[a-z0-9]+)*$` (3–40). Aucun caractère hors classe n'est silencieusement transformé : `république`, `mode_dakar`, `x--y` sont **rejetés** (CA-V7-020/022). Le front applique la même normalisation pour l'aperçu, sans autorité. |
 | Format accepté | `^[a-z0-9]+(?:-[a-z0-9]+)*$`, longueur **3–40**. Rejette `a`, `ab`, `--x`, `x--y`, `mode_dakar`, `mode.dakar`, `république`, `a/b`, 41 caractères (CA-V7-022). |
 | Mots réservés (20) | `admin, api, boutique, catalogue, vendre, mes-articles, mon-abonnement, parrainage, panier, profil, login, register, search, static, assets, health, www, help, contact, legal` → `400 SLUG_RESERVED` (CA-V7-021). Liste figée dans le fichier, **PO-V7-06 ouvert** (§9). |
 | Unicité cross-sellers | Dans la **seule** fonction d'écriture : `SELECT seller_id FROM seller_subscriptions WHERE slug = $1 ORDER BY created_at LIMIT 1`. Si trouvé et `seller_id <> current` → `409 SLUG_TAKEN`, quel que soit le statut trouvé (y compris `EXPIRED`/`CANCELLED`) → slug réservé **à vie au vendeur** (CA-V7-020). Si `seller_id = current` → autorisé : changement de forfait **ou** re-souscription. |
@@ -470,7 +470,7 @@ Abonnement `EXPIRED` : `status: "EXPIRED"`, `message` clair « Votre abonnement 
 **Réponse `200`** :
 ```json
 {
-  "storefront": { "slug": "mode-dakar", "displayName": "Aïcha M." },
+  "storefront": { "slug": "mode-dakar", "displayName": "Aïcha M.", "memberSince": 2024 },
   "items": [ { "id": 88, "name": "Veste…", "price": 12000,
                "primaryPhotoUrl": "…", "effectiveStatus": "AVAILABLE" } ],
   "page": 1, "perPage": 12, "total": 3, "totalPages": 1
@@ -478,7 +478,7 @@ Abonnement `EXPIRED` : `status: "EXPIRED"`, `message` clair « Votre abonnement 
 ```
 - Uniquement les listings non retirés dont `products.status ∈ ('PENDING','AVAILABLE','RESERVED')` et `deleted_at IS NULL`.
 - `per_page` 1..48, défaut 12 (convention §1.5). Liste vide → `200 items: []`.
-- `storefront.displayName` = `users.display_name` uniquement. **Aucun `phone`/`email`/`whatsapp`/`tel:`/`mailto:`** (CA-V7-026).
+- `storefront.displayName` = `users.display_name` ; `memberSince` = année d'inscription (`users.created_at`) — les seuls champs publics de la boutique. **Aucun `phone`/`email`/`whatsapp`/`tel:`/`mailto:`** (CA-V7-026).
 - Réutilise `serializePublicProduct`-like (champs publics uniquement) ; un nouveau `serializeStorefront*` dédié est créé dans `utils/storefront-serializers.ts` (aucune édition de `utils/serializers.ts`).
 
 **Erreurs** : `404 NOT_FOUND` / « Boutique introuvable » (identique dans tous les cas de non-divulgation, §3.6) · `400 VALIDATION_ERROR` (pagination hors bornes) · `500 INTERNAL_ERROR`. Aucune session requise.
@@ -580,7 +580,7 @@ Aucune nouvelle librairie front ; TanStack Query est utilisé pour l'invalidatio
 | **RBAC** | `requireAuth` (seller) et `requireAdmin` (admin) réutilisés ; aucun `role` nouveau, aucune écriture de `users.role`, aucune élévation. Un `user` sur route admin → `403` API et redirection front sans page 403 (convention ARB-V5-02). | CA-V7-002/013/050/052 |
 | **Slug** | Normalisation + regex + longueur + 20 mots réservés **côté serveur** (autorité) ; échappement automatique React ; pas d'interpolation SQL (tout paramétré via `pool.query`). Aucun `/`, `.`, `_`, accent. | CA-V7-020/021/022 |
 | **Non-divulgation** | 404 unique pour slug inconnu / `PENDING` / `EXPIRED` ; ressource d'autrui → 404. **Exception assumée** : produit d'autrui sur `POST /api/storefront/listings` → `403 NOT_PRODUCT_OWNER` (CA-V7-030, api.md v2.7 §1.4). Aucun `currentStatus` dans les 404. | CA-V7-024/030 |
-| **Coordonnées privées** | Sérialiseur public V7 = `displayName` uniquement. Aucun `phone`, `whatsapp`, `email`, `tel:`, `mailto:` dans le HTML/JSON de `/boutique/:slug` ni dans la notification (seule l'adresse **du demandeur** y figure, à destination du vendeur). Absent de `/catalogue/:slug`. | CA-V7-026/046/047 |
+| **Coordonnées privées** | Sérialiseur public V7 = `displayName` + `memberSince`. Aucun `phone`, `whatsapp`, `email`, `tel:`, `mailto:` dans le HTML/JSON de `/boutique/:slug` ni dans la notification (seule l'adresse **du demandeur** y figure, à destination du vendeur). Absent de `/catalogue/:slug`. | CA-V7-026/046/047 |
 | **Injection / XSS** | Requêtes paramétrées ; zod sur toutes les entrées ; React échappe le contenu ; `message` du contact stocké tel quel en base mais rendu comme texte (jamais `dangerouslySetInnerHTML`). | CA-V7-045 |
 | **Paiement / fraude** | Aucune route de paiement d'abonnement, aucun webhook, aucun champ bancaire. `status='ACTIVE'` ignoré si envoyé par le client (le service ne lit que `planId`, `slug`, `supersedesId`). | CA-V7-014 |
 | **Rate limit** | Global 300/min déjà monté sur `/api` ; admin 60/min déjà monté sur `/api/admin` ; nouveau scope `storefront-contact` 10/10 min sur la route de contact (middleware existant, clé Redis `rl:storefront-contact:<ip>`). Bypass `NODE_ENV=test` conservé. | api.md §8, CA-V7-045 |
@@ -642,7 +642,7 @@ Format `gestion-risques` : impact × probabilité, action, plan B. Statut au 17/
 | **R-V7-A6** | Expiration non matérialisée → conflit 23505 sur `uq_one_active_subscription_per_seller` à la ré-souscription **sans `supersedesId`** | ⚠️ Important | Matérialisation paresseuse avant toute activation + filtre `ends_at > now()` en lecture (§3.4) ; `@backend` | Mapping 23505 → `SUBSCRIPTION_ALREADY_ACTIVE` (déjà prévu) |
 | **R-V7-A7** | Migration appliquée **après** le code en prod → 500 sur les routes V7 | 🔴 Critique | Ordre strict §7.2 + feature flag §7.3 ; `@deploy-ops` | Flag `false` immédiat, appliquer 019, réactiver |
 | **R-V7-A8** | Fuite de quota dans `POST /api/products` → régression CA-V5-069/070 | 🔴 Critique | CA-V7-003/004/033/038 exécutés avant chaque merge ; `@tester` + `@backend` | Flag off + rollback ; 0 test V5 amendé |
-| **R-V7-A9** | Slug non normalisé → collision / injection de chemin | ⚠️ Important | Regex + NFD + mots réservés + échappement React (§2.5) ; `@backend` | Rejet 400 serveur avant toute écriture |
+| **R-V7-A9** | Slug non normalisé → collision / injection de chemin | ⚠️ Important | Regex stricte + mots réservés + échappement React (§2.5) ; `@backend` | Rejet 400 serveur avant toute écriture |
 | **R-V7-A10** | Goulot d'activation admin (file `PENDING`) | ⚠️ Important | Écran admin filtré + notification admin à la souscription (hors V7 strict ? voir PO-V7-08) ; `@frontend`/`@backend` | SLA annoncé ; traitement par lot — **attend : PO-V7-08** |
 | **R-V7-A11** | Liste des 20 mots réservés non définitive | ℹ️ Mineur | Liste §2.5 figée dans `utils/storefront.ts` — **attend : PO-V7-06** | Ajout de mots = 1 ligne, sans migration |
 | **R-V7-A12** | Incohérence géo Sénégal vs Côte d'Ivoire | ℹ️ Mineur | Aucun impact fonctionnel ; conserver les docs antérieurs inchangés — **attend : PO-V7-07** | Aucun |

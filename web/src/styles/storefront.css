@@ -1,0 +1,149 @@
+/* =====================================================================
+   STOREFRONT V7 — « Hébergement des vendeurs »
+   ---------------------------------------------------------------------
+   Écrans V7 publics uniquement : `/boutique/:slug` et `/mon-abonnement`
+   (scope `.market-site`). `/admin/abonnements` vit dans `.market-admin`
+   (Tailwind + composants admin) et n'utilise AUCUNE règle d'ici.
+
+   Jetons : uniquement ceux de `tokens.css` / `bureau.css` (aucun hex,
+   aucune fonte, aucun rayon, aucune ombre nouveaux). Importé APRÈS
+   `bureau-fixes.css` (`main.tsx`).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------
+   1. Bouton discret — « Charger plus » / « Annuler »
+   (design §5.2, `.btn.quiet` : jumeau de `.btn.ghost` sans bordure)
+   --------------------------------------------------------------- */
+.market-site .btn.quiet { --bg: transparent; --bd: transparent; --fg: var(--text-secondary) }
+.market-site .btn.quiet:hover { --bg: var(--surface-hover); --fg: var(--text-primary) }
+
+/* Titre principal de page (une page = un h1) */
+.market-site .rv-shop-h1 { font: 400 var(--fs-h1)/1.15 var(--font-display); letter-spacing: -0.015em; color: var(--text-primary); margin: 14px 0 10px }
+.market-site .rv-shop-rule { border: 0; border-top: 1px solid var(--line-strong); margin: 6px 0 18px; opacity: .7 }
+
+/* ---------------------------------------------------------------
+   2. Boutique publique — hero (design §2.1 / §5.2 `StorefrontHero`)
+   --------------------------------------------------------------- */
+.market-site .rv-shop-hero { padding: clamp(26px, 3.5vw, 44px) 0 clamp(20px, 3vw, 32px); border-bottom: 1px solid var(--line) }
+.market-site .rv-shop-hero h1 { font: 400 var(--fs-h1)/1.12 var(--font-display); letter-spacing: -0.015em; color: var(--text-primary); margin: 16px 0 8px; max-width: 22ch }
+.market-site .rv-shop-baseline { font: italic 400 15px/1.5 var(--font-display); color: var(--text-secondary); margin: 0 0 14px }
+.market-site .rv-shop-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 500 var(--fs-meta)/1.6 var(--font-sans); color: var(--text-secondary) }
+.market-site .rv-shop-hero-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 18px }
+.market-site .rv-shop-priv { font: 500 var(--fs-meta)/1.5 var(--font-sans); color: var(--text-tertiary) }
+
+/* Deux colonnes ≥ 1024 px : contenu 8 / sidebar contact 4 (sticky) */
+.market-site .rv-shop-layout { display: grid; grid-template-columns: 1fr; gap: clamp(28px, 4vw, 56px); align-items: start }
+@media (min-width: 1024px) {
+  .market-site .rv-shop-layout { grid-template-columns: minmax(0, 8fr) minmax(300px, 4fr) }
+  .market-site .rv-shop-aside,
+  .market-site .rv-shop-sticky { position: sticky; top: calc(var(--header-h, 72px) + 20px) }
+}
+/* Annonces en 4 colonnes ≥ 1080 px (via .rv-grid existante) */
+
+/* ---------------------------------------------------------------
+   3. Formulaire de contact (design §2.1 / §2.3)
+   `.field` + `.inp` + `.hint` + `.err` viennent de la maquette ;
+   d'ici : mise en page, compteur, état connecté.
+   --------------------------------------------------------------- */
+.market-site .rv-shop-contact { display: grid; gap: 4px }
+.market-site .rv-shop-h2 { font: 400 var(--fs-h2)/1.2 var(--font-display); color: var(--text-primary); margin: 0 0 6px }
+.market-site .rv-shop-sub { color: var(--text-secondary); font: 500 var(--fs-body-s)/1.6 var(--font-sans); margin: 0 0 18px }
+.market-site .rv-shop-counter { float: right; font: 600 var(--fs-meta)/1.6 var(--font-sans); color: var(--text-tertiary); font-variant-numeric: tabular-nums }
+.market-site .rv-shop-lock { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-raised) }
+.market-site .rv-shop-lock .note { margin: 0 }
+
+/* ---------------------------------------------------------------
+   4. Choix du forfait (design §3.1 `PlanPicker`)
+   Radios NATIFS (clavier gratuit), carte entière cliquable.
+   --------------------------------------------------------------- */
+.market-site .rv-shop-plans { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 0; padding: 0; border: 0 }
+@media (min-width: 768px) { .market-site .rv-shop-plans { grid-template-columns: repeat(3, 1fr) } }
+.market-site .rv-shop-plan { position: relative; display: block; margin: 0; cursor: pointer }
+.market-site .rv-shop-plan-card {
+  position: relative;
+  display: grid; gap: 8px; height: 100%;
+  padding: 18px; border: 1.5px solid var(--line-strong); border-radius: var(--r-lg);
+  background: var(--surface-raised);
+  transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease)
+}
+.market-site .rv-shop-plan-name { font: 700 var(--fs-label)/1 var(--font-sans); letter-spacing: .18em; text-transform: uppercase; color: var(--accent-text) }
+.market-site .rv-shop-plan-price { font: 700 var(--fs-price-lg)/1.2 var(--font-sans); color: var(--text-primary); font-variant-numeric: tabular-nums }
+.market-site .rv-shop-plan-price small { display: block; font: 500 var(--fs-meta)/1.5 var(--font-sans); color: var(--text-secondary); letter-spacing: 0 }
+.market-site .rv-shop-plan-detail { font: 500 var(--fs-meta)/1.6 var(--font-sans); color: var(--text-secondary) }
+.market-site .rv-shop-plan-card:hover { border-color: var(--accent-ui); transform: translateY(-2px); box-shadow: var(--shadow-md) }
+.market-site .rv-shop-plan input:focus-visible + .rv-shop-plan-card { outline: 2px solid var(--focus); outline-offset: 3px }
+.market-site .rv-shop-plan input:checked + .rv-shop-plan-card { border-color: var(--accent-ui); box-shadow: 0 0 0 3px var(--accent-soft) }
+.market-site .rv-shop-plan-pill { position: absolute; top: -11px; right: 14px; padding: 3px 12px; border-radius: var(--r-pill); background: var(--champagne-soft); color: var(--text-primary); font: 600 var(--fs-label)/1.5 var(--font-sans); letter-spacing: .04em }
+/* Slug — préfixe fixe sous le curseur (maquette §3.1) */
+.market-site .rv-shop-slug { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: stretch; border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface-raised); overflow: hidden }
+.market-site .rv-shop-slug:focus-within { border-color: var(--focus); box-shadow: 0 0 0 3px var(--surface-hover) }
+.market-site .rv-shop-slug.bad { border-color: var(--danger) }
+.market-site .rv-shop-slug-prefix { display: flex; align-items: center; padding: 0 4px 0 16px; color: var(--text-secondary); font: 500 var(--fs-meta)/1.4 var(--font-sans); white-space: nowrap; user-select: none }
+.market-site .rv-shop-slug input { border: 0; background: transparent; min-height: 52px; padding: 0 14px 0 2px; font: 600 16px/1.4 var(--font-sans); color: var(--text-primary); width: 100% }
+.market-site .rv-shop-slug input:focus { outline: none }
+.market-site .rv-shop-slug input.bad { color: var(--danger) }
+
+/* ---------------------------------------------------------------
+   5. Jauge de quota (design §3.3 `QuotaGauge`)
+   role="progressbar" + aria-value* côté composant ; aplat `--accent`
+   sur piste `--surface-sunken` (8,88:1 clair, ≥ 3:1 exigé en 1.4.11
+   porté par la phrase compagne). Aucune donnée distante.
+   --------------------------------------------------------------- */
+.market-site .rv-shop-gauge { display: grid; gap: 8px; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-raised) }
+.market-site .rv-shop-gauge-value { font: 700 var(--fs-price-lg)/1.1 var(--font-sans); color: var(--text-primary); font-variant-numeric: tabular-nums }
+.market-site .rv-shop-gauge-track { height: 12px; border-radius: var(--r-pill); background: var(--surface-sunken); overflow: hidden }
+.market-site .rv-shop-gauge-fill { height: 100%; background: var(--accent); border-radius: var(--r-pill); transition: width var(--t-slow) var(--ease) }
+.market-site .rv-shop-gauge-text { font: 500 var(--fs-meta)/1.5 var(--font-sans); color: var(--text-secondary) }
+.market-site .rv-shop-gauge--full .rv-shop-gauge-track { outline: 1px solid var(--line-strong) }
+
+/* ---------------------------------------------------------------
+   6. Lignes « Mes annonces de boutique » (design §3.3)
+   --------------------------------------------------------------- */
+.market-site .rv-shop-listings { display: grid; gap: 0; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface-raised) }
+.market-site .rv-shop-listing { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 14px }
+.market-site .rv-shop-listing + .rv-shop-listing { border-top: 1px solid var(--line) }
+.market-site .rv-shop-listing-img { width: 64px; height: 64px; object-fit: cover; border-radius: var(--r-sm); background: var(--surface-sunken) }
+.market-site .rv-shop-listing-img--empty { display: inline-flex; align-items: center; justify-content: center; color: var(--text-tertiary) }
+.market-site .rv-shop-listing-title { font: 600 15px/1.35 var(--font-sans); color: var(--text-primary); min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-decoration: none }
+.market-site .rv-shop-listing-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 5px; font: 500 var(--fs-meta)/1.4 var(--font-sans); color: var(--text-secondary); font-variant-numeric: tabular-nums }
+.market-site .rv-shop-listing-actions { display: grid; justify-items: end; gap: 6px; min-width: 104px }
+
+/* Retrait à deux temps — inline, pas de modale (design §3.3) */
+.market-site .rv-shop-withdraw { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end }
+.market-site .rv-shop-confirm { display: flex; align-items: center; gap: 8px }
+.market-site .rv-shop-recall { font: 500 var(--fs-meta)/1.6 var(--font-sans); color: var(--text-tertiary); margin-top: 12px }
+.market-site .rv-shop-listing--leaving { overflow: hidden; max-height: 120px; opacity: 1; transition: max-height 200ms var(--ease-out), opacity 200ms var(--ease-out) }
+.market-site .rv-shop-listing--gone { max-height: 0; opacity: 0; padding-block: 0; border-width: 0 }
+
+/* ---------------------------------------------------------------
+   7. Panneaux statut (design §3.2 / §3.4)
+   --------------------------------------------------------------- */
+.market-site .rv-shop-panel { display: grid; gap: 16px; padding: clamp(18px, 3vw, 30px); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-raised) }
+.market-site .rv-shop-panel h1, .market-site .rv-shop-panel h2 { font: 400 var(--fs-h2)/1.18 var(--font-display); letter-spacing: -0.01em; color: var(--text-primary); margin: 0 }
+.market-site .rv-shop-recap { display: grid; gap: 0; border-top: 1px solid var(--line) }
+.market-site .rv-shop-recap-row { display: grid; grid-template-columns: minmax(96px, 140px) 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font: 500 var(--fs-meta)/1.5 var(--font-sans) }
+.market-site .rv-shop-recap-row dt { color: var(--text-tertiary); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; font-size: 11px }
+.market-site .rv-shop-recap-row dd { color: var(--text-primary); margin: 0 }
+
+/* Échéance — texte STATIQUE (jamais un chrono) */
+.market-site .rv-shop-deadline { font: 500 var(--fs-body-s)/1.6 var(--font-sans); color: var(--text-secondary) }
+
+/* En-tête abonnement actif : badge + lien boutique */
+.market-site .rv-shop-subhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px }
+.market-site .rv-shop-shop-link { display: inline-flex; align-items: center; gap: 8px; font: 600 var(--fs-meta)/1.6 var(--font-sans); color: var(--accent-text) }
+.market-site .rv-shop-shop-link:hover { text-decoration: underline }
+
+/* État vide annonces (design §3.3 / §8) */
+.market-site .rv-shop-addbox { display: grid; gap: 14px; justify-items: start; padding: clamp(22px, 3vw, 30px); border: 1px dashed var(--line-strong); border-radius: var(--r-lg); background: var(--surface-raised) }
+
+/* Forfaits alternatifs */
+.market-site .rv-shop-altplans { display: grid; gap: 10px }
+
+/* ---------------------------------------------------------------
+   8. Reduced motion — la jauge saute à la valeur finale
+   --------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .market-site .rv-shop-gauge-fill { transition: none }
+  .market-site .rv-shop-plan-card, .market-site .rv-shop-plan-card:hover { transition: none; transform: none }
+  .market-site .rv-shop-listing--leaving { transition: none }
+}
