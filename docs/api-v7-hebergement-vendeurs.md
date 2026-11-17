@@ -210,7 +210,7 @@ Sur `POST /api/storefront/listings` (route 3), un produit appartenant à **un au
 - **Unicité à vie** (cross-sellers, tous statuts confondus, y compris `EXPIRED`/`CANCELLED`) vérifiée dans la fonction d'écriture unique : slug déjà pris par un **autre** vendeur → `409 SLUG_TAKEN` (CA-V7-020). Un même vendeur peut réutiliser **son** slug (changement de forfait / ré-abonnement, CA-V7-015).
 - Filet DB : index partiel `uq_active_subscription_slug` (une seule boutique `ACTIVE` par slug) — violation `23505` → `409 SLUG_TAKEN` (mapping erreurs §11.3).
 - **20 mots réservés** → `400 SLUG_RESERVED` (CA-V7-021) : `admin`, `api`, `boutique`, `catalogue`, `vendre`, `mes-articles`, `mon-abonnement`, `parrainage`, `panier`, `profil`, `login`, `register`, `search`, `static`, `assets`, `health`, `www`, `help`, `contact`, `legal`.
-- **Format** : `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 3 à 40 caractères. Normalisation **serveur** (autorité) : `NFD` → suppression diacritiques → minuscules → espaces/non-alphanumériques → `-` → trim des `-`. `Mode Dakar` ≡ `mode-dakar` (CA-V7-020/022).
+- **Format** : `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 3 à 40 caractères. Normalisation **serveur** (autorité) : `trim().toLowerCase()` → espaces → `-`, puis regex stricte : tout caractère hors `[a-z0-9-]` → `400` (ex. `république`, `mode_dakar`, `x--y`). `Mode Dakar` ≡ `mode-dakar` (CA-V7-020/022).
 
 ---
 
@@ -960,7 +960,7 @@ Clé `rl:storefront-contact:<ip>`. En `NODE_ENV=test`, bypassé (comportement v2
 |---|---|---|
 | **Ownership** | `productId` vérifié `owner_id = session.userId` (route 3) ; listing vérifié via jointure `subscription.seller_id` (route 4) ; abonnement toujours résolu depuis `session.userId`, jamais depuis un paramètre | CA-V7-030/034 |
 | **RBAC** | `requireAuth` (vendeur) / `requireAdmin` (admin) réutilisés ; aucun `role` nouveau, aucune écriture `users.role`, aucune élévation | CA-V7-002/013/050/052 |
-| **Slug** | Normalisation NFD + regex stricte + longueur 3–40 + 20 mots réservés **côté serveur (autorité)** ; échappement React ; requêtes paramétrées uniquement | CA-V7-020/021/022 |
+| **Slug** | Normalisation stricte (`trim → minuscules → espaces → `-`) + regex stricte + longueur 3–40 + 20 mots réservés **côté serveur (autorité)** ; échappement React ; requêtes paramétrées uniquement | CA-V7-020/021/022 |
 | **Non-divulgation** | `404 NOT_FOUND` unique (§5.1) ; exception unique et documentée `403 NOT_PRODUCT_OWNER` (§5.2) ; aucun `currentStatus`/`hint` dans les 404 | CA-V7-024/030 |
 | **Coordonnées privées** | Sérialiseur public V7 = `displayName` + `memberSince` ; 0 occurrence de `phone`/`whatsapp`/`email`/`tel:`/`mailto:` dans la boutique ; email du **demandeur** transmis uniquement au vendeur (route 6) | CA-V7-026/045/046/047, D2 |
 | **Injection / XSS** | zod sur toutes les entrées ; React échappe le contenu ; `message` rendu comme texte (jamais `dangerouslySetInnerHTML`) | CA-V7-045 |

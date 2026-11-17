@@ -4458,3 +4458,12 @@ accord explicite pour ouvrir l'étape architecture.
   base des suites ; 4) audit e2e `menus.test.ts`/`adminDesignInvariants.test.ts` : amendés par
   l'implémentation V7 (ajout Abonnements au menu + compteur), PAS affaiblis — à valider en review ;
   5) suite serveur verte hors le flake emails. **Non poussé, non fusionné, prod intacte.**
+
+**Revue V7 + correctifs (17/11/2026)** — verdict initial : PAS BLOQUANT pour la fusion, 10 importants identifiés, 2 corrigent des bugs réels et sont vérifiés :
+- I-1 : activation admin — la contrainte slug (`uq_active_subscription_slug`) est désormais mappée `409 SLUG_TAKEN` (au lieu de 500).
+- I-2 : changement de forfait activé après échéance → listings réattachés QUEL QUE SOIT le statut matérialisé du prédécesseur (avant : boutique vide pour l'utilisateur).
+- I-3 : création de souscription sérialisée par `pg_advisory_xact_lock(hashtextextended(slug))` (check+insert atomique, races de slug éliminées).
+- I-4 : reproduction front honnête (« Vous pourrez suivre son état ici ») au lieu d'une notification inexistante + délai SLA inventé.
+- Tests de contre-exemple ajoutés (plan change après expiration, course slug 201/409) — 39/39 edge verts.
+- Docs resynchronisées (architecture, design, api-v7) : `memberSince` exposé par le payload boutique (fix 17/11/2026), normalisation slug abrégée telle qu'implémentée (espaces→tirets + regex stricte).
+- 646/646 serveur verts, 236/236 web, build OK. Prod NON touchée ; la mise en prod exige migration `019` avant code + arbitrage I-4/I-5/I-8.

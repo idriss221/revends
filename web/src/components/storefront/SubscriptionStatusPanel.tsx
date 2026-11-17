@@ -40,7 +40,7 @@ export function SubscriptionStatusPanel({ subscription }: { subscription: Subscr
         <HeartMark />
         <h1 id="sub-pending-title">Votre boutique est en attente d’activation</h1>
         <p className="rv-shop-sub">
-          L’administration examine votre demande. Vous serez notifié dès l’ouverture — rien d’autre à faire.
+          L’administration examine votre demande. Vous pourrez suivre son état ici — rien d’autre à faire.
         </p>
         <dl className="rv-shop-recap">
           <div className="rv-shop-recap-row">

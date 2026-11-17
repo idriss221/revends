@@ -195,6 +195,10 @@ export async function createSubscription(sellerId: number, input: SubscribeInput
           ]);
         }
         const normalized = normalizeSlug(input.slug);
+        // Sérialisation par slug : deux vendeurs peuvent passer la vérification
+        // de disponibilité en même temps ; le verrou rend l'ensemble
+        // check+insert atomique vis-à-vis des autres créateurs de PENDING.
+        await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [normalized]);
         if (!isSlugFormatValid(normalized)) {
           throw badRequest('VALIDATION_ERROR', 'Données invalides', [
             {
@@ -623,22 +627,23 @@ export async function activateSubscription(adminId: number, targetId: number) {
     await materializeExpiredSubscriptions(client, { sellerId: target.seller_id });
 
     if (target.supersedes_id != null) {
-      // (2a) Changement de forfait : CANCELLED du prédécesseur + réattach des listings actifs.
-      const cancelled = await client.query(
+      // (2a) Changement de forfait : le prédécesseur devient CANCELLED et ses
+      // listings actifs sont réattachés à la nouvelle demande. Le réattach se
+      // fait QUEL QUE SOIT le statut matérialisé du prédécesseur (le pré-
+      // traitement en (1) peut l'avoir fait passer EXPIRED avant cette ligne) :
+      // un plan change activé après l'échéance ne doit pas vider la boutique.
+      await client.query(
         `UPDATE seller_subscriptions
             SET status = 'CANCELLED'
-          WHERE id = $1 AND seller_id = $2 AND status = 'ACTIVE'
-          RETURNING id`,
+          WHERE id = $1 AND seller_id = $2 AND status = 'ACTIVE'`,
         [target.supersedes_id, target.seller_id],
       );
-      if ((cancelled.rowCount ?? 0) > 0) {
-        await client.query(
-          `UPDATE storefront_listings
-              SET subscription_id = $1
-            WHERE subscription_id = $2 AND withdrawn_at IS NULL`,
-          [target.id, target.supersedes_id],
-        );
-      }
+      await client.query(
+        `UPDATE storefront_listings
+            SET subscription_id = $1
+          WHERE subscription_id = $2 AND withdrawn_at IS NULL`,
+        [target.id, target.supersedes_id],
+      );
     } else {
       // (2b) Demande indépendante : un ACTIVE existe déjà pour ce vendeur → 409.
       const { rows: activeRows } = await client.query(
@@ -684,6 +689,10 @@ export async function activateSubscription(adminId: number, targetId: number) {
       if (isPgError(err) && err.code === '23505' && err.constraint === 'uq_one_active_subscription_per_seller') {
         // Course : un autre ACTIVE est apparu entre-temps (filet DB).
         throw conflict('SUBSCRIPTION_ALREADY_ACTIVE', 'Ce vendeur a déjà un abonnement actif');
+      }
+      if (isPgError(err) && err.code === '23505' && err.constraint === 'uq_active_subscription_slug') {
+        // Course : un autre vendeur a activé une boutique sur ce slug entre-temps.
+        throw conflict('SLUG_TAKEN', 'Cette adresse de boutique est déjà prise');
       }
       throw err;
     }

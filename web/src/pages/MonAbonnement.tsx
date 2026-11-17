@@ -239,7 +239,7 @@ export function MonAbonnement() {
 
           <h2 className="rv-shop-h2">Choisissez votre forfait</h2>
           <p className="rv-shop-sub">
-            Activation par l’administration sous 24 h ouvrées. Sans paiement en ligne pour le moment.
+            L’administration examine votre demande. Vous pourrez suivre son état ici — sans paiement en ligne pour le moment.
           </p>
 
           <form onSubmit={onSubmitPlans} noValidate>
@@ -335,7 +335,7 @@ export function MonAbonnement() {
               disabled={subscribe.isPending}
               aria-busy={subscribe.isPending}
             >
-              {subscribe.isPending ? 'Envoi…' : `Re-souscrire à ${subscription.plan.name} — éléments conservés`}
+              {subscribe.isPending ? 'Envoi…' : `Re-souscrire à ${subscription.plan.name}`}
             </button>
             <button
               type="button"

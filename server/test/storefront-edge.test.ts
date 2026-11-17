@@ -640,3 +640,50 @@ describe('CA-V7-012 — utilisateur sans abonnement : me → subscription null, 
     assert.equal(plans.length, 3);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fixes de revue — contre-exemples qui échouaient avant le correctif
+// ---------------------------------------------------------------------------
+describe('Revue V7 — correctifs I-2/I-3 : plan change après expiration, course sur le slug', () => {
+  it('activation AVEC plan change après expiration matérialisée → listings réattachés, boutique non vide', async () => {
+    const seller = await registerUser(server, 'cv7recov');
+    const { subId: oldId } = await subscribeAndActivate(seller, 2, 'Recuperation Expire');
+    const product = await createApprovedProduct(seller.client, admin, { name: `Produit recuperation ${Date.now()}` });
+    const add = await seller.client.post('/api/storefront/listings', { productId: product.id });
+    assert.equal(add.status, 201);
+    // Force l'ACTIVE à être déjà expirée à l'activation du plan change.
+    await dbQuery("UPDATE seller_subscriptions SET started_at = now() - interval '40 days', ends_at = now() - interval '1 day' WHERE id = $1", [oldId]);
+    // Demande de changement de forfait (nouvel abonnement PENDING).
+    const move = await seller.client.post('/api/subscriptions', { planId: 3, supersedesId: oldId });
+    assert.equal(move.status, 201);
+    const newId = (move.body as any).subscription.id as number;
+    const act = await admin.post(`/api/admin/subscriptions/${newId}/activate`, {});
+    assert.equal(act.status, 200, `activation → ${act.status} ${JSON.stringify(act.body)}`);
+    // La boutique publique contient le listing réattaché (et l'abonné le voit).
+    const me = await seller.client.get('/api/subscriptions/me');
+    assert.equal((me.body as any).usage.used, 1);
+    const pub = await server.newClient().get('/api/storefront/recuperation-expire');
+    assert.equal(pub.status, 200);
+    assert.equal((pub.body as any).items.length, 1);
+  });
+
+  it('deux vendeurs souscrivent le même slug en parallèle → 201 + 409 SLUG_TAKEN (jamais deux PENDING)', async () => {
+    const sellerA = await registerUser(server, 'cv7raceA');
+    const sellerB = await registerUser(server, 'cv7raceB');
+    const slug = `cv7race-win-${Date.now().toString(36)}`;
+    const [a, b] = await Promise.all([
+      sellerA.client.post('/api/subscriptions', { planId: 1, slug }),
+      sellerB.client.post('/api/subscriptions', { planId: 1, slug }),
+    ]);
+    const statuses = [a.status, b.status].sort((x, y) => x - y);
+    assert.deepEqual(statuses, [201, 409], `statuts=${statuses.join(',')} bodies=${JSON.stringify([a.body, b.body])}`);
+    const refused = [a, b].find((r) => r.status === 409)!;
+    assert.equal(errorCode(refused.body), 'SLUG_TAKEN');
+    // Un seul abonnement PENDING existe pour ce slug.
+    const rows = await dbQuery<{ n: number }>(
+      "SELECT count(*)::int AS n FROM seller_subscriptions WHERE slug = $1",
+      [slug],
+    );
+    assert.equal(rows[0]?.n, 1);
+  });
+});
