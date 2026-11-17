@@ -31,12 +31,20 @@ export const univers: Universe[] = [
   { slug: 'loisirs', label: 'Loisirs', icon: 'gamepad' },
 ]
 
-/** Menu sidebar admin (mapping design-system §4.3). */
-export function adminMenu(pending: number): SidebarItem[] {
+/**
+ * Menu sidebar admin (mapping design-system §4.3).
+ *
+ * `pendingSubs` (V7, optionnel, additif) : nombre de demandes d’abonnement
+ * en attente — N’affiche le badge « Abonnements » que sur la page qui le
+ * connaît (`/admin/abonnements`) ; ailleurs la ligne reste sans badge plutôt
+ * que d’afficher le compteur de produits (qui n’est PAS le même signal).
+ */
+export function adminMenu(pending: number, pendingSubs?: number): SidebarItem[] {
   return [
     { to: '/admin', icon: 'fas fa-gauge-high', label: 'Dashboard', exact: true },
     { to: '/admin/articles-en-attente', icon: 'fas fa-clock', label: 'Articles en attente', badge: pending, exact: true },
     { to: '/admin/articles', icon: 'fas fa-box', label: 'Articles' },
+    { to: '/admin/abonnements', icon: 'fas fa-store', label: 'Abonnements', badge: pendingSubs, exact: true },
     { to: '/admin/commandes', icon: 'fas fa-cart-shopping', label: 'Commandes' },
     { to: '/admin/paiements', icon: 'fas fa-money-bill-wave', label: 'Paiements vendeurs' },
     { to: '/admin/utilisateurs', icon: 'fas fa-users', label: 'Utilisateurs' },
@@ -50,6 +58,7 @@ export const adminMenuLabels: Record<string, string> = {
   '/admin': 'Dashboard',
   '/admin/articles-en-attente': 'Articles en attente',
   '/admin/articles': 'Articles',
+  '/admin/abonnements': 'Abonnements',
   '/admin/commandes': 'Commandes',
   '/admin/paiements': 'Paiements',
   '/admin/utilisateurs': 'Utilisateurs',

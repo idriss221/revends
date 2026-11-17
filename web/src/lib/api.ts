@@ -75,8 +75,12 @@ function getCsrfToken(): string | null {
 /**
  * Intercepteur global : exécute le fetch, applique credentials + headers JSON,
  * gère timeout/abandon, et transforme la réponse en données… ou en ApiError.
+ *
+ * Exporté (additif, v7) pour que `lib/storefront.ts` réutilise le même
+ * porteur CSRF/timeout sans dupliquer l'intercepteur. Aucun appelant
+ * existant n'est modifié.
  */
-async function request<T>(
+export async function request<T>(
   path: string,
   options: RequestInit = {},
   timeoutMs: number = TIMEOUTS.default,

@@ -30,15 +30,16 @@ describe('univers (navigation publique)', () => {
 describe('adminMenu(pending) — sidebar back-office', () => {
   it('structure attendue et routes réelles', () => {
     const m = adminMenu(0)
-    expect(m).toHaveLength(8)
+    expect(m).toHaveLength(9)
     expect(m[0]).toMatchObject({ to: '/admin', label: 'Dashboard', exact: true })
     expect(m[1]).toMatchObject({ to: '/admin/articles-en-attente', label: 'Articles en attente', exact: true })
     expect(m[2]).toMatchObject({ to: '/admin/articles', label: 'Articles' })
-    expect(m[3]).toMatchObject({ to: '/admin/commandes', label: 'Commandes' })
-    expect(m[4]).toMatchObject({ to: '/admin/paiements', label: 'Paiements vendeurs' })
-    expect(m[5]).toMatchObject({ to: '/admin/utilisateurs', label: 'Utilisateurs' })
-    expect(m[6]).toMatchObject({ to: '/admin/categories', label: 'Catégories' })
-    expect(m[7]).toMatchObject({ to: '/admin/historique', label: 'Historique' })
+    expect(m[3]).toMatchObject({ to: '/admin/abonnements', label: 'Abonnements', exact: true })
+    expect(m[4]).toMatchObject({ to: '/admin/commandes', label: 'Commandes' })
+    expect(m[5]).toMatchObject({ to: '/admin/paiements', label: 'Paiements vendeurs' })
+    expect(m[6]).toMatchObject({ to: '/admin/utilisateurs', label: 'Utilisateurs' })
+    expect(m[7]).toMatchObject({ to: '/admin/categories', label: 'Catégories' })
+    expect(m[8]).toMatchObject({ to: '/admin/historique', label: 'Historique' })
   })
 
   it('badge « Articles en attente » reflète exactement le compteur', () => {
@@ -46,7 +47,15 @@ describe('adminMenu(pending) — sidebar back-office', () => {
     expect(adminMenu(1)[1]?.badge).toBe(1)
     expect(adminMenu(42)[1]?.badge).toBe(42)
     // le compteur ne fuite pas sur les autres entrées
-    for (let i = 0; i < 8; i++) if (i !== 1) expect(adminMenu(99)[i]?.badge).toBeUndefined()
+    for (let i = 0; i < 9; i++) if (i !== 1) expect(adminMenu(99)[i]?.badge).toBeUndefined()
+  })
+
+  it('badge « Abonnements » seulement via le 2ᵉ argument (additif)', () => {
+    expect(adminMenu(0)[3]?.badge).toBeUndefined()
+    expect(adminMenu(0, 0)[3]?.badge).toBe(0)
+    expect(adminMenu(0, 7)[3]?.badge).toBe(7)
+    // le compteur produits ne fuit pas sur Abonnements
+    expect(adminMenu(99)[3]?.badge).toBeUndefined()
   })
 
   it('chaque entrée a icône + label non vides', () => {
@@ -68,7 +77,7 @@ describe('adminMenuLabels — menu mobile/bas d’écran (< 968 px)', () => {
       expect(adminMenuLabels[t]).toBeTypeOf('string')
       expect((adminMenuLabels[t] as string).length).toBeGreaterThan(0)
     }
-    expect(Object.keys(adminMenuLabels)).toHaveLength(8)
+    expect(Object.keys(adminMenuLabels)).toHaveLength(9)
   })
 
   it('cohérent avec les labels de la sidebar (menu bas d’écran tronqué intentionnellement)', () => {

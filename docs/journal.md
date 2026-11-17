@@ -4403,3 +4403,18 @@ accord explicite pour ouvrir l'étape architecture.
   (aucun `ALTER TYPE`) ; skin public `.market-site` pour la boutique.
 - `docs/api.md` non modifié : fusion en **v2.7** à l'implémentation. La recette
   des 45 critères est due par `@tester`.
+
+**Implémentation V7 (17/11/2026, branche `feat/v7-hebergement-vendeurs`)**
+- Backend : migration `019_storefront.sql`, service + 3 routeurs V7, 70/70
+  tests verts, **34/34 suites serveur vertes sans amendement** des tests
+  existants, `tsc --noEmit` = 0. Zéro ligne du pipeline de commande modifiée.
+- Frontend : `/boutique/:slug`, `/mon-abonnement`, `/admin/abonnements` + 9
+  composants `components/storefront/*` ; `tsc -b` = 0, build OK, **236/236
+  tests web verts** ; ajouts purs (3 routes, 1 lien compte, 2 tests de garde).
+- Fix : `memberSince` désormais exposé par le sérialiseur public V7
+  (`serializeStorefrontPublic`) — le hero affiche « Membre depuis <année> »,
+  toujours aucune donnée privée. Docs (`api.md` v2.7, `api-v7-…`) + types web
+  alignés.
+- Reste pour recette : parcours E2E, Playwright/accessibilité, `information_schema`
+  complet, migration `019` à appliquer **avant** tout déploiement (manuelle),
+  reviewer + securite. **Non déployé, non fusionné sur la branche de prod.**
