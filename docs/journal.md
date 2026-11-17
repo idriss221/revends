@@ -4581,3 +4581,26 @@ flag) ; ⑥ accord utilisateur explicite pour déploiement ; ⑦ surveiller `ema
 (CA-V5-002 hors V7). Note d'hygiène : la re-vérification a remis `revends_test` à zéro
 (drop schema → migrate → seed admin) — base de test jetable, l'état n'affecte pas la prod.
 **Prod NON touchée à aucune étape.**
+
+## 17/11/2026 — V7 « Hébergement des vendeurs » : mise en PRODUCTION
+
+**Backup** — `pg_dump` prod via image postgres:18 (serveur 18.7 ; le client
+Ubuntu 16.15 était trop ancien), fichier `~/.revends-secrets/backup/revends-pre-v7-2026-11-17.dump`,
+298 objets, vérifié restaurable (`pg_restore --list`).
+**Merge** — `fix/v6-on-799a7ab ← feat/v7-hebergement-vendeurs` (non fast-forward, `337da2e`).
+**Migration AVANT code** — `019_storefront.sql` appliquée en prod : 3 forfaits seed
+(Découverte 2 000/10, Boutique 5 000/30, Atelier 10 000/100), enum
+`subscription_status` = 4 valeurs, tables `subscription_plans` / `seller_subscriptions` /
+`storefront_listings`, `notification_type` inchangé (22 valeurs),
+**`information_schema.columns` identique** pour users/products/orders/notifications/referral_qualifications.
+**Déploiement** — `scripts/deploy-vercel.sh` → production `readyState READY`, alias
+`https://revends.vercel.app`, déployé `337da2e`.
+**Smoke prod (comptes test)** — register `smoke-v7-*@test.revends` ; souscription
+PENDING ; boutique publique API → **404 NOT_FOUND** avant activation (CA-V7-012/024 ✓) ;
+activation admin → **ACTIVE** (`/api/subscriptions/me` expose paliers/réponses) ;
+boutique publique après activation → **200** avec `memberSince` ; health 200 ;
+`/mon-abonnement` et `/admin/abonnements` servent 200 (SPA).
+**Observations** — viewRow prices come from the API (never hardcoded) ; la recette
+cargo (45/45, axe clean, 650+239 tests) tient sur la branche fusionnée.
+**À décider** — délai d'annonce « Élargir l'offre Hébergement vendeurs » (après
+clôture de la campagne parrainage 16/12 ?) + SLA activation admin (PO-V7-08).
