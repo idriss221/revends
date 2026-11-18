@@ -4644,3 +4644,13 @@ I5 clé activation datée). **Securite** : 0 critique ; IMPORTANTS soumis à l'a
 aucune notification avant confirmation du paiement). **Migration 020 à appliquer
 manuellement** (`RUN_MIGRATIONS=false`) AVANT tout déploiement.
 **Deploy** : voir conditions (backup, migration, CRON_SECRET fort, smoke, accord).
+
+## 18/11/2026 — V8 « Hébergement Boutique » : MERGÉ ET DÉPLOYÉ EN PRODUCTION
+
+**Merge** — `fix/v6-on-799a7ab ← feat/v8-hebergement-boutique` (non fast-forward, `bb50976`).
+**Backup** — `~/.revends-secrets/backup/revends-pre-v8-2026-11-18.dump` (postgres:18, 2 286 objets).
+**Migration AVANT code** — `020_storefront_v8.sql` appliquée en prod : `seller_subscriptions` + `payment_reference varchar(64)` + `payment_method varchar(32)` CHECK `wave|orange_money|virement` ; `storefront_profiles`, `auto_approved_products`, `monthly_metrics` (`PK subscription_id, period`, `ca_fcfa BIGINT`, `views_baseline/views_sum` — delta = vues du mois, jamais persisté) ; legacy 73 colonnes identiques ; `schema_migrations` = 20.
+**CRON_SECRET** — configuré en prod (≥ 32 car., `vercel env add --environment`) ; `DISABLE_CRON=false` (le cron sera actif au 1er déc. 2026).
+**Déploiement** — `bash scripts/deploy-vercel.sh`, Ready, alias `revends.vercel.app`.
+**Smoke prod** — health 200 ; slug inconnu 404 ; routes V8 publiques OK (`/boutique/:slug`, boutique, `/mon-abonnement`, admin abonnements) ; **auto-approve confirmée** : article publié directement **AVAILABLE** sans validation admin ; **boutique brandée 200** ; ajout au listing boutique OK ; `sellerBadge="verifiee"` visible dans le catalogue et la boutique.
+**À faire** — premier bilan mensuel le 1er déc. 2026 (attendu) ; surveiller `DISABLE_CRON` et `AUTO_APPROVE_V8` ; possible cleanup des comptes smoke (`@test.revends`).
