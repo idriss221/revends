@@ -4694,3 +4694,19 @@ sémantique à trois branches :
 2. Le back-office admin affiche **la référence de paiement en clair** (mon node V8.1 l'avait masquée par erreur — admin ne pouvait pas vérifier la transaction Wave, ce qui faisait toute la chaîne de vérification pivot).
 3. **SLA 24h** : pastille badge « SLA » sur les demandes en attente > 24h — l'admin voit immédiatement ce qui est en retard.
 4. Refus : motif 10-2000 caractères taggés + envoi best-effort e-mail anti-doublon (clé `subscription-refused:<userId>:<subId>`).
+
+**V8.2 production verified** (smoke dév puis prod) :
+- Migration `022_refusal_pair.sql` appliquée — la contrainte `chk_activation_pair` est réécrite en
+  sémantique à trois branches (PENDING : dates NULL ; CANCELLED : indifférentes ; ACTIVE/EXPIRED : remplies).
+  Prod opérationnelle ; tests locaux OK (17/17 `storefront-admin-ctl.test.ts` + le reste de la suite).
+- Admin back-office `/admin/abonnements` expose la référence de paiement complète (Wave/OM/virement),
+  badge SLA "attente depuis > 24h" sur les PENDING, boutons « Activer » + « Refuser ».
+- Refus : motif 10-2000 caractères, e-mail vendeur envoyé best-effort (inclut le motif) ; trace `subscription.refused`.
+- Smoke prod de bout en bout (compte `smoke-reject-*@test.revends`) :
+  PENDING → activation admin → refus motivé → CANCELLED → vérifier `admin_actions` registre `subscription.refused`.
+- Question déjà résolue côté amont V8.1/V8.2 : l'article n'est pas supprimé du catalogue à cause d'une
+  exposition parasite (qui est maintenant filtrée par deleted_at IS NULL partout — boutique, catalogue,
+  listings, fiche, cart-only AVAILABLE).
+
+**Rappel** — back-office `/admin/abonnements` pour vérifier/refuser les souscriptions ; vérifier également
+la référence Wave côté Wave app (réponse automatique absente de l'échange opérationnel explicite).
