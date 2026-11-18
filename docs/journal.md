@@ -4677,3 +4677,20 @@ manuellement** (`RUN_MIGRATIONS=false`) AVANT tout déploiement.
 **Emergency** — le forfait source `mbour` reste ACTIVE (sous-données du partenaire).
 
 **Actions** — vérifier que l'interface admin se construit bien, `PRODUCT_HAS_ACTIVE_ORDER` réagir sur le 409 n'apparaît pas mieux, contrôler l'invalidation react-query cross-pages.
+
+## 18/11/2026 — V8.2 « Refus paiement » (ajout prod)
+
+**Bug critique corrigé** : la transition `PENDING → CANCELLED` violait la contrainte
+`chk_activation_pair` en prod — toute tentative de REFUSER une demande d'abonnement répondait 500.
+
+**Migration 022_refusal_pair.sql** : la contrainte `chk_activation_pair CHECK (...)` est réécrite en
+sémantique à trois branches :
+   PENDING        : dates OBLIGATOIREMENT NULL
+   CANCELLED      : dates indifférentes (oubli/refus)
+   ACTIVE/EXPIRED : dates OBLIGATOIREMENT remplies
+
+**Features V8.2 livrées en prod (migration 022 + code)** :
+1. Le vendeur est **refusé** avec un e-mail automatique (`subscription_refused`) contenant le motif défi posé par l'admin (≥ 10 caractères).
+2. Le back-office admin affiche **la référence de paiement en clair** (mon node V8.1 l'avait masquée par erreur — admin ne pouvait pas vérifier la transaction Wave, ce qui faisait toute la chaîne de vérification pivot).
+3. **SLA 24h** : pastille badge « SLA » sur les demandes en attente > 24h — l'admin voit immédiatement ce qui est en retard.
+4. Refus : motif 10-2000 caractères taggés + envoi best-effort e-mail anti-doublon (clé `subscription-refused:<userId>:<subId>`).

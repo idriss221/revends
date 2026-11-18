@@ -29,6 +29,7 @@ import {
 } from './helpers.js';
 import type { ServerHandle, TestUser } from './helpers.js';
 import { storeBadge } from '../src/utils/storefront-badges.js';
+import { clearSentMails, recentSentMails } from '../src/mail/mailer.js';
 
 let server: ServerHandle;
 let admin: Awaited<ReturnType<typeof loginAdmin>>;
@@ -340,5 +341,71 @@ describe('V8.1 — badges après déactivation', () => {
     const itemAfter = ((afterRes.body as any).items as Array<{ sellerBadge?: string | null }>)[0];
     assert.equal(itemAfter?.sellerBadge ?? null, null, 'plus de badge après déactivation');
     assert.equal(await storeBadge(seller.id!), null);
+  });
+});
+
+describe('V8.2 — refus d\'une demande d\'abonnement en attente', () => {
+  it('refus → CANCELLED + e-mail au vendeur avec le motif', async () => {
+    const previousMailEnabled = process.env.MAIL_ENABLED;
+    process.env.MAIL_ENABLED = 'true';
+    clearSentMails();
+    try {
+    const seller = await registerUser(server, 'v8refuse');
+    const res = await seller.client.post('/api/subscriptions', {
+      planId: 1,
+      slug: 'Refus Test Post ' + Date.now().toString(36),
+      paymentMethod: 'wave',
+      paymentReference: 'WAVE-REJECT-' + Date.now(),
+    });
+    assert.equal(res.status, 201);
+    const sub = (res.body as any).subscription;
+
+    const reject = await admin.post(`/api/admin/subscriptions/${sub.id}/reject`, {
+      reason: 'Référence introuvable dans Wave — contrôle automatisé insuffisant.',
+    });
+    assert.equal(reject.status, 200, JSON.stringify(reject.body));
+    assert.equal((reject.body as any).subscription.status, 'CANCELLED');
+
+    // Vérifier que l'e-mail de refus a été enregistré.
+    const sent = recentSentMails().filter((m) => m.event === 'subscription_refused');
+    assert.equal(sent.length, 1, 'un e-mail subscription_refused doit être envoyé au vendeur');
+    assert.ok((sent[0].subject || '').length > 0);
+    } finally {
+      process.env.MAIL_ENABLED = previousMailEnabled;
+    }
+  });
+
+  it('refuser sur un abonnement déjà actif → 409 INVALID_STATUS', async () => {
+    const seller = await registerUser(server, 'v8refuseact');
+    const res = await seller.client.post('/api/subscriptions', {
+      planId: 1,
+      slug: 'Actif Refus Tst ' + Date.now().toString(36),
+      paymentMethod: 'wave',
+      paymentReference: 'WAVE-REJTAF-' + Date.now(),
+    });
+    assert.equal(res.status, 201);
+    const subId = (res.body as any).subscription.id as number;
+    const act = await admin.post(`/api/admin/subscriptions/${subId}/activate`, {});
+    assert.equal(act.status, 200);
+    const reject = await admin.post(`/api/admin/subscriptions/${subId}/reject`, {
+      reason: 'Subtest interdit après activation',
+    });
+    assert.equal(reject.status, 409);
+    assert.equal((reject.body as any).error?.code, 'INVALID_STATUS');
+  });
+
+  it('motif trop court → 400 VALIDATION_ERROR', async () => {
+    const seller = await registerUser(server, 'v8shortref');
+    const res = await seller.client.post('/api/subscriptions', {
+      planId: 1,
+      slug: 'Court Motif ' + Date.now().toString(36),
+      paymentMethod: 'wave',
+      paymentReference: 'WAVE-SHORTR-' + Date.now(),
+    });
+    assert.equal(res.status, 201);
+    const subId = (res.body as any).subscription.id as number;
+    const reject = await admin.post(`/api/admin/subscriptions/${subId}/reject`, { reason: 'court' });
+    assert.equal(reject.status, 400);
+    assert.equal((reject.body as any).error?.code, 'VALIDATION_ERROR');
   });
 });
