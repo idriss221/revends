@@ -121,6 +121,16 @@ export interface SubscriptionAdminItem {
   paymentReference?: string | null
 }
 
+/** V8.1 — réponse commune aux routes Contrôle boutique (`deactivate`/`delete`). */
+export interface SubscriptionCtlResponse {
+  subscription: {
+    id: number
+    status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED'
+    slug: string
+    merchantActive: boolean
+  }
+}
+
 export interface SubscriptionAdminListResponse {
   items: SubscriptionAdminItem[]
   page: number

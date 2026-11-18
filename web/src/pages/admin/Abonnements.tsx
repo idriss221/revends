@@ -29,9 +29,15 @@ import { useToast } from '../../lib/toast'
  *   « par l’admin #id » — le contrat expose `activatedBy` en id, jamais en
  *   nom (activation : CA-V7-051 ; le nom d’affichage du *vendeur*, lui, est
  *   exposé par `sellerDisplayName`) ;
+ * · V8.1 — « Contrôle boutique » (contrat v8.1) : deux gouvernances ajoutées
+ *   dans la colonne Actions de l'onglet « Tous » — « Désactiver » (ACTIVE
+ *   uniquement, réversible, confirmation simple) et « Supprimer définitivement »
+ *   (ACTIVE + CANCELLED, deux temps : saisie « Supprimer ») ;
+ * · Onglet « En attente » inchangé (seule « Activer ») ; compteurs, cartes,
+ *   layout, cards et navigation : 0 ligne ;
  * · Non-admin : redirection accueil (RequireAdmin, convention ARB-V5-02 —
  *   pas de page 403) ;
- * · Aucun CRUD forfait (CA-V7-053) : seuls « Activer » et la navigation.
+ * · Aucun CRUD forfait (CA-V7-053).
  */
 type Tab = 'pending' | 'all'
 type NonPendingStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED'
@@ -65,6 +71,9 @@ export function Abonnements() {
   const [historyStatus, setHistoryStatus] = useState<NonPendingStatus>('ACTIVE')
   const [page, setPage] = useState(1)
   const [target, setTarget] = useState<SubscriptionAdminItem | null>(null)
+  const [deactivateTarget, setDeactivateTarget] = useState<SubscriptionAdminItem | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<SubscriptionAdminItem | null>(null)
+  const [deleteWord, setDeleteWord] = useState('')
   const [activatedBanner, setActivatedBanner] = useState<string | null>(null)
 
   const status: 'PENDING' | NonPendingStatus = tab === 'pending' ? 'PENDING' : historyStatus
@@ -108,6 +117,47 @@ export function Abonnements() {
       invalidate()
     },
   })
+
+  // V8.1 — « Contrôle boutique » : désactivation réversible (ACTIVE → CANCELLED).
+  const deactivate = useMutation({
+    mutationFn: (id: number) => storefrontApi.adminDeactivate(id),
+    onSuccess: () => {
+      if (deactivateTarget) {
+        toast('success', `« ${deactivateTarget.slug} » passe hors-ligne — les annonces restent au catalogue. Le vendeur peut la réactiver plus tard.`)
+      }
+      setDeactivateTarget(null)
+      invalidate()
+    },
+    onError: (err) => {
+      toast('error', storefrontError(err, 'Impossible de désactiver cette boutique. Réessayez.'))
+      setDeactivateTarget(null)
+      invalidate()
+    },
+  })
+
+  // V8.1 — suppression DÉFINITIVE (CANCELLED + articles masqués + listings supprimés).
+  const deleteCtl = useMutation({
+    mutationFn: (id: number) => storefrontApi.adminDelete(id),
+    onSuccess: () => {
+      if (deleteTarget) {
+        toast('success', `« ${deleteTarget.slug} » supprimée définitivement — articles masqués, annonces retirées.`)
+      }
+      setDeleteTarget(null)
+      setDeleteWord('')
+      invalidate()
+    },
+    onError: (err) => {
+      toast('error', storefrontError(err, 'Impossible de supprimer cette boutique. Réessayez.'))
+      setDeleteTarget(null)
+      setDeleteWord('')
+      invalidate()
+    },
+  })
+
+  const closeDelete = () => {
+    setDeleteTarget(null)
+    setDeleteWord('')
+  }
 
   const backlog = pendingCount.data?.total
   const activatedByLabel = (id: number | null) =>
@@ -199,6 +249,48 @@ export function Abonnements() {
                 </span>
               </span>
             ),
+          } satisfies AdminColumn<SubscriptionAdminItem>,
+          // V8.1 — « Contrôle boutique » : « Désactiver » uniquement sur une
+          // ACTIVE (une CANCELLED l'est déjà) ; « Supprimer définitivement »
+          // proposé aussi pour les CANCELLED (clôture d'une commande).
+          {
+            key: 'actions',
+            header: 'Actions',
+            widthClass: 'text-right',
+            cell: (row: SubscriptionAdminItem) => {
+              const canDeactivate = row.status === 'ACTIVE'
+              const canDelete = row.status === 'ACTIVE' || row.status === 'CANCELLED'
+              if (!canDeactivate && !canDelete) return <span className="text-muted">—</span>
+              return (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {canDeactivate && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon="chevron-down"
+                      onClick={() => setDeactivateTarget(row)}
+                      aria-label={`Désactiver la boutique « ${row.slug} »`}
+                    >
+                      Désactiver
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      icon="trash"
+                      onClick={() => {
+                        setDeleteWord('')
+                        setDeleteTarget(row)
+                      }}
+                      aria-label={`Supprimer définitivement la boutique « ${row.slug} »`}
+                    >
+                      Supprimer définitivement
+                    </Button>
+                  )}
+                </div>
+              )
+            },
           } satisfies AdminColumn<SubscriptionAdminItem>,
         ]),
   ]
@@ -394,6 +486,65 @@ export function Abonnements() {
           { icon: 'fa-signature', text: 'Votre nom et la date seront enregistrés (activated_by, activated_at).' },
         ]}
       />
+
+      {/* V8.1 — Désactiver : confirmation simple (une étape, Annuler/Désactiver) */}
+      <ConfirmAction
+        open={deactivateTarget !== null}
+        onClose={() => setDeactivateTarget(null)}
+        onConfirm={() => deactivateTarget && deactivate.mutate(deactivateTarget.id)}
+        title="Désactiver la boutique ?"
+        confirmLabel="Désactiver"
+        tone="secondary"
+        urgency="warning"
+        loading={deactivate.isPending}
+        message={
+          <span className="block">
+            Les annonces restent dans le catalogue, mais la boutique passe hors-ligne. Réactiver plus tard ?
+          </span>
+        }
+        consequences={[
+          { icon: 'fa-eye-slash', text: `« ${deactivateTarget?.slug ?? ''} » est retirée des boutiques publiques (statut Annulée).` },
+          { icon: 'fa-undo', text: 'Aucune annonce n’est supprimée — le vendeur peut la réactiver en se réabonnant.' },
+        ]}
+      />
+
+      {/* V8.1 — Supprimer définitivement : deux temps — nom + saisie « Supprimer » */}
+      <ConfirmAction
+        open={deleteTarget !== null}
+        onClose={closeDelete}
+        onConfirm={() => deleteTarget && deleteCtl.mutate(deleteTarget.id)}
+        title="Cette action est irréversible"
+        confirmLabel="Supprimer définitivement"
+        tone="danger"
+        urgency="danger"
+        loading={deleteCtl.isPending}
+        confirmDisabled={deleteWord.trim() !== 'Supprimer'}
+        message={
+          <span className="block font-bold">
+            Supprimer définitivement la boutique « {deleteTarget?.slug} » ?
+          </span>
+        }
+        consequences={[
+          { icon: 'fa-ban', text: 'Le statut passe à Annulée — aucune restauration possible.' },
+          { icon: 'fa-eye-slash', text: 'Les articles du vendeur sont masqués (soft-delete) — l’historique des commandes est préservé.' },
+          { icon: 'fa-trash', text: 'Les annonces boutique (listings) sont supprimées définitivement.' },
+        ]}
+      >
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">
+            Saisissez « Supprimer » pour confirmer
+          </span>
+          <input
+            type="text"
+            value={deleteWord}
+            onChange={(e) => setDeleteWord(e.target.value)}
+            placeholder="Supprimer"
+            autoComplete="off"
+            aria-label="Saisissez « Supprimer » pour confirmer"
+            className="field-input w-full"
+          />
+        </label>
+      </ConfirmAction>
     </DashboardLayout>
   )
 }

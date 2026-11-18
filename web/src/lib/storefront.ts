@@ -20,6 +20,7 @@ import type {
   SubscribeResponse,
   SubscribeWithPaymentBody,
   SubscriptionAdminListResponse,
+  SubscriptionCtlResponse,
   SubscriptionStatus,
 } from './storefront.types'
 
@@ -117,6 +118,31 @@ export const storefrontApi = {
   adminActivate(id: number): Promise<ActivateSubscriptionResponse> {
     return request<ActivateSubscriptionResponse>(
       `/api/admin/subscriptions/${encodeURIComponent(String(id))}/activate`,
+      { method: 'POST', body: JSON.stringify({}) },
+    )
+  },
+
+  /* ---------------- V8.1 — « Contrôle boutique » (gouvernance admin) ---------------- */
+
+  /**
+   * POST /api/admin/subscriptions/:id/deactivate — ACTIVE → CANCELLED (réversible).
+   * Réponse 200 (`merchantActive: false`) ; 404 si la souscription n'existe pas ou n'est pas ACTIVE.
+   * Corps `{}` — jamais de statut/seller_id côté client.
+   */
+  adminDeactivate(id: number): Promise<SubscriptionCtlResponse> {
+    return request<SubscriptionCtlResponse>(
+      `/api/admin/subscriptions/${encodeURIComponent(String(id))}/deactivate`,
+      { method: 'POST', body: JSON.stringify({}) },
+    )
+  },
+
+  /**
+   * POST /api/admin/subscriptions/:id/delete — DÉFINITIF (CANCELLED + articles
+   * soft-deleted + listings supprimés). Tout statut accepté ; 404 si inexistante.
+   */
+  adminDelete(id: number): Promise<SubscriptionCtlResponse> {
+    return request<SubscriptionCtlResponse>(
+      `/api/admin/subscriptions/${encodeURIComponent(String(id))}/delete`,
       { method: 'POST', body: JSON.stringify({}) },
     )
   },

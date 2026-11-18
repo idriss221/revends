@@ -27,7 +27,7 @@ import { Ico } from '../components/brand/Ico'
  * `index.html`) : les `<use href="#i-…">` doivent résorber sur **toutes**
  * les routes, admin comprise.
  */
-type ToastKind = 'success' | 'error' | 'info'
+type ToastKind = 'success' | 'error' | 'info' | 'warning'
 
 interface ToastItem {
   id: number
@@ -42,6 +42,7 @@ const KIND_ICON: Record<ToastKind, string> = {
   success: 'circle-check',
   error: 'triangle-exclamation',
   info: 'circle-info',
+  warning: 'triangle-exclamation',
 }
 
 /** Durée d'affichage de la maquette (`app.js` : `setTimeout(…, 2600)`). */

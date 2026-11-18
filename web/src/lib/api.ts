@@ -319,9 +319,15 @@ export class ApiClient {
     return request<OwnerProduct>(`/api/products/${id}`, { method: 'PUT', body: formData }, TIMEOUTS.command)
   }
 
-  // C4 / ARB-V5-04 : la suppression d'article est réservée à l'administration
-  // (`DELETE /api/admin/products/:id`). Aucune méthode cliente de suppression
-  // côté vendeur (CA-V5-055) — la route user n'existe plus côté serveur.
+  // V8.1 — « Contrôle boutique » : la suppression d'article est aussi ouverte
+  // à son PROPRIÉTAIRE (`DELETE /api/me/products/:id`, `requireAuth`, 204 sans
+  // corps ; 409 `PRODUCT_ORDER_ACTIVE` si commande en cours).
+  // ⚠️ Quarantaine CA-V5-054/CA-V5-055 reste en vigueur pour le nom client
+  // composé des mots « delete » + « Product » collés — jamais réintroduit ;
+  // la méthode propriétaire est celle-ci (test `sellerDeleteRemoved.test.ts`).
+  deleteOwnerProduct(id: number): Promise<void> {
+    return request<void>(`/api/me/products/${encodeURIComponent(String(id))}`, { method: 'DELETE' })
+  }
 
   /* --- Panier (§3.4) — le serveur renvoie un TABLEAU de lignes --- */
 

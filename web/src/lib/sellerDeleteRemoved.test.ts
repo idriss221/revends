@@ -1,15 +1,21 @@
 /**
- * Invariant C4 / CA-V5-054 / CA-V5-055 — la suppression d'article est
- * **réservée à l'administration**.
+ * V8.1 — « Contrôle boutique » : la suppression d'article propriétaire est
+ * désormais OUVERTE côté web, mais reste **strictement encadrée**.
  *
- * CA-V5-055 : `grep -rn` du nom de méthode de suppression vendeur dans
- * `web/src/` ne doit retourner **aucune** occurrence, et `MyArticlesPage` ne
- * doit plus proposer l'action « Supprimer ». Ce test parcourt les FICHIERS
- * SOURCE (même approche que `noDeadLinks.test.ts`) : il échoue si une
- * suppression vendeur réintroduit une méthode cliente ou une UI.
+ * Historique : CA-V5-054/055 réservaient la suppression à l'admin ; le contrat
+ * V8.1 (DELETE /api/me/products/:id, `requireAuth`, owner-only) ouvre la
+ * suppression au PROPRIÉTAIRE. Ce fichier verrouille les invariants V8.1 :
  *
- * Le nom recherché est assemblé à l'exécution (`['delete','Product'].join('')`)
- * pour que ce fichier ne se détecte pas lui-même.
+ *  1. aucune méthode cliente littérale composée des mots « delete »+« Product »
+ *     (l'admin garde ses routes ; le vendeur passe UNIQUEMENT par
+ *     `deleteOwnerProduct`) ;
+ *  2. `MyArticlesPage` câble la suppression propriétaire via
+ *     `api.deleteOwnerProduct` — jamais une route `/api/admin/...` ;
+ *  3. la confirmation est à DEUX TEMPS (saisie « Supprimer ») ;
+ *  4. la page garde l'accès à la vente (« /vendre »).
+ *
+ * Le nom recherché est assemblé à l'exécution pour que ce fichier ne se
+ * détecte pas lui-même.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -28,7 +34,7 @@ function sourceFiles(dir: string): string[] {
   })
 }
 
-describe('Suppression d’article réservée à l’admin (C4, CA-V5-054/055)', () => {
+describe('Suppression d’article propriétaire — invariants V8.1', () => {
   it(`aucune occurrence de « ${FORBIDDEN_METHOD} » dans web/src`, () => {
     const offenders = sourceFiles(SRC)
       .filter((f) => readFileSync(f, 'utf8').includes(FORBIDDEN_METHOD))
@@ -36,10 +42,19 @@ describe('Suppression d’article réservée à l’admin (C4, CA-V5-054/055)', 
     expect(offenders, `Occurrences interdites :\n${offenders.join('\n')}`).toEqual([])
   })
 
-  it('MyArticlesPage ne propose aucune action de suppression', () => {
+  it('MyArticlesPage câble la suppression PROPRIÉTAIRE ; la route vit dans lib/api.ts', () => {
     const page = readFileSync(join(SRC, 'pages/MyArticlesPage.tsx'), 'utf8')
-    expect(page).not.toContain('toDelete')
-    expect(page).not.toContain('Supprimer')
+    const client = readFileSync(join(SRC, 'lib/api.ts'), 'utf8')
+    expect(page).toContain('deleteOwnerProduct')
+    expect(page).not.toContain('/api/admin/')
+    expect(client).toContain('/api/me/products/')
+    expect(client).toContain("method: 'DELETE'")
+  })
+
+  it('MyArticlesPage : confirmation à deux temps (saisie « Supprimer »)', () => {
+    const page = readFileSync(join(SRC, 'pages/MyArticlesPage.tsx'), 'utf8')
+    expect(page).toContain('Supprimer')
+    expect(page).toContain('placeholder="Supprimer"')
   })
 
   it('MyArticlesPage laisse toujours l’accès à la vente (modifier / re-soumettre)', () => {

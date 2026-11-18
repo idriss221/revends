@@ -20,6 +20,7 @@ import { productsRouter } from './routes/products.routes.js';
 import { bannersRouter } from './routes/banners.routes.js';
 import { ordersRouter } from './routes/orders.routes.js';
 import { meRouter } from './routes/me.routes.js';
+import { meProductsRouter } from './routes/me-products.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { cartRouter } from './routes/cart.routes.js';
 import { favoritesRouter } from './routes/favorites.routes.js';
@@ -27,6 +28,7 @@ import { referralsRouter } from './routes/referrals.routes.js';
 import { subscriptionsRouter } from './routes/subscriptions.routes.js';
 import { storefrontRouter } from './routes/storefront.routes.js';
 import { adminSubscriptionsRouter } from './routes/admin-subscriptions.routes.js';
+import { adminStorefrontCtlRouter } from './routes/admin-storefront-ctl.routes.js';
 import { adminV8Router } from './routes/admin-v8.routes.js';
 import { cronRouter } from './routes/cron.routes.js';
 import { listPublicCategories } from './services/categories.service.js';
@@ -253,6 +255,9 @@ export function createApp(): express.Express {
   app.use('/api/products', productsRouter);
   app.use('/api/banners', bannersRouter);
   app.use('/api/orders', ordersRouter);
+  // V8.1 — Contrôle boutique : DELETE /api/me/products/:id (propriétaire,
+  // requireAuth) AVANT meRouter (dont le requireUser bloquerait un admin).
+  app.use('/api/me/products', meProductsRouter);
   app.use('/api/me', meRouter);
   app.use('/api/cart', cartRouter);
   app.use('/api/favorites', favoritesRouter);
@@ -261,6 +266,9 @@ export function createApp(): express.Express {
   // pour que /api/admin/subscriptions ne traverse pas l'adminRouter existant).
   app.use('/api/subscriptions', subscriptionsRouter);
   app.use('/api/storefront', storefrontRouter);
+  // V8.1 — Contrôle boutique (admin) : POST /:id/deactivate et /:id/delete
+  // (adminSubscriptionsRouter n'expose que GET / et POST /:id/activate).
+  app.use('/api/admin/subscriptions', adminStorefrontCtlRouter);
   app.use('/api/admin/subscriptions', adminSubscriptionsRouter);
   // V8 — gouvernance additionnelle (chemins inexistants dans adminRouter :
   // /auto-approvals, /products/:id/retrograde) ; montée AVANT /api/admin.
