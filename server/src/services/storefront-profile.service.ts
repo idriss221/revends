@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import { withTransaction, afterCommit } from '../utils/db.js';
-import { AppError, badRequest } from '../utils/errors.js';
+import { pool } from '../db/pool.js';
+import { AppError, badRequest, forbidden } from '../utils/errors.js';
 import { sniffImageMime, MAX_LOGO_BYTES, MAX_BANNER_BYTES } from '../middleware/upload.js';
 import { saveStorefrontAsset, deleteStorefrontAsset } from '../utils/storage.js';
 import { logger } from '../utils/logger.js';
@@ -84,6 +85,23 @@ export async function updateStorefrontProfile(
   input: ProfileTextInput,
   files: ProfileFiles,
 ): Promise<Record<string, unknown>> {
+  // Une boutique PENDING n'est PAS éligible aux usages de l'abonnement : logo,
+  // bannière, description, adresse de collecte — tout est gelé tant que
+  // l'abonnement n'est pas ACTIVE (règle produit V8 §5 : l'accessibilité est
+  // conditionnée, jamais implicite). Les mêmes vedettes informatives sont
+  // disponibles uniquement dans le visage ACTIVE.
+  const { rows } = await pool.query<{ status: string; ends_at: Date | string | null }>(
+    `SELECT status, ends_at FROM seller_subscriptions
+      WHERE seller_id = $1
+      ORDER BY (status = 'ACTIVE') DESC, id DESC
+      LIMIT 1`,
+    [sellerId],
+  );
+  const sub = rows[0];
+  if (!sub || sub.status !== 'ACTIVE' || (sub.ends_at && new Date(sub.ends_at).getTime() <= Date.now())) {
+    throw forbidden('SUBSCRIPTION_REQUIRED', 'Votre abonnement n’est pas encore activé. Dès validation, tous les usages boutiques seront disponibles.');
+  }
+
   const text = validateProfileTextFields(input);
   const logo = await fileBufferAndMime(files.logo?.[0], 'logo');
   const banner = await fileBufferAndMime(files.banner?.[0], 'banner');

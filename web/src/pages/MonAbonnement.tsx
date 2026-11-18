@@ -456,7 +456,12 @@ export function MonAbonnement() {
               activatedAt={subscription.activatedAt}
               endsAt={subscription.endsAt}
             />
-            <BrandingPanel profile={data?.profile} />
+            {/* V8.4 — EXPIRED : branding verrouillé (boutique non ACTIVE). */}
+            <Notice tone="info">
+              Votre abonnement est expiré. Le branding (logo, bannière, description,
+              adresse de collecte) ne pourra être modifié qu’une fois votre nouvelle
+              demande validée par l’administration.
+            </Notice>
           </div>
         </div>
       </div>
@@ -506,14 +511,16 @@ export function MonAbonnement() {
           )}
 
           <div style={{ marginTop: 26, display: 'grid', gap: 22 }}>
-            <BrandingPanel profile={data?.profile} />
-            <StatsPanel
-              slug={subscription.slug}
-              planName={subscription.plan.name}
-              priceFcfa={subscription.plan.priceFcfa}
-              activatedAt={subscription.activatedAt}
-              endsAt={subscription.endsAt}
-            />
+            {/* V8.4 — tant que l'abonnement n'est pas activé, aucun usage de l'abonnement
+                n'est accessible (logo, bannière, annonces, stats). Le serveur refuse
+                aussi toute écriture branding tant que l'abonnement n'est pas ACTIVE. */}
+            <>
+              <Notice tone="info">
+                Votre boutique n’est pas encore validée par l’administration. Tant qu’elle
+                ne l’est pas, le logo, la bannière, les annonces et les statistiques ne
+                seront pas accessibles.
+              </Notice>
+            </>
           </div>
         </div>
 

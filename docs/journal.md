@@ -4724,3 +4724,26 @@ Cause racine : un contenu à `min-content` > 336 px (bouton « Passer à X — 2
 - Images `.rv-shop-* img` → `max-width: 100%`.
 
 **Vérif prod** via Playwright : `/mon-abonnement` à 280/320/360/375 px → `scrollWidth = viewport` (280, 320, 360, 375 restent égaux). `/mes-articles` et `/boutique/mac-...` au check visuel OK.
+
+## 18/11/2026 — V8.4 « verrou PENDING » : aucun usage sans activation
+
+**Bug** : une boutique en attente d'activation pouvait configurer logo, bannière,
+description publique, adresse de collecte — bien que tout soit désactivé côté V8
+publique (404 lint publicProfile). L\'utilisateur a demandé : « si l'abonnement
+n'est pas encore approuvé, l'utilisateur ne doit avoir aucun accès sur les uses
+cases de l'abonnement ».
+
+**Fix serveur** : `updateStorefrontProfile` lève désormais `403 SUBSCRIPTION_REQUIRED`
+si le vendeur n'a pas d'abonnement **ACTIVE non expiré**. `addListingToStorefront`
+déjà verrouillé par ACTIVE (V7). Tests V8.4 ajoutés ; tests V8-D5 mis à jour.
+
+**Fix front (`/mon-abonnement`)** : le visage PENDING (et EXPIRED / CANCELLED)
+n'affiche plus ni BrandingPanel ni StatsPanel — seulement l'état d\'attente
+d'activation, les options de changement de forfait et un rappel verrouillé.
+
+**Comportement expiration** : après ends_at (30 jours), l'abonnement passe EXPIRED
+(lazy materialization) → boutique 404 côté public (aucune visibilité), badges
+retirés du catalogue, listings retirées, **abri live reste vendable au catalogue** ;
+le vendeur voit « Annonces conservées » dans `/mon-abonnement`, peut re-souscrire.
+J-3 avant expiration, l'e-mail recoit un rappel (subscription_expiry_reminder)
+le 1er du mois suivant.0 Voir docs/journal.md historique pour les variantes.

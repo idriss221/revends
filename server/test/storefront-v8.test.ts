@@ -331,18 +331,22 @@ describe('V8-D3/D4 — badges dérivés et tri par défaut (Atelier > Boutique >
 // 3. Profil boutique (V8-D5 / §7) — branding, magic bytes, tailles, adresse privée
 // ---------------------------------------------------------------------------
 
-describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
-  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(64).fill(0)]);
+function profileForm(fields: Record<string, string>, files: { name: string; data: Buffer; type: string }[] = []): FormData {
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(fields)) fd.append(k, v);
+  for (const f of files) fd.append(f.name, new Blob([f.data], { type: f.type }), `${f.name}.png`);
+  return fd;
+}
 
-  function profileForm(fields: Record<string, string>, files: { name: string; data: Buffer; type: string }[] = []): FormData {
-    const fd = new FormData();
-    for (const [k, v] of Object.entries(fields)) fd.append(k, v);
-    for (const f of files) fd.append(f.name, new Blob([f.data], { type: f.type }), `${f.name}.png`);
-    return fd;
-  }
+describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
+  // V8.4 — le visage PENDING n'autorise AUCUN upload branding : chacun de ces
+  // tests utilise donc un vendeur ACTIVÉ (par l'admin) pour que les paths
+  // d'écriture fonctionnent. Les cas "PENDING refusé" ont leur propre describe.
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(64).fill(0)]);
 
   it('PUT multipart : logo + bannière + description + collecteAddress (§14.D clos : l’adresse n’apparaît JAMAIS dans l’API — propriétaire inclus)', async () => {
     const seller = await registerUser(server, 'v8prof1');
+    const _a = await activateFor(seller, 1, 'prof-1-slug-' + Date.now().toString(36));
     const address = 'Sandaga, Dakar — 12 rue Carnot, porte B';
     const res = await seller.client.request('/api/storefront/profile', 'PUT', {
       form: profileForm(
@@ -376,6 +380,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('PUT : logo > 2 Mo → 413 FILE_TOO_LARGE ; bannière > 4 Mo → 413 FILE_TOO_LARGE', async () => {
     const seller = await registerUser(server, 'v8prof2');
+    const _a = await activateFor(seller, 1, 'prof-2-slug-' + Date.now().toString(36));
     const bigLogo = Buffer.concat([png, Buffer.alloc(2 * 1024 * 1024)]);
     const bigBanner = Buffer.concat([png, Buffer.alloc(4 * 1024 * 1024)]);
     const r1 = await seller.client.request('/api/storefront/profile', 'PUT', {
@@ -392,6 +397,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('PUT : MIME réel invalide (pas une image) → 400 INVALID_IMAGE', async () => {
     const seller = await registerUser(server, 'v8prof3');
+    const _a = await activateFor(seller, 1, 'prof-3-slug-' + Date.now().toString(36));
     const r = await seller.client.request('/api/storefront/profile', 'PUT', {
       form: profileForm({}, [{ name: 'logo', data: Buffer.from('not an image at all'), type: 'image/png' }]),
     });
@@ -401,6 +407,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('PUT : description > 500 graphèmes → 400 ; exactement 500 caractères → 200 ; 👨‍👩‍👧 compte pour 1 graphème', async () => {
     const seller = await registerUser(server, 'v8prof4');
+    const _a = await activateFor(seller, 1, 'prof-4-slug-' + Date.now().toString(36));
     const tooLong = 'a'.repeat(501);
     const r1 = await seller.client.request('/api/storefront/profile', 'PUT', {
       form: profileForm({ publicDescription: tooLong }),
@@ -425,6 +432,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('PUT : collecteAddress < 10 caractères → 400 VALIDATION_ERROR', async () => {
     const seller = await registerUser(server, 'v8prof5');
+    const _a = await activateFor(seller, 1, 'prof-5-slug-' + Date.now().toString(36));
     const r = await seller.client.request('/api/storefront/profile', 'PUT', {
       form: profileForm({ collecteAddress: 'Court' }),
     });
@@ -434,6 +442,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('POST JSON : écriture sans fichiers (profil accessible dès PENDING)', async () => {
     const seller = await registerUser(server, 'v8prof6');
+    const _a = await activateFor(seller, 1, 'prof-6-slug-' + Date.now().toString(36));
     await seller.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'Profil Pending Prepa' });
     const r = await seller.client.post('/api/storefront/profile', {
       publicDescription: 'Description avant activation',
@@ -445,6 +454,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('DELETE logo puis re-DELETE : 200 idempotent, le profil est conservé', async () => {
     const seller = await registerUser(server, 'v8prof7');
+    const _a = await activateFor(seller, 1, 'prof-7-slug-' + Date.now().toString(36));
     await seller.client.request('/api/storefront/profile', 'PUT', {
       form: profileForm({}, [{ name: 'logo', data: png, type: 'image/png' }]),
     });
@@ -459,6 +469,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('DELETE bannière : 200 + bannière NULL en base', async () => {
     const seller = await registerUser(server, 'v8prof8');
+    const _a = await activateFor(seller, 1, 'prof-8-slug-' + Date.now().toString(36));
     await seller.client.request('/api/storefront/profile', 'PUT', {
       form: profileForm({}, [{ name: 'banner', data: png, type: 'image/png' }]),
     });
@@ -470,6 +481,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('XSS : description avec <script> stockée brute mais inerte (React échappe) — API ne la rend pas as raw HTML', async () => {
     const seller = await registerUser(server, 'v8prof9');
+    const _a = await activateFor(seller, 1, 'prof-9-slug-' + Date.now().toString(36));
     const payload = '<script>alert(1)</script>';
     const r = await seller.client.post('/api/storefront/profile', { publicDescription: payload });
     assert.equal(r.status, 200);
@@ -481,11 +493,11 @@ describe('V8-D5 — boutique publique étendue (E2) : branding public, adresse j
   it('ACTIVE + profil → logoUrl/bannerUrl/publicDescription exposés ; collecteAddress JAMAIS', async () => {
     const seller = await registerUser(server, 'v8pub1');
     const address = 'Marché HLM, Dakar — box 44';
+    await activateFor(seller, 1, 'Boutique Publique V8');
     await seller.client.post('/api/storefront/profile', {
       publicDescription: 'Boutique de confiance',
       collecteAddress: address,
     });
-    await activateFor(seller, 1, 'Boutique Publique V8');
     const res = await seller.client.get('/api/storefront/boutique-publique-v8');
     assert.equal(res.status, 200, JSON.stringify(res.body));
     const storefront = (res.body as any).storefront;
@@ -599,11 +611,11 @@ describe('V8-D8 / E1 — souscription avec référence de paiement (Wave | Orang
   it('E4 — GET /api/subscriptions/me expose le bloc profile sans la valeur collecteAddress', async () => {
     const seller = await registerUser(server, 'v8e4');
     const address = 'Médina, Dakar — 5e rue x 3e avenue';
+    await activateFor(seller, 1, 'Profile E4 Bloc');
     await seller.client.post('/api/storefront/profile', {
       publicDescription: 'Description E4',
       collecteAddress: address,
     });
-    await activateFor(seller, 1, 'Profile E4 Bloc');
     const res = await seller.client.get('/api/subscriptions/me');
     assert.equal(res.status, 200);
     const profile = (res.body as any).profile;
@@ -1059,5 +1071,48 @@ describe('CA-V8-010/badged — contrat des noms de paliers (protection du mappin
       'SELECT name FROM subscription_plans ORDER BY price_fcfa',
     );
     assert.deepEqual(rows.map((r) => r.name), ['Découverte', 'Boutique', 'Atelier']);
+  });
+});
+
+describe('V8.4 — verrou PENDING : aucun usage de l\'abonnement sans activation', () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(64).fill(0)]);
+  it('PENDING : PUT /api/storefront/profile → 403 SUBSCRIPTION_REQUIRED', async () => {
+    const seller = await registerUser(server, 'v8lock1');
+    const res = await seller.client.request('/api/storefront/profile', 'PUT', {
+      form: profileForm({ publicDescription: 'pas activé', collecteAddress: 'Adresse Test, Dakar' }),
+    });
+    assert.equal(res.status, 403);
+    assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
+  });
+
+  it('PENDING : POST /api/storefront/profile avec files → 403', async () => {
+    const seller = await registerUser(server, 'v8lock2');
+    const res = await seller.client.request('/api/storefront/profile', 'PUT', {
+      form: profileForm({}, [{ name: 'logo', data: png, type: 'image/png' }]),
+    });
+    assert.equal(res.status, 403);
+    assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
+  });
+
+  it('EXPIRED : PUT branding → 403 SUBSCRIPTION_REQUIRED', async () => {
+    const seller = await registerUser(server, 'v8lock3');
+    await activateFor(seller, 1, 'v8-lock-expired-' + Date.now().toString(36));
+    await expireSubscription(seller.id!);
+    const res = await seller.client.request('/api/storefront/profile', 'PUT', {
+      form: profileForm({ publicDescription: 'expiration' }),
+    });
+    assert.equal(res.status, 403);
+    assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
+  });
+
+  it('CANCELLED : PUT branding → 403 SUBSCRIPTION_REQUIRED', async () => {
+    const seller = await registerUser(server, 'v8lock4');
+    const subId = await activateFor(seller, 1, 'v8-lock-cancelled-' + Date.now().toString(36));
+    await admin.post(`/api/admin/subscriptions/${subId}/deactivate`, {});
+    const res = await seller.client.request('/api/storefront/profile', 'PUT', {
+      form: profileForm({ publicDescription: 'annulation' }),
+    });
+    assert.equal(res.status, 403);
+    assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
   });
 });
