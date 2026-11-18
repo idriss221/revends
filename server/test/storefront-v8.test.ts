@@ -953,3 +953,73 @@ describe('V8-D7 — bilan mensuel : calcul, idempotence, PDF, rappel J-3, stats'
     assert.equal(res.status, 401);
   });
 });
+
+// ---------------------------------------------------------------------------
+// V8 — GET /api/subscriptions/me/report?period=YYYY-MM : PDF du bilan persisté.
+// requireAuth (« me » exclusivement — aucun paramètre userId) ; 404
+// REPORT_NOT_AVAILABLE si aucune ligne monthly_metrics pour la période.
+// ---------------------------------------------------------------------------
+
+describe('V8 — GET /api/subscriptions/me/report : PDF du bilan de la période', () => {
+  it('anonyme → 401', async () => {
+    const anon = server.newClient();
+    const res = await anon.get('/api/subscriptions/me/report?period=2026-10');
+    assert.equal(res.status, 401);
+  });
+
+  it('period malformée → 400 INVALID_PERIOD', async () => {
+    const seller = await registerUser(server, 'v8rep400');
+    await activateFor(seller, 1, 'Report Mauvais Format');
+    for (const bad of ['2026-13', '2026-1', 'oct-2026', '']) {
+      const res = await seller.client.get(`/api/subscriptions/me/report?period=${encodeURIComponent(bad)}`);
+      assert.equal(res.status, 400, `period=${bad} → ${res.status}`);
+      assert.equal(errorCode(res.body), 'INVALID_PERIOD');
+    }
+  });
+
+  it('aucune ligne monthly_metrics pour la période → 404 REPORT_NOT_AVAILABLE', async () => {
+    const seller = await registerUser(server, 'v8rep404');
+    await activateFor(seller, 1, 'Report Inconnue');
+    const res = await seller.client.get('/api/subscriptions/me/report?period=2020-01');
+    assert.equal(res.status, 404, JSON.stringify(res.body));
+    assert.equal(errorCode(res.body), 'REPORT_NOT_AVAILABLE');
+  });
+
+  it('période d’un autre vendeur → 404 (périmètre session, aucun accès croisé)', async () => {
+    const owner = await registerUser(server, 'v8repown');
+    const buyer = await registerUser(server, 'v8repbuy');
+    const subId = await activateFor(owner, 1, 'Report Proprietaire');
+    const { product } = await createProduct(owner.client, { name: 'Report Article Proprietaire' });
+    const { period, when } = previousMonth(new Date());
+    await makePaidOrder(owner, buyer, product.id, 25_000, when);
+    await runMonthlyReport(new Date(Date.UTC(when.getUTCFullYear(), when.getUTCMonth() + 1, 1, 6, 0, 0)), period);
+
+    const stranger = await registerUser(server, 'v8repother');
+    await activateFor(stranger, 1, 'Report Autre Boutique');
+    const res = await stranger.client.get(`/api/subscriptions/me/report?period=${period}`);
+    assert.equal(res.status, 404, 'une ligne monthly_metrics du voisin n’est jamais servie');
+    assert.equal(errorCode(res.body), 'REPORT_NOT_AVAILABLE');
+    void subId;
+  });
+
+  it('période appartenant au vendeur → 200 application/pdf, disposition attachment, magic bytes %PDF-', async () => {
+    const seller = await registerUser(server, 'v8rep200');
+    const buyer = await registerUser(server, 'v8repbuy2');
+    const subId = await activateFor(seller, 1, 'Report Telechargement');
+    const { product } = await createProduct(seller.client, { name: 'Report Article Telecharge' });
+    await dbQuery('UPDATE products SET view_count = 321 WHERE id = $1', [product.id]);
+    const { period, when } = previousMonth(new Date());
+    await makePaidOrder(seller, buyer, product.id, 70_000, when);
+    const summary = await runMonthlyReport(new Date(Date.UTC(when.getUTCFullYear(), when.getUTCMonth() + 1, 1, 6, 0, 0)), period);
+    assert.equal(summary.sent >= 1, true, 'le bilan de la période doit être persisté par le cron');
+
+    const res = await seller.client.get(`/api/subscriptions/me/report?period=${period}`);
+    assert.equal(res.status, 200, typeof res.body === 'string' ? res.body.slice(0, 200) : JSON.stringify(res.body));
+    assert.match(res.headers.get('content-type') ?? '', /^application\/pdf/);
+    const disposition = res.headers.get('content-disposition') ?? '';
+    assert.equal(disposition, `attachment; filename="bilan-ReVendsen-${period}.pdf"`);
+    assert.equal(typeof res.body, 'string', 'corps binaire relu en texte (client de test)');
+    assert.equal((res.body as string).slice(0, 5), '%PDF-', 'magic bytes %PDF-');
+    void subId;
+  });
+});

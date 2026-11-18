@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { currentUser, requireAuth } from '../middleware/auth.js';
 import { subscribeSchema } from '../utils/storefront-validation.js';
+import { badRequest } from '../utils/errors.js';
 import { createSubscription, getMySubscription } from '../services/storefront.service.js';
-import { getMyStats } from '../services/storefront-reports.service.js';
+import { getMyReportPdf, getMyStats } from '../services/storefront-reports.service.js';
 
 // ---------------------------------------------------------------------------
 // V7 — Souscriptions (routes 1 et 2 du contrat api-v7 §7.1/§7.2).
@@ -28,4 +29,19 @@ subscriptionsRouter.get('/me', requireAuth, async (_req, res) => {
 /** GET /api/subscriptions/me/stats — vues totales, ventes 30 j, CA (seller_amount), meilleur article, panier moyen, conversion + historique ≤ 12 bilans. */
 subscriptionsRouter.get('/me/stats', requireAuth, async (_req, res) => {
   res.json(await getMyStats(currentUser(res).id));
+});
+
+/** GET /api/subscriptions/me/report?period=YYYY-MM — PDF du bilan persisté de l'abonnement courant (requireAuth « me » exclusivement). 404 REPORT_NOT_AVAILABLE si aucune ligne monthly_metrics. */
+subscriptionsRouter.get('/me/report', requireAuth, async (req, res) => {
+  const period = typeof req.query.period === 'string' ? req.query.period : '';
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
+    throw badRequest('INVALID_PERIOD', 'period doit être au format YYYY-MM');
+  }
+  const pdf = await getMyReportPdf(currentUser(res).id, period);
+  res
+    .set('content-type', 'application/pdf')
+    .set('content-disposition', `attachment; filename="bilan-ReVendsen-${period}.pdf"`)
+    .set('content-length', String(pdf.length))
+    .set('cache-control', 'private, no-store')
+    .send(pdf);
 });

@@ -368,6 +368,99 @@ export interface StatsReportEntry {
   sentAt: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// GET /api/subscriptions/me/report?period=YYYY-MM — PDF du bilan persisté (V8).
+// requireAuth « me » exclusivement (propriétaire — un admin appelle pour SON
+// abonnement, aucun paramètre userId). 404 REPORT_NOT_AVAILABLE si aucune
+// ligne monthly_metrics pour (subscription_id, period). P12 : mêmes données
+// persistées que le cron + dérivés recalculés à la lecture (comme /me/stats).
+// ---------------------------------------------------------------------------
+
+export async function getMyReportPdf(sellerId: number, period: string): Promise<Buffer> {
+  await materializeExpiredSubscriptions(pool, { sellerId });
+
+  // Abonnement « courant » : ACTIVE en priorité, sinon le plus récent (idem /me/stats).
+  const subRes = await pool.query<{ id: number; slug: string }>(
+    `SELECT s.id, s.slug
+       FROM seller_subscriptions s
+      WHERE s.seller_id = $1
+      ORDER BY (s.status = 'ACTIVE') DESC, s.created_at DESC, s.id DESC
+      LIMIT 1`,
+    [sellerId],
+  );
+  const sub = subRes.rows[0];
+  if (!sub) {
+    throw notFound('REPORT_NOT_AVAILABLE', 'Aucun bilan disponible pour cette période');
+  }
+
+  const row = await selectReportRow(pool, sub.id, period);
+  if (!row) {
+    throw notFound('REPORT_NOT_AVAILABLE', 'Aucun bilan disponible pour cette période');
+  }
+
+  const caBrut = Number(row.ca_fcfa);
+  const salesCount = Number(row.sales_count);
+  const views = Number(row.views_sum);
+
+  const [y, m] = period.split('-').map(Number);
+  const periodStart = new Date(Date.UTC(y!, m! - 1, 1));
+  const periodEnd = new Date(Date.UTC(y!, m!, 1)); // exclu
+
+  // Commission/brut recalculés depuis les commandes PAID de la période (immuables, P12) ;
+  // repli sur 10 % du CA brut si la période n'a aucune vente persistée (idem /me/stats).
+  const commissionRes = await pool.query<{ period: string; commission: string }>(
+    `SELECT to_char(e.created_at, 'YYYY-MM') AS period,
+            COALESCE(SUM(o.commission), 0)::bigint AS commission
+       FROM orders o
+       JOIN order_events e ON e.order_id = o.id AND e.to_status = 'PAID'
+      WHERE o.seller_id = $1 AND e.created_at >= $2 AND e.created_at < $3
+      GROUP BY 1`,
+    [sellerId, periodStart, periodEnd],
+  );
+  const persisted = commissionRes.rows[0];
+  const commissionFcfa = persisted ? Number(persisted.commission) : Math.round(caBrut * 0.1);
+  const netRevenueFcfa = caBrut - commissionFcfa;
+  const avgBasketFcfa = salesCount > 0 ? Math.floor(caBrut / salesCount) : null;
+  const conversionRate = views > 0 ? salesCount / views : null;
+
+  const bestRes = await pool.query<{ id: number; name: string; sales: string }>(
+    `SELECT p.id, p.name, COUNT(DISTINCT o.id)::int AS sales
+       FROM orders o
+       JOIN order_events e ON e.order_id = o.id AND e.to_status = 'PAID'
+       JOIN products p ON p.id = o.product_id
+      WHERE o.seller_id = $1 AND e.created_at >= $2 AND e.created_at < $3 AND p.deleted_at IS NULL
+      GROUP BY p.id, p.name
+      ORDER BY sales DESC, MAX(p.view_count) DESC, p.id ASC
+      LIMIT 1`,
+    [sellerId, periodStart, periodEnd],
+  );
+  const best = bestRes.rows[0];
+
+  // Libellé « 1er relevé » : même heuristique que /me/stats (P12).
+  const historyRows = await selectReportHistory(sub.id, 12, pool);
+  const sortedAsc = [...historyRows].sort((a, b) => a.period.localeCompare(b.period));
+  const firstPeriod = sortedAsc[0]?.period ?? null;
+  const viewsLabel: ReportMetrics['viewsLabel'] =
+    row.period === firstPeriod && sortedAsc.length === 1 ? 'vues cumulées (1er relevé)' : 'vues du mois';
+
+  return renderBilanPdf({
+    boutique: sub.slug,
+    period: periodLabelFr(period),
+    periodIso: period,
+    generatedAt: new Date(),
+    views,
+    viewsLabel,
+    salesCount,
+    revenueFcfa: caBrut,
+    netRevenueFcfa,
+    commissionFcfa,
+    avgBasketFcfa,
+    bestProductName: best?.name ?? null,
+    bestProductSales: best ? Number(best.sales) : null,
+    conversionRate,
+  });
+}
+
 export async function getMyStats(sellerId: number): Promise<Record<string, unknown>> {
   await materializeExpiredSubscriptions(pool, { sellerId });
 
