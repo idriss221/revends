@@ -539,7 +539,7 @@ export const deleteStorefrontAsset = deletePhoto;   // réutilisé tel quel (bes
 ```
 
 - Nom de fichier **toujours UUID serveur** ; magic bytes vérifiés (`sniffImageMime` réutilisé de `middleware/upload.ts`) — jamais le header client (RG-MEDIA-1).
-- MIME `image/jpeg|png|webp` uniquement ; **≤ 2 Mo** (uploader `multer` dédié `uploadStorefrontAsset` : `memoryStorage`, `limits: { fileSize: 2*1024*1024, files: 1, fields: 6 }` — nouveau middleware dans `middleware/upload.ts`, **appuyé sur les constantes existantes**, pas de réécriture des 2 uploaders en place).
+- MIME `image/jpeg|png|webp` uniquement ; **logo ≤ 2 Mo · bannière ≤ 4 Mo** (`MAX_LOGO_BYTES`/`MAX_BANNER_BYTES` dans `middleware/upload.ts`, `memoryStorage`, `fileSize: 8 Mo` outer + contrôle par kind dans le service, 2 kinds max).
 - `BLOB_READ_WRITE_TOKEN` absent (dev/test) → repli disque identique à `savePhoto` (CA-V8-046).
 - Anciens fichiers : écrasement → suppression best-effort après succès (CA-V8-047) ; échec ignoré (P8).
 - Le préfixe logique `uploads/storefront/` est **nouveau** ; `uploads/products` et `uploads/payment-proofs` inchangés.
@@ -559,7 +559,7 @@ export const deleteStorefrontAsset = deletePhoto;   // réutilisé tel quel (bes
 - Disponible **dès `PENDING`** (préparation, CA-V8-045) ; le rendu public n'a lieu que si `ACTIVE` (sinon `/boutique/:slug` 404 inchangé).
 - `collecteAddress` : **jamais renvoyée dans aucune réponse API ni UI** (arbitrage §14.D clos). Saisie en écriture seule (`PUT`) ; aucune lecture possible via l'API — la valeur existante n'est affichable nulle part (le propriétaire ressaisit pour corriger ; le front n'affiche qu'un indicateur `collecteAddressSet: boolean`). Lecture réservée au SQL trusted (DBA/logistique hors produit).
 - Réponse `200` : `{ profile: { logoUrl, bannerUrl, publicDescription, collecteAddressSet, updatedAt } }` (propriétaire uniquement).
-- Erreurs : `401 UNAUTHENTICATED` · `400 VALIDATION_ERROR` (description > 500 graphèmes, graphes combinants comptés — `Intl.Segmenter`, test Unicode `👨‍👩‍👧` = 1 grapheme — CA-V8-043 ; collecteAddress hors 10–500, CA-V8-042) · `400 INVALID_IMAGE` (MIME ≠ magic bytes, ou non-image — `application/pdf` → 400) · `413 FILE_TOO_LARGE` (> 2 Mo, message clair) · `500 INTERNAL_ERROR`.
+- Erreurs : `401 UNAUTHENTICATED` · `400 VALIDATION_ERROR` (description > 500 graphèmes, graphes combinants comptés — `Intl.Segmenter`, test Unicode `👨‍👩‍👧` = 1 grapheme — CA-V8-043 ; collecteAddress hors 10–500, CA-V8-042) · `400 INVALID_IMAGE` (MIME ≠ magic bytes, ou non-image — `application/pdf` → 400) · `413 FILE_TOO_LARGE` (> 2 Mo logo · > 4 Mo bannière, message clair) · `500 INTERNAL_ERROR`.
 - Écriture : upsert `storefront_profiles` (même transaction que suppression éventuelle de l'ancien blob — blob supprimé **après** commit, best-effort).
 - **Édition dès `PENDING` mais jamais rendue publique hors `ACTIVE`** — le serializer public (§7.3) ignore le profil si pas `ACTIVE` (CA-V8-045).
 - XSS : `public_description` stockée brute, **rendue échappée** (React) ; `<script>alert(1)</script>` inerte (CA-V8-042) ; jamais `dangerouslySetInnerHTML` ; alt bannière vide / `aria-hidden="true"`, logo `alt=« Logo de la boutique {nom} »` (CA-V8-041/048).
@@ -967,7 +967,7 @@ grep -rn 'ALTER TYPE\|CREATE TRIGGER' server/migrations/020_storefront_v8.sql   
 | `app.ts` | +2 lignes montage (`/api/admin` nouveau routeur, `/api/cron`) — 0 middleware retiré |
 | `config.ts` | +`autoApproveV8`, lecture `CRON_SECRET` (déjà la convention env) |
 | `jobs/run.ts` | +`cron.schedule('0 6 * * *', …)` (§11.3) |
-| `middleware/upload.ts` | +`uploadStorefrontAsset` (2 Mo, 1 fichier) |
+| `middleware/upload.ts` | +`uploadStorefrontAsset` (logo ≤ 2 Mo · bannière ≤ 4 Mo, 1 fichier) |
 | `vercel.json` | +`crons` : **1 job** `0 6 * * *` (§11.2, §14.F clos) |
 | `server/package.json` | +`pdfkit@0.20.2` (**après `npm audit` — §14.G clos), +`@types/pdfkit` (dev) |
 
