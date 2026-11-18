@@ -230,6 +230,23 @@ if (sessionSecretError) {
   process.exit(1);
 }
 
+// Production : CRON_SECRET obligatoire et ≥ 32 caractères (valeur aléatoire),
+// sinon le déclencheur externe Vercel Cron est soit inerte (absent → 401)
+// soit bruteforçable (faible). Tests et dev : aucune contrainte.
+const cronSecretError = env.NODE_ENV === 'production'
+  ? (!env.CRON_SECRET
+    ? 'CRON_SECRET est requis en production (≥ 32 caractères, `openssl rand -hex 32`)'
+    : env.CRON_SECRET.length < 32
+      ? 'CRON_SECRET doit faire au moins 32 caractères'
+      : /^(change-me|change_me|secret|cron|default|test|example)/i.test(env.CRON_SECRET)
+        ? 'CRON_SECRET ne doit pas commencer par un littéral public/exemple'
+        : null)
+  : null;
+if (cronSecretError) {
+  logger.error(cronSecretError);
+  process.exit(1);
+}
+
 const adminPasswordError = validateAdminPassword(env.ADMIN_PASSWORD);
 if (adminPasswordError) {
   logger.error(adminPasswordError);

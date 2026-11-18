@@ -15,13 +15,12 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 /**
  * POST /api/subscriptions — planId obligatoire ; slug optional.
- * V8 (E1) : `paymentMethod` + `paymentReference` — **contraints en service**
- * (codes dédiés INVALID_PAYMENT_METHOD / INVALID_PAYMENT_REFERENCE) et
- * ACCEPTÉS ABSENTS (legacy CA-V8-053). Voir DEFIANCE dans le rapport V8 :
- * l'obligation stricte (CA-V8-050) casserait les suites V7 existantes
- * (contrainte absolue « tests DO NOT CHANGE / suites vertes »). La validation
- * reste stricte DÈS QU'UNE VALEUR EST FOURNIE ; le front doit rendre les
- * champs obligatoires à la souscription (phase @frontend).
+ * V8 (E1 / CA-V8-050) : `paymentMethod` + `paymentReference` sont **OBLIGATOIRES**
+ * — le service les exige via `validatePaymentFields` (codes dédiés
+ * INVALID_PAYMENT_METHOD / PAYMENT_REFERENCE_REQUIRED) : toute souscription sans
+ * référence Wave/OM/virement est rejetée (400). Les lignes legacy antérieures
+ * à la V8 (payment_* = NULL) restent **activables** par l'admin (CA-V8-053),
+ * fabrication hors ce schéma.
  */
 export const subscribeSchema = z.object({
   planId: z.coerce

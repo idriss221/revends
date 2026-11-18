@@ -65,7 +65,7 @@ storefrontRouter.post('/profile', requireAuth, async (req, res) => {
   res.json(await updateStorefrontProfile(currentUser(res).id, input, {}));
 });
 
-/** GET /api/storefront/profile — lecture propriétaire (collecteAddress VISIBLE ici ; jamais en public). */
+/** GET /api/storefront/profile — lecture propriétaire (§14.D clos : jamais la valeur de collecteAddress ; booléen `collecteAddressSet` uniquement). */
 storefrontRouter.get('/profile', requireAuth, async (_req, res) => {
   res.json(await getStorefrontProfile(currentUser(res).id));
 });

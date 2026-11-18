@@ -400,7 +400,7 @@ export interface StatsReportEntry {
 // persistées que le cron + dérivés recalculés à la lecture (comme /me/stats).
 // ---------------------------------------------------------------------------
 
-export async function getMyReportPdf(sellerId: number, period: string): Promise<Buffer> {
+export async function getMyReportPdf(sellerId: number, period: string): Promise<{ pdf: Buffer; slug: string }> {
   await materializeExpiredSubscriptions(pool, { sellerId });
 
   // Abonnement « courant » : ACTIVE en priorité, sinon le plus récent (idem /me/stats).
@@ -467,7 +467,7 @@ export async function getMyReportPdf(sellerId: number, period: string): Promise<
   const viewsLabel: ReportMetrics['viewsLabel'] =
     row.period === firstPeriod && sortedAsc.length === 1 ? 'vues cumulées (1er relevé)' : 'vues du mois';
 
-  return renderBilanPdf({
+  const pdf = await renderBilanPdf({
     boutique: sub.slug,
     period: periodLabelFr(period),
     periodIso: period,
@@ -483,6 +483,7 @@ export async function getMyReportPdf(sellerId: number, period: string): Promise<
     bestProductSales: best ? Number(best.sales) : null,
     conversionRate,
   });
+  return { pdf, slug: sub.slug };
 }
 
 export async function getMyStats(sellerId: number): Promise<Record<string, unknown>> {

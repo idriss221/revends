@@ -1042,7 +1042,7 @@ describe('V8 — GET /api/subscriptions/me/report : PDF du bilan de la période'
     assert.equal(res.status, 200, typeof res.body === 'string' ? res.body.slice(0, 200) : JSON.stringify(res.body));
     assert.match(res.headers.get('content-type') ?? '', /^application\/pdf/);
     const disposition = res.headers.get('content-disposition') ?? '';
-    assert.equal(disposition, `attachment; filename="bilan-ReVendsen-${period}.pdf"`);
+    assert.equal(disposition, `attachment; filename="bilan-report-telechargement-${period}.pdf"`);
     assert.equal(typeof res.body, 'string', 'corps binaire relu en texte (client de test)');
     assert.equal((res.body as string).slice(0, 5), '%PDF-', 'magic bytes %PDF-');
     void subId;

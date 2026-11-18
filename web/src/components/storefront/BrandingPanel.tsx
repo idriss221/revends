@@ -309,7 +309,7 @@ export function BrandingPanel({ profile }: { profile: StorefrontProfileSummary |
             value={collecte}
             disabled={clearCollecte}
             onChange={(event) => setCollecte(event.target.value)}
-            placeholder={collecteSet ? '•••••••••• (renseignée — ressaisissez pour la remplacer)' : 'Marché Sandaga, box 42 — Dakar'}
+            placeholder={collecteSet ? '•••••••••• (renseignée — ressaisissez pour la remplacer)' : 'Ex. Marché central, box 12 — quartier de votre choix'}
             className="field-input"
           />
           <p className="hint" id="collecte-hint">

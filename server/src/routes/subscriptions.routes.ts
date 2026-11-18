@@ -37,10 +37,10 @@ subscriptionsRouter.get('/me/report', requireAuth, async (req, res) => {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
     throw badRequest('INVALID_PERIOD', 'period doit être au format YYYY-MM');
   }
-  const pdf = await getMyReportPdf(currentUser(res).id, period);
+  const { pdf, slug } = await getMyReportPdf(currentUser(res).id, period);
   res
     .set('content-type', 'application/pdf')
-    .set('content-disposition', `attachment; filename="bilan-ReVendsen-${period}.pdf"`)
+    .set('content-disposition', `attachment; filename="bilan-${slug}-${period}.pdf"`)
     .set('content-length', String(pdf.length))
     .set('cache-control', 'private, no-store')
     .send(pdf);

@@ -89,6 +89,9 @@ export async function updateStorefrontProfile(
   const banner = await fileBufferAndMime(files.banner?.[0], 'banner');
 
   const oldPaths: string[] = [];
+  // Chemins fraîchement écrits : supprimés si la transaction DB échoue après
+  // l'écriture (upload « orphelin » public = fuite bornée sinon).
+  const staged: string[] = [];
   const profile = await withTransaction(async (client) => {
     const { rows: currentRows } = await client.query<{ logo_path: string | null; banner_path: string | null }>(
       'SELECT logo_path, banner_path FROM storefront_profiles WHERE seller_id = $1',
@@ -98,6 +101,8 @@ export async function updateStorefrontProfile(
 
     const logoPath = logo ? await saveStorefrontAsset(logo.buffer, logo.mime) : undefined;
     const bannerPath = banner ? await saveStorefrontAsset(banner.buffer, banner.mime) : undefined;
+    if (logoPath !== undefined) staged.push(logoPath);
+    if (bannerPath !== undefined) staged.push(bannerPath);
     if (logoPath !== undefined && current?.logo_path) oldPaths.push(current.logo_path);
     if (bannerPath !== undefined && current?.banner_path) oldPaths.push(current.banner_path);
 
@@ -107,6 +112,11 @@ export async function updateStorefrontProfile(
       ...(text.publicDescription !== undefined ? { publicDescription: text.publicDescription } : {}),
       ...(text.collecteAddress !== undefined ? { collecteAddress: text.collecteAddress } : {}),
     });
+  }).catch(async (err) => {
+    // Compensation best-effort : uploads jetés si la transaction avorte.
+    const toDelete = [...staged];
+    await Promise.all(toDelete.map((p) => deleteStorefrontAsset(p).catch(() => undefined)));
+    throw err;
   });
 
   if (oldPaths.length > 0) {
