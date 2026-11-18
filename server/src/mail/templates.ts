@@ -77,7 +77,10 @@ export type MailEvent =
   | 'phone_reset'
   | 'announcement_sell'
   | 'referral_program_launch'
-  | 'referral_milestone';
+  | 'referral_milestone'
+  | 'subscription_activated'
+  | 'subscription_expiry_reminder'
+  | 'storefront_monthly_report';
 
 export interface TemplateVars {
   /**
@@ -101,6 +104,25 @@ export interface TemplateVars {
   referralCode?: string;
   /** Chemin interne, ex. `/orders/CMD-000123`. Relié à SITE_URL. Jamais absolu. */
   linkPath?: string;
+  /** Nom du forfait (DB subscription_plans) — échappé à l'interpolation. */
+  planName?: string;
+  /** Nom affichable de la boutique (ex. slug) — échappé à l'interpolation. */
+  boutiqueName?: string;
+  /** Période lisible du bilan, ex. « novembre 2026 ». */
+  period?: string;
+  /** Cumul de vues affiché tel quel dans le corps (chiffres). */
+  viewsCount?: number;
+  viewsLabel?: string;
+  salesCount?: number;
+  revenueFcfa?: number;
+  netRevenueFcfa?: number;
+  commissionFcfa?: number;
+  /** null ⇒ « — » (aucune vente). */
+  avgBasketFcfa?: number | null;
+  bestProductName?: string;
+  bestProductSales?: number | null;
+  /** 2 décimales, ex. 0.0032 ; null ⇒ « — » (0 vue). */
+  conversionRate?: number | null;
 }
 
 const MONEY = new Intl.NumberFormat('fr-FR').format;
@@ -387,6 +409,19 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
     referralCode: rawVars.referralCode === undefined ? undefined : escapeHtml(rawVars.referralCode),
     amountFcfa: rawVars.amountFcfa,
     linkPath: rawVars.linkPath,
+    planName: rawVars.planName === undefined ? undefined : escapeHtml(rawVars.planName),
+    boutiqueName: rawVars.boutiqueName === undefined ? undefined : escapeHtml(rawVars.boutiqueName),
+    period: rawVars.period === undefined ? undefined : escapeHtml(rawVars.period),
+    viewsCount: rawVars.viewsCount,
+    viewsLabel: rawVars.viewsLabel === undefined ? undefined : escapeHtml(rawVars.viewsLabel),
+    salesCount: rawVars.salesCount,
+    revenueFcfa: rawVars.revenueFcfa,
+    netRevenueFcfa: rawVars.netRevenueFcfa,
+    commissionFcfa: rawVars.commissionFcfa,
+    avgBasketFcfa: rawVars.avgBasketFcfa,
+    bestProductName: rawVars.bestProductName === undefined ? undefined : escapeHtml(rawVars.bestProductName),
+    bestProductSales: rawVars.bestProductSales,
+    conversionRate: rawVars.conversionRate,
   };
   const product = vars.productName ?? 'votre article';
   const order = vars.orderNumber ?? '';
@@ -793,6 +828,65 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         html,
         text,
       };
+    }
+
+    case 'subscription_activated': {
+      const plan = vars.planName ?? 'Hébergement Boutique';
+      const { html, text } = layout(
+        'Votre boutique est active',
+        [
+          para(`Votre abonnement ${plan} est activé : votre boutique est en ligne et vos articles éligibles peuvent être publiés directement.`),
+          para('Votre badge de palier apparaît dès maintenant sur vos articles et votre fiche.'),
+        ],
+        link ?? internalLink('/mon-abonnement'),
+      );
+      return { subject: 'Votre boutique est active sur ReVends', html, text };
+    }
+
+    case 'subscription_expiry_reminder': {
+      const plan = vars.planName ?? 'Hébergement Boutique';
+      const { html, text } = layout(
+        'Votre abonnement expire dans 3 jours',
+        [
+          para(`Votre abonnement ${plan} arrive à échéance dans 3 jours.`),
+          para("À l'échéance : votre boutique passe en veille (annonces conservées, catalogue intact) et votre badge disparaît. Renouvelez-le depuis votre espace pour les conserver."),
+        ],
+        link ?? internalLink('/mon-abonnement'),
+      );
+      return { subject: 'Votre abonnement ReVends expire dans 3 jours', html, text };
+    }
+
+    case 'storefront_monthly_report': {
+      const period = vars.period ?? 'ce mois-ci';
+      const boutique = vars.boutiqueName ?? 'votre boutique';
+      const viewsLabel = vars.viewsLabel ?? 'vues du mois';
+      const views = typeof vars.viewsCount === 'number' ? MONEY(vars.viewsCount) : '—';
+      const sales = typeof vars.salesCount === 'number' ? MONEY(vars.salesCount) : '—';
+      const gross = typeof vars.revenueFcfa === 'number' ? money(vars.revenueFcfa) : '—';
+      const net = typeof vars.netRevenueFcfa === 'number' ? money(vars.netRevenueFcfa) : '—';
+      const commission = typeof vars.commissionFcfa === 'number' ? money(vars.commissionFcfa) : '—';
+      const avg = vars.avgBasketFcfa == null ? '—' : money(vars.avgBasketFcfa);
+      const best = vars.bestProductName
+        ? `${vars.bestProductName}${vars.bestProductSales != null ? ` — ${MONEY(vars.bestProductSales)} vente(s)` : ''}`
+        : '—';
+      const conversion = vars.conversionRate == null ? '—' : `${(vars.conversionRate * 100).toFixed(2).replace('.', ',')} %`;
+      const { html, text } = layout(
+        `Votre bilan de ${period}`,
+        [
+          para(`Boutique : ${boutique}`),
+          para(`Période : ${period}`),
+          para(`${viewsLabel} : ${views}`),
+          para(`Ventes : ${sales}`),
+          para(`CA brut : ${gross}`),
+          para(`CA net (vendeur) : ${net}`),
+          para(`Commission ReVends (10 %) : ${commission}`),
+          para(`Panier moyen : ${avg}`),
+          para(`Meilleur article : ${best}`),
+          para(`Taux de conversion (vues → ventes) : ${conversion}`),
+        ],
+        link ?? internalLink('/mon-abonnement'),
+      );
+      return { subject: `Votre bilan ReVends de ${period} — ${boutique}`, html, text };
     }
 
     default: {

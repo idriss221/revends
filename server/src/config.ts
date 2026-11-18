@@ -43,6 +43,14 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // V8 — Publication directe pour les vendeurs éligibles (V8-D2). `false` restaure V7 (PENDING).
+  AUTO_APPROVE_V8: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // V8 — Secret du endpoint cron `/api/cron/monthly-report` (dual-auth Vercel Cron).
+  // Jamais de valeur par défaut : absent ⇒ 401 systématique (fail-closed).
+  CRON_SECRET: z.string().optional(),
   ADMIN_EMAIL: z.string().default('admin@revends.com'),
   ADMIN_PASSWORD: z.string().default(''),
   // Adresses supplémentaires à alerter (produit en attente, nouvelle commande).
@@ -222,6 +230,23 @@ if (sessionSecretError) {
   process.exit(1);
 }
 
+// Production : CRON_SECRET obligatoire et ≥ 32 caractères (valeur aléatoire),
+// sinon le déclencheur externe Vercel Cron est soit inerte (absent → 401)
+// soit bruteforçable (faible). Tests et dev : aucune contrainte.
+const cronSecretError = env.NODE_ENV === 'production'
+  ? (!env.CRON_SECRET
+    ? 'CRON_SECRET est requis en production (≥ 32 caractères, `openssl rand -hex 32`)'
+    : env.CRON_SECRET.length < 32
+      ? 'CRON_SECRET doit faire au moins 32 caractères'
+      : /^(change-me|change_me|secret|cron|default|test|example)/i.test(env.CRON_SECRET)
+        ? 'CRON_SECRET ne doit pas commencer par un littéral public/exemple'
+        : null)
+  : null;
+if (cronSecretError) {
+  logger.error(cronSecretError);
+  process.exit(1);
+}
+
 const adminPasswordError = validateAdminPassword(env.ADMIN_PASSWORD);
 if (adminPasswordError) {
   logger.error(adminPasswordError);
@@ -341,6 +366,8 @@ export const config = {
   commissionRate: env.COMMISSION_RATE,
   reservationDays: env.RESERVATION_DAYS,
   disableCron: env.DISABLE_CRON,
+  autoApproveV8: env.AUTO_APPROVE_V8,
+  cronSecret: env.CRON_SECRET,
   adminEmail: env.ADMIN_EMAIL,
   adminPassword: env.ADMIN_PASSWORD,
   /** Adresses admin supplémentaires (en plus des comptes `role = admin`). */

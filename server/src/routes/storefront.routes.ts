@@ -6,6 +6,7 @@ import {
   idParamSchema,
   normalizePaginationParams,
   storefrontPaginationSchema,
+  storefrontProfileJsonSchema,
 } from '../utils/storefront-validation.js';
 import {
   addListingToStorefront,
@@ -13,6 +14,13 @@ import {
   getPublicStorefront,
   withdrawListing,
 } from '../services/storefront.service.js';
+import {
+  deleteStorefrontBanner,
+  deleteStorefrontLogo,
+  getStorefrontProfile,
+  updateStorefrontProfile,
+} from '../services/storefront-profile.service.js';
+import { uploadStorefrontAsset } from '../middleware/upload.js';
 
 // ---------------------------------------------------------------------------
 // V7 — Boutique publique + annonces de boutique (routes 3, 4, 5, 6).
@@ -26,6 +34,50 @@ export const storefrontRouter = Router();
 storefrontRouter.post('/listings', requireAuth, async (req, res) => {
   const { productId } = addListingSchema.parse(req.body);
   res.status(201).json(await addListingToStorefront(currentUser(res).id, productId));
+});
+
+/** PUT /api/storefront/profile — écriture branding (multipart : logo ≤ 2 Mo, bannière ≤ 4 Mo, description ≤ 500 graphèmes, collecteAddress 10–500). */
+storefrontRouter.put(
+  '/profile',
+  requireAuth,
+  uploadStorefrontAsset.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'banner', maxCount: 1 },
+  ]),
+  async (req, res) => {
+    const files = req.files as { logo?: Express.Multer.File[]; banner?: Express.Multer.File[] } | undefined;
+    res.json(
+      await updateStorefrontProfile(
+        currentUser(res).id,
+        {
+          publicDescription: typeof req.body?.publicDescription === 'string' ? req.body.publicDescription : undefined,
+          collecteAddress: typeof req.body?.collecteAddress === 'string' ? req.body.collecteAddress : undefined,
+        },
+        { logo: files?.logo, banner: files?.banner },
+      ),
+    );
+  },
+);
+
+/** POST /api/storefront/profile — même écriture en JSON (sans fichiers). */
+storefrontRouter.post('/profile', requireAuth, async (req, res) => {
+  const input = storefrontProfileJsonSchema.parse(req.body);
+  res.json(await updateStorefrontProfile(currentUser(res).id, input, {}));
+});
+
+/** GET /api/storefront/profile — lecture propriétaire (§14.D clos : jamais la valeur de collecteAddress ; booléen `collecteAddressSet` uniquement). */
+storefrontRouter.get('/profile', requireAuth, async (_req, res) => {
+  res.json(await getStorefrontProfile(currentUser(res).id));
+});
+
+/** DELETE /api/storefront/profile/logo — retire le logo (octets supprimés best-effort). */
+storefrontRouter.delete('/profile/logo', requireAuth, async (_req, res) => {
+  res.json(await deleteStorefrontLogo(currentUser(res).id));
+});
+
+/** DELETE /api/storefront/profile/banner — retire la bannière (octets supprimés best-effort). */
+storefrontRouter.delete('/profile/banner', requireAuth, async (_req, res) => {
+  res.json(await deleteStorefrontBanner(currentUser(res).id));
 });
 
 /** DELETE /api/storefront/listings/:id — retrait boutique-scopé, idempotent, 0 écriture sur products. */

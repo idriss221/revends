@@ -18,7 +18,11 @@ import { resolveImageUrl } from '../lib/catalogPhotos'
 import { useToast } from '../lib/toast'
 import { ApiError } from '../lib/apiClient'
 import { fmt } from '../components/site/SiteBits'
-import type { SubscriptionPlan } from '../lib/storefront.types'
+import { BrandingPanel } from '../components/storefront/BrandingPanel'
+import { StatsPanel } from '../components/storefront/StatsPanel'
+import { PaymentReferenceFields } from '../components/storefront/PaymentReferenceFields'
+import { validatePaymentFields, type PaymentFieldErrors } from '../lib/v8'
+import type { SubscriptionPlan, SubscribeWithPaymentBody } from '../lib/storefront.types'
 import type { OwnerProduct } from '../lib/types'
 
 /* ============================================================================
@@ -69,6 +73,9 @@ export function MonAbonnement() {
   const [withdrawingId, setWithdrawingId] = useState<number | null>(null)
   const [addingId, setAddingId] = useState<number | null>(null)
   const [resouscribing, setResouscribing] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('')
+  const [paymentReference, setPaymentReference] = useState('')
+  const [paymentErrors, setPaymentErrors] = useState<PaymentFieldErrors>({})
 
   const data = me.data
   const subscription = data?.subscription ?? null
@@ -82,9 +89,24 @@ export function MonAbonnement() {
   const quota = usage?.quota ?? subscription?.plan.quota ?? 0
   const quotaFull = isActive && usage !== null && usage.used >= usage.quota
 
+  // V8 — référence de paiement (E1) : le bouton n'est actif que si les deux
+  // champs sont valides côté client (le serveur reste l'arbitre).
+  const paymentCheck = validatePaymentFields({ paymentMethod, paymentReference })
+  const paymentValid = Object.keys(paymentCheck).length === 0
+  const paymentPayload = (): Pick<SubscribeWithPaymentBody, 'paymentMethod' | 'paymentReference'> => ({
+    paymentMethod: paymentMethod as SubscribeWithPaymentBody['paymentMethod'],
+    paymentReference: paymentReference.trim(),
+  })
+  /** Valide au clic : pose paymentErrors si invalide ; sinon null. */
+  const guardPayment = (): boolean => {
+    const errors = validatePaymentFields({ paymentMethod, paymentReference })
+    setPaymentErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   /* ── Mutations ───────────────────────────────────────────────────── */
   const subscribe = useMutation({
-    mutationFn: (body: { planId: number; slug: string; supersedesId?: number }) => storefrontApi.subscribe(body),
+    mutationFn: (body: SubscribeWithPaymentBody) => storefrontApi.subscribe(body),
     onSuccess: (_res, body) => {
       qc.invalidateQueries({ queryKey: ['my-subscription'] })
       toast(
@@ -102,6 +124,9 @@ export function MonAbonnement() {
       setPendingPlanId(null)
       setResouscribing(false)
       setChangeTarget(null)
+      setPaymentMethod('')
+      setPaymentReference('')
+      setPaymentErrors({})
     },
     onError: (err) => {
       const message = storefrontError(err, 'La demande n’a pas pu être envoyée. Réessayez.')
@@ -174,7 +199,8 @@ export function MonAbonnement() {
 
   const reSubscribe = () => {
     if (!subscription) return
-    subscribe.mutate({ planId: subscription.plan.id, slug: subscription.slug })
+    if (!guardPayment()) return
+    subscribe.mutate({ planId: subscription.plan.id, slug: subscription.slug, ...paymentPayload() })
   }
 
   const onSubmitPlans = (e: FormEvent) => {
@@ -184,11 +210,12 @@ export function MonAbonnement() {
     setFieldError(null)
     const normalized = slug.trim().toLowerCase().replace(/\s+/g, '-')
     if (!planId) return
+    if (!guardPayment()) return
     if (!SLUG_RE.test(normalized) || normalized.length < SLUG_MIN || normalized.length > SLUG_MAX) {
       setFieldError('Minuscules, chiffres et tirets — 3 à 40 caractères, sans tiret double.')
       return
     }
-    subscribe.mutate({ planId, slug: normalized })
+    subscribe.mutate({ planId, slug: normalized, ...paymentPayload() })
   }
 
   /* ── Retours anticipés (hooks terminés) ─────────────────────────── */
@@ -226,7 +253,7 @@ export function MonAbonnement() {
   /* Visage AUCUN — écran de choix                                         */
   /* ==================================================================== */
   if (!subscription) {
-    const canSubmit = planId !== null && !subscribe.isPending
+    const canSubmit = planId !== null && !subscribe.isPending && paymentValid
     return (
       <div className="wrap">
         <Crumb items={[{ label: 'Mon abonnement' }]} />
@@ -239,7 +266,8 @@ export function MonAbonnement() {
 
           <h2 className="rv-shop-h2">Choisissez votre forfait</h2>
           <p className="rv-shop-sub">
-            L’administration examine votre demande. Vous pourrez suivre son état ici — sans paiement en ligne pour le moment.
+            L’administration examine votre demande après votre paiement hors ligne (Wave / Orange Money / virement).
+            Vous pourrez suivre son état ici.
           </p>
 
           <form onSubmit={onSubmitPlans} noValidate>
@@ -286,6 +314,23 @@ export function MonAbonnement() {
               )}
             </div>
 
+            <div style={{ marginTop: 18 }}>
+              <PaymentReferenceFields
+                idPrefix="subscribe"
+                method={paymentMethod}
+                reference={paymentReference}
+                onMethodChange={(v) => {
+                  setPaymentMethod(v)
+                  setPaymentErrors((prev) => ({ ...prev, paymentMethod: undefined }))
+                }}
+                onReferenceChange={(v) => {
+                  setPaymentReference(v)
+                  setPaymentErrors((prev) => ({ ...prev, paymentReference: undefined }))
+                }}
+                errors={paymentErrors}
+              />
+            </div>
+
             {formError && (
               <Notice tone="danger" className="mt-2">
                 {formError}
@@ -308,7 +353,8 @@ export function MonAbonnement() {
               </p>
             ) : (
               <p className="hint" style={{ marginTop: 10 }}>
-                L’activation est manuelle : rien à payer maintenant.
+                Réglez hors ligne (Wave / Orange Money / virement) — l’administration ouvre votre boutique après
+                vérification.
               </p>
             )}
           </form>
@@ -328,11 +374,26 @@ export function MonAbonnement() {
           <h1 className="rv-shop-h1">Mon abonnement</h1>
           <SubscriptionStatusPanel subscription={subscription} />
           <div style={{ marginTop: 18 }}>
+            <PaymentReferenceFields
+              idPrefix="resubscribe"
+              method={paymentMethod}
+              reference={paymentReference}
+              onMethodChange={(v) => {
+                setPaymentMethod(v)
+                setPaymentErrors((prev) => ({ ...prev, paymentMethod: undefined }))
+              }}
+              onReferenceChange={(v) => {
+                setPaymentReference(v)
+                setPaymentErrors((prev) => ({ ...prev, paymentReference: undefined }))
+              }}
+              errors={paymentErrors}
+            />
             <button
               type="button"
               className="btn terra block"
+              style={{ marginTop: 16 }}
               onClick={reSubscribe}
-              disabled={subscribe.isPending}
+              disabled={subscribe.isPending || !paymentValid}
               aria-busy={subscribe.isPending}
             >
               {subscribe.isPending ? 'Envoi…' : `Re-souscrire à ${subscription.plan.name}`}
@@ -355,10 +416,12 @@ export function MonAbonnement() {
                 type="button"
                 className="btn terra block"
                 style={{ marginTop: 12 }}
-                disabled={planId === null || subscribe.isPending}
+                disabled={planId === null || subscribe.isPending || !paymentValid}
                 aria-busy={subscribe.isPending}
                 onClick={() => {
-                  if (planId !== null) subscribe.mutate({ planId, slug: subscription.slug })
+                  if (planId !== null && guardPayment()) {
+                    subscribe.mutate({ planId, slug: subscription.slug, ...paymentPayload() })
+                  }
                 }}
               >
                 {subscribe.isPending ? 'Envoi…' : 'Envoyer la demande'}
@@ -384,6 +447,17 @@ export function MonAbonnement() {
             />
           )}
           <p className="rv-shop-recall">Votre slug /boutique/{subscription.slug} vous est réservé.</p>
+
+          <div style={{ marginTop: 26, display: 'grid', gap: 22 }}>
+            <StatsPanel
+              slug={subscription.slug}
+              planName={subscription.plan.name}
+              priceFcfa={subscription.plan.priceFcfa}
+              activatedAt={subscription.activatedAt}
+              endsAt={subscription.endsAt}
+            />
+            <BrandingPanel profile={data?.profile} />
+          </div>
         </div>
       </div>
     )
@@ -401,21 +475,46 @@ export function MonAbonnement() {
           <SubscriptionStatusPanel subscription={subscription} />
           {isPendingSub && plans.length > 1 && (
             <div style={{ marginTop: 18 }}>
+              <PaymentReferenceFields
+                idPrefix="change-plan"
+                method={paymentMethod}
+                reference={paymentReference}
+                onMethodChange={(v) => {
+                  setPaymentMethod(v)
+                  setPaymentErrors((prev) => ({ ...prev, paymentMethod: undefined }))
+                }}
+                onReferenceChange={(v) => {
+                  setPaymentReference(v)
+                  setPaymentErrors((prev) => ({ ...prev, paymentReference: undefined }))
+                }}
+                errors={paymentErrors}
+              />
               <PlanPicker plans={plans} value={pendingPlanId} onChange={setPendingPlanId} name="plan-pending" />
               <button
                 type="button"
                 className="btn ghost"
                 style={{ marginTop: 12 }}
-                disabled={pendingPlanId === null || subscribe.isPending}
+                disabled={pendingPlanId === null || subscribe.isPending || !paymentValid}
                 onClick={() => {
                   const target = plans.find((p) => p.id === pendingPlanId)
-                  if (target) setChangeTarget(target)
+                  if (target && guardPayment()) setChangeTarget(target)
                 }}
               >
                 Demander le changement de forfait
               </button>
             </div>
           )}
+
+          <div style={{ marginTop: 26, display: 'grid', gap: 22 }}>
+            <BrandingPanel profile={data?.profile} />
+            <StatsPanel
+              slug={subscription.slug}
+              planName={subscription.plan.name}
+              priceFcfa={subscription.plan.priceFcfa}
+              activatedAt={subscription.activatedAt}
+              endsAt={subscription.endsAt}
+            />
+          </div>
         </div>
 
         {/* Changement de forfait en PENDING : nouvelle demande sans supersedesId
@@ -428,7 +527,7 @@ export function MonAbonnement() {
             current={subscription.plan}
             target={changeTarget}
             loading={subscribe.isPending}
-            onConfirm={() => subscribe.mutate({ planId: changeTarget.id, slug: subscription.slug })}
+            onConfirm={() => subscribe.mutate({ planId: changeTarget.id, slug: subscription.slug, ...paymentPayload() })}
             onCancel={() => setChangeTarget(null)}
           />
         )}
@@ -482,6 +581,23 @@ export function MonAbonnement() {
             {quotaFull && <Notice tone="warning">{quotaMessage}</Notice>}
             {quotaError && !quotaFull && <Notice tone="warning">{quotaError}</Notice>}
 
+            {plans.length > 1 && (
+              <PaymentReferenceFields
+                idPrefix="switch-plan"
+                method={paymentMethod}
+                reference={paymentReference}
+                onMethodChange={(v) => {
+                  setPaymentMethod(v)
+                  setPaymentErrors((prev) => ({ ...prev, paymentMethod: undefined }))
+                }}
+                onReferenceChange={(v) => {
+                  setPaymentReference(v)
+                  setPaymentErrors((prev) => ({ ...prev, paymentReference: undefined }))
+                }}
+                errors={paymentErrors}
+              />
+            )}
+
             <section aria-labelledby="alt-plans-title">
               <h2 id="alt-plans-title" className="rv-shop-h2" style={{ marginBottom: 12 }}>
                 Forfait
@@ -490,7 +606,15 @@ export function MonAbonnement() {
                 {plans
                   .filter((p) => p.id !== subscription.plan.id)
                   .map((p) => (
-                    <button key={p.id} type="button" className="btn ghost" onClick={() => setChangeTarget(p)}>
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="btn ghost"
+                      disabled={!paymentValid}
+                      onClick={() => {
+                        if (guardPayment()) setChangeTarget(p)
+                      }}
+                    >
                       Passer à {p.name} — {fmt(p.priceFcfa)}/mois · quota {p.quota}
                     </button>
                   ))}
@@ -543,6 +667,17 @@ export function MonAbonnement() {
           </div>
         </div>
 
+        <div style={{ marginTop: 26, display: 'grid', gap: 22 }}>
+          <BrandingPanel profile={data?.profile} />
+          <StatsPanel
+            slug={subscription.slug}
+            planName={subscription.plan.name}
+            priceFcfa={subscription.plan.priceFcfa}
+            activatedAt={subscription.activatedAt}
+            endsAt={subscription.endsAt}
+          />
+        </div>
+
         <p className="rv-shop-sub" style={{ marginTop: 34, fontStyle: 'italic' }}>
           La seconde vie a de la valeur.
         </p>
@@ -555,7 +690,8 @@ export function MonAbonnement() {
         loading={subscribe.isPending}
         context="active"
         onConfirm={() =>
-          changeTarget && subscribe.mutate({ planId: changeTarget.id, slug: subscription.slug, supersedesId: subscription.id })
+          changeTarget &&
+          subscribe.mutate({ planId: changeTarget.id, slug: subscription.slug, supersedesId: subscription.id, ...paymentPayload() })
         }
         onCancel={() => setChangeTarget(null)}
       />

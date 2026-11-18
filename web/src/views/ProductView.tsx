@@ -12,6 +12,7 @@ import { categoryPhoto, resolveImageUrl } from '../lib/catalogPhotos'
 import { Ico } from '../components/brand/Ico'
 import { SiteImage, artKindFor } from '../components/site/SiteImage'
 import { SiteCardGrid } from '../components/site/SiteCard'
+import { SellerBadge } from '../components/storefront/SellerBadge'
 import { Crumb, SiteEmpty, SiteHead, catLabel, fmt, text } from '../components/site/SiteBits'
 import { HeartLoader } from '../components/ui/HeartLoader'
 import { friendlyError } from '../lib/errors'
@@ -364,6 +365,7 @@ export function ProductView() {
                   <Ico name="star" cls="sm" /> Ambassadeur
                 </span>
               ) : null}
+              {p.sellerBadge ? <SellerBadge badge={p.sellerBadge} className="seller-badge-inline" /> : null}
               <div className="meta-line">Membre depuis {p.seller.memberSince}</div>
               {p.seller.sales !== undefined ? (
                 <div className="facts">

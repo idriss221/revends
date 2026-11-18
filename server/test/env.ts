@@ -54,6 +54,11 @@ process.env.TEST_DB_NAME = TEST_DB_NAME;
 // publique `photoPublicPath` → `/uploads/products/...` soit réellement servie.
 process.env.UPLOAD_DIR = `/tmp/revends-test-uploads-${process.pid}/uploads/products`;
 process.env.DISABLE_CRON = 'true';
+// V8 — Publication directe (V8-D2, flag R-V8-01) DÉSACTIVÉE pour les suites
+// V7 historiques : elles testent le parcours PENDING → approve. `false`
+// restaure V7 exactement (§12.2) ; la suite V8 dédiée (storefront-v8.test.ts)
+// active le flag dynamiquement AVANT tout import applicatif.
+process.env.AUTO_APPROVE_V8 = process.env.AUTO_APPROVE_V8 ?? 'false';
 // SESSION_SECRET: >=32 chars, no dev/change/test patterns
 process.env.SESSION_SECRET = 'strong-session-secret-for-testing-42-chars-minimum-ok!';
 // ADMIN_PASSWORD: >=12 chars, no weak patterns

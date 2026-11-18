@@ -74,6 +74,26 @@ export const uploadProductPhotos = multer({
 });
 
 /**
+ * Branding boutique (V8-D5) : UN logo (≤ 2 Mo) ou UNE bannière (≤ 4 Mo).
+ * Même pattern memoryStorage + magic bytes côté service — le buffer n'est pas
+ * disponible au fileFilter. Limite multer dur = 8 Mo (garde-mémoire) ; les
+ * bornes EXACTES par champ (2/4 Mo) sont appliquées dans le service, qui
+ * produit 413 FILE_TOO_LARGE (jamais le mapping partagé PHOTO_TOO_LARGE).
+ */
+export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+export const MAX_BANNER_BYTES = 4 * 1024 * 1024;
+export const uploadStorefrontAsset = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 8 * 1024 * 1024,
+    files: 2,
+    fields: 6,
+    fieldSize: 100_000,
+    parts: 10,
+  },
+});
+
+/**
  * Preuve de paiement : UNE capture, mêmes bornes que les photos produit.
  * Le MIME réel est vérifié par magic bytes dans le service (jamais le header).
  */

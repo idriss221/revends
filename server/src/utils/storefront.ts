@@ -100,13 +100,40 @@ export function serializePlan(row: PlanRowLike): Record<string, unknown> {
   };
 }
 
+export interface StorefrontPublicProfileRow {
+  logo_path: string | null;
+  banner_path: string | null;
+  public_description: string | null;
+}
+
+export interface StorefrontPublicView {
+  slug: string;
+  displayName: string;
+  memberSince: number;
+  logoUrl?: string;
+  bannerUrl?: string;
+  publicDescription?: string;
+}
+
 /** Vue publique de la boutique : displayName + memberSince UNIQUEMENT (CA-V7-026). Jamais name/email/phone/whatsapp. */
 export function serializeStorefrontPublic(
   row: { slug: string; display_name: string; created_at: Date | string },
-): { slug: string; displayName: string; memberSince: number } {
+  profile?: StorefrontPublicProfileRow | null,
+): StorefrontPublicView {
   const createdAt = row.created_at instanceof Date ? row.created_at : new Date(row.created_at);
   const memberSince = Number.isNaN(createdAt.getTime()) ? new Date().getUTCFullYear() : createdAt.getUTCFullYear();
-  return { slug: row.slug, displayName: row.display_name, memberSince };
+  const out: StorefrontPublicView = {
+    slug: row.slug,
+    displayName: row.display_name,
+    memberSince,
+  };
+  // V8 / E2 (contrat v2.8) — champs ADDITIFS présents uniquement si profil
+  // fourni (l'appelant ne passe le profil que si l'abonnement est ACTIVE).
+  // collecte_address n'entre JAMAIS ici (CA-V8-044/049).
+  if (profile?.logo_path) out.logoUrl = imageUrl(profile.logo_path);
+  if (profile?.banner_path) out.bannerUrl = imageUrl(profile.banner_path);
+  if (profile?.public_description) out.publicDescription = profile.public_description;
+  return out;
 }
 
 export interface StorefrontItemRow {
@@ -115,6 +142,7 @@ export interface StorefrontItemRow {
   price: number;
   status: string;
   primary_photo_path: string | null;
+  seller_badge?: 'pro' | 'verifiee' | 'boutique' | null;
 }
 
 /** `primaryPhotoUrl` : URL servie sous /uploads (convention v2.6), null si aucune photo. */
@@ -125,6 +153,8 @@ export function serializeStorefrontItem(row: StorefrontItemRow): Record<string, 
     price: row.price,
     primaryPhotoUrl: row.primary_photo_path ? imageUrl(row.primary_photo_path) : null,
     effectiveStatus: row.status,
+    // V8-D3 — champ additif (null si la source ne joint pas le badge).
+    sellerBadge: row.seller_badge ?? null,
   };
 }
 

@@ -36,6 +36,7 @@ import {
   selectLocations,
   selectOwnerProduct,
   selectProductBySlugOrId,
+  selectProductBySlugOrIdWithBadge,
   selectProductForUpdate,
   selectOwnProductsPage,
   selectSuggestions,
@@ -48,6 +49,9 @@ import {
   type CatalogFilters,
   type ProductFields,
 } from '../repositories/products.repository.js';
+import { insertAutoApprovedProduct } from '../repositories/auto-approved.repository.js';
+import { getStoreEligibility } from './store-eligibility.service.js';
+import { config } from '../config.js';
 import { findParentId, selectCategoriesForValidation } from '../repositories/categories.repository.js';
 import { findAdminUserById, findById as findUserById, findAdminAlertRecipients } from '../repositories/users.repository.js';
 import { alertAdmins } from './admin-alerts.service.js';
@@ -176,13 +180,33 @@ export async function createProduct(
     await validateCategory(client, fields.categoryId, fields.subcategoryId);
     const slug = await uniqueSlug(client, fields.name);
 
-    const id = await insertProduct(client, ownerId, fields, slug);
+    // V8-D2 / F1 — Publication directe pour les vendeurs éligibles
+    // (abonnement ACTIVE + ends_at > now() + numéro +221 7XXXXXXXX strict).
+    // Dérivée en lecture dans la MÊME transaction (P4/P11) ; sinon PENDING
+    // (comportement V7/V5 inchangé). Seule dérogation au verrou CA-V5-150.
+    const eligible = await getStoreEligibility(ownerId, client);
+    const autoApprove = eligible.eligible && config.autoApproveV8;
+    const initialStatus: 'PENDING' | 'AVAILABLE' = autoApprove ? 'AVAILABLE' : 'PENDING';
+
+    const inserted = await insertProduct(client, ownerId, fields, slug, initialStatus);
+    const id = inserted.id;
 
     // Photos : 1re reçue = principale (position 1), suivantes 2..n
     for (let i = 0; i < files.length; i++) {
       const fp = await writePhotoFile(files[i]!);
       written.push(fp);
       await insertImage(client, id, fp, i === 0, i + 1);
+    }
+
+    if (autoApprove) {
+      // V8-D2/F1 (R2 RETENUE, §14.A clos) — trace système, 1 ligne/produit.
+      // AUCUNE notification vendeur (V6.4) et AUCUNE alerte admin « à valider ».
+      await insertAutoApprovedProduct(client, {
+        productId: id,
+        sellerId: ownerId,
+        subscriptionId: eligible.subscriptionId!,
+      });
+      return id;
     }
 
     // N1 — Notification vendeur dans la MÊME transaction
@@ -319,7 +343,7 @@ export async function getCatalog(filters: CatalogFilters): Promise<Record<string
 }
 
 export async function getPublicProduct(ident: string | number): Promise<Record<string, unknown>> {
-  let product = await selectProductBySlugOrId(ident);
+  let product = await selectProductBySlugOrIdWithBadge(ident);
   if (!product) throw notFound('PRODUCT_NOT_FOUND', 'Article introuvable');
   if (product.status === 'PENDING' || product.status === 'REJECTED') {
     throw notFound('PRODUCT_NOT_FOUND', 'Article introuvable'); // masqué (CA-CAT03-04)
@@ -328,7 +352,7 @@ export async function getPublicProduct(ident: string | number): Promise<Record<s
   // Libération paresseuse : réservation expirée → remettre AVAILABLE avant de répondre (D3)
   if (product.status === 'RESERVED') {
     await lazyReleaseForProduct(product.id);
-    const fresh = await selectProductBySlugOrId(product.id);
+    const fresh = await selectProductBySlugOrIdWithBadge(product.id);
     if (fresh) product = { ...product, ...fresh };
   }
 
@@ -339,7 +363,8 @@ export async function getPublicProduct(ident: string | number): Promise<Record<s
   const seller = await loadUser(product.owner_id);
   const sales = await countSoldByOwner(product.owner_id);
   const sellerView = serializePublicUser({ ...seller, sales }, { sales: true });
-  return serializeProductDetail(product, await loadImages(product.id), sellerView);
+  // V8-D3 — badge palier dérivé en lecture (jointure de la fiche, 0 requête de +).
+  return serializeProductDetail(product, await loadImages(product.id), sellerView, product.seller_badge ?? null);
 }
 
 // ---------------------------------------------------------------------------

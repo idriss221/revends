@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { badRequest } from './errors.js';
 
 // ---------------------------------------------------------------------------
 // Schémas de validation V7 — Hébergement des vendeurs.
@@ -7,7 +8,20 @@ import { z } from 'zod';
 // normalisation/réservation du slug sont appliquées dans le service.
 // ---------------------------------------------------------------------------
 
-/** POST /api/subscriptions — planId obligatoire ; slug optional (requis en pratique hors supersedesId / slug déjà réservé). */
+/** Référence de paiement (E1 / V8-D8) : trim, 4–64 car., 1er alphanumérique, [A-Za-z0-9 .\-_/] ensuite. */
+export const PAYMENT_REFERENCE_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .\-_/]{2,62}$/;
+export const PAYMENT_METHODS = ['wave', 'orange_money', 'virement'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/**
+ * POST /api/subscriptions — planId obligatoire ; slug optional.
+ * V8 (E1 / CA-V8-050) : `paymentMethod` + `paymentReference` sont **OBLIGATOIRES**
+ * — le service les exige via `validatePaymentFields` (codes dédiés
+ * INVALID_PAYMENT_METHOD / PAYMENT_REFERENCE_REQUIRED) : toute souscription sans
+ * référence Wave/OM/virement est rejetée (400). Les lignes legacy antérieures
+ * à la V8 (payment_* = NULL) restent **activables** par l'admin (CA-V8-053),
+ * fabrication hors ce schéma.
+ */
 export const subscribeSchema = z.object({
   planId: z.coerce
     .number({ error: 'planId doit être un entier ≥ 1' })
@@ -20,6 +34,8 @@ export const subscribeSchema = z.object({
     .int({ error: 'supersedesId doit être un entier ≥ 1' })
     .positive({ error: 'supersedesId doit être un entier ≥ 1' })
     .nullish(),
+  paymentMethod: z.string().trim().max(32).optional(),
+  paymentReference: z.string().trim().max(64).optional(),
 });
 
 /** POST /api/storefront/listings */
@@ -76,3 +92,89 @@ export function normalizePaginationParams(query: Record<string, unknown>): Recor
 
 export type SubscribeInput = z.infer<typeof subscribeSchema>;
 export type ContactInput = z.infer<typeof contactSchema>;
+
+// ---------------------------------------------------------------------------
+// V8 — Validation souscription (E1) + profil boutique (R1/E4).
+// Codes dédiés : INVALID_PAYMENT_METHOD / INVALID_PAYMENT_REFERENCE
+//                INVALID_IMAGE / FILE_TOO_LARGE / VALIDATION_ERROR
+// ---------------------------------------------------------------------------
+
+/** Valide (et normalise) paymentMethod/paymentReference fournis requis. Lève AppError 400 dédiée sinon. */
+export function validatePaymentFields(input: { paymentMethod?: string; paymentReference?: string }): {
+  paymentMethod: PaymentMethod;
+  paymentReference: string;
+} {
+  let paymentMethod: PaymentMethod;
+  const m = (input.paymentMethod ?? '').trim().toLowerCase();
+  if (m === '') {
+    throw badRequest('INVALID_PAYMENT_METHOD', 'paymentMethod doit valoir wave, orange_money ou virement');
+  }
+  if (!(PAYMENT_METHODS as readonly string[]).includes(m)) {
+    throw badRequest('INVALID_PAYMENT_METHOD', 'paymentMethod doit valoir wave, orange_money ou virement');
+  }
+  paymentMethod = m as PaymentMethod;
+
+  const ref = (input.paymentReference ?? '').trim();
+  if (ref === '') {
+    throw badRequest('PAYMENT_REFERENCE_REQUIRED', 'La référence de paiement est requise à la souscription');
+  }
+  if (ref.length < 4 || ref.length > 64 || !PAYMENT_REFERENCE_REGEX.test(ref)) {
+    throw badRequest(
+      'INVALID_PAYMENT_REFERENCE',
+      'La référence de paiement doit contenir entre 4 et 64 caractères (lettres, chiffres, espaces, points, tirets, underscores, slashs) et commencer par une lettre ou un chiffre',
+    );
+  }
+  return { paymentMethod, paymentReference: ref };
+}
+
+/** Comptage de graphèmes (Unicode) — Intl.Segmenter (👨‍👩‍👧 = 1 grapheme). */
+export function graphemeLength(value: string): number {
+  let count = 0;
+  for (const _ of new Intl.Segmenter('fr', { granularity: 'grapheme' }).segment(value)) count += 1;
+  return count;
+}
+
+/** Corps JSON alternatif à PUT multipart (POST /api/storefront/profile). */
+export const storefrontProfileJsonSchema = z.object({
+  publicDescription: z.string().max(4000).optional(),
+  collecteAddress: z.string().max(1000).optional(),
+});
+
+/** Validation métier partagée des champs texte du profil (codes dédiés).
+ *  Chaîne vide ⇒ NULL explicite (effacement) ; absente ⇒ non touchée. */
+export function validateProfileTextFields(input: { publicDescription?: string; collecteAddress?: string }): {
+  publicDescription: string | null | undefined;
+  collecteAddress: string | null | undefined;
+} {
+  let publicDescription: string | null | undefined;
+  if (input.publicDescription !== undefined) {
+    const d = input.publicDescription.trim();
+    if (d === '') {
+      publicDescription = null;
+    } else if (graphemeLength(d) > 500 || d.length > 500) {
+      // Double garde : graphèmes (Intl.Segmenter — CA-V8-043) ET codepoints
+      // (char_length côté PostgreSQL, chk_storefront_profile_description).
+      // Sans la garde codepoints, une saisie acceptée par le front pourrait
+      // être rejetée par le CHECK BDD et produire un 500.
+      throw badRequest('VALIDATION_ERROR', 'La description publique doit contenir au plus 500 caractères', [
+        { field: 'publicDescription', message: '500 caractères maximum' },
+      ]);
+    } else {
+      publicDescription = d;
+    }
+  }
+  let collecteAddress: string | null | undefined;
+  if (input.collecteAddress !== undefined) {
+    const a = input.collecteAddress.trim();
+    if (a === '') {
+      collecteAddress = null;
+    } else if (graphemeLength(a) < 10 || graphemeLength(a) > 500) {
+      throw badRequest('VALIDATION_ERROR', "L'adresse de collecte doit contenir entre 10 et 500 caractères", [
+        { field: 'collecteAddress', message: 'Entre 10 et 500 caractères' },
+      ]);
+    } else {
+      collecteAddress = a;
+    }
+  }
+  return { publicDescription, collecteAddress };
+}

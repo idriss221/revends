@@ -113,12 +113,28 @@ export function Boutique() {
 
   const displayName = first?.storefront.displayName ?? ''
   const memberSince = first?.storefront.memberSince
+  // E2 (v2.8) — branding public : présent uniquement si abonnement ACTIVE.
+  const logoUrl = first?.storefront.logoUrl ?? null
+  const bannerUrl = first?.storefront.bannerUrl ?? null
+  const publicDescription = first?.storefront.publicDescription ?? null
+  // Écart consigné (E2) : le badge n'est pas exposé au niveau boutique — dérivé des annonces
+  // (même vendeur ⇒ même badge) ; boutique vide ⇒ aucun badge (CA-V8-025).
+  const sellerBadge = items[0]?.sellerBadge ?? null
 
   return (
     <div className="wrap">
       <Crumb items={[{ label: displayName }]} />
 
-      <StorefrontHero displayName={displayName} memberSince={memberSince} listingCount={count} slug={slug} />
+      <StorefrontHero
+        displayName={displayName}
+        memberSince={memberSince}
+        listingCount={count}
+        slug={slug}
+        logoUrl={logoUrl}
+        bannerUrl={bannerUrl}
+        publicDescription={publicDescription}
+        sellerBadge={sellerBadge}
+      />
 
       <div className="section tight rv-shop-layout">
         {/* ── Annonces boutique uniquement (CA-V7-025) ─────────────────── */}

@@ -35,6 +35,8 @@ const EXT_BY_MIME: Record<string, string> = {
 const PUBLIC_DIR = 'uploads/products';
 /** Preuves de paiement : dossier séparé, jamais exposé comme photo produit. */
 const PROOF_DIR = 'uploads/payment-proofs';
+/** Branding boutique (V8-D5) : logo/bannière — additif, préfixe nouveau. */
+const STOREFRONT_DIR = 'uploads/storefront';
 
 export function blobStorageEnabled(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
@@ -104,6 +106,31 @@ export async function savePaymentProof(buffer: Buffer, mime: string): Promise<st
   return `${PROOF_DIR}/${filename}`;
 }
 
+/**
+ * Écrit un logo/bannière de boutique (V8-D5). Même pattern que `savePhoto`
+ * (UUID serveur, Blob ou disque) — le nom de fichier ne vient JAMAIS du client.
+ */
+export async function saveStorefrontAsset(buffer: Buffer, mime: string): Promise<string> {
+  const filename = `${crypto.randomUUID()}.${extFor(mime)}`;
+
+  if (blobStorageEnabled()) {
+    const { url } = await put(`${STOREFRONT_DIR}/${filename}`, buffer, {
+      access: 'public',
+      contentType: mime,
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    logger.info('asset boutique écrit (blob)', { pathname: `${STOREFRONT_DIR}/${filename}`, bytes: buffer.length });
+    return url;
+  }
+
+  const absPath = path.join(config.uploadDir, '..', 'storefront', filename);
+  const { mkdir, writeFile: write } = await import('node:fs/promises');
+  await mkdir(path.dirname(absPath), { recursive: true });
+  await write(absPath, buffer);
+  return `${STOREFRONT_DIR}/${filename}`;
+}
+
 /** Supprime une photo (best effort) — utilisée en compensation et au retrait. */
 export async function deletePhoto(publicPath: string): Promise<void> {
   if (!publicPath) return;
@@ -116,3 +143,6 @@ export async function deletePhoto(publicPath: string): Promise<void> {
   }
   await unlink(resolveUploadPath(publicPath)).catch(() => {});
 }
+
+/** Suppression d'un asset boutique (best-effort) — même implémentation que `deletePhoto`. */
+export const deleteStorefrontAsset = deletePhoto;

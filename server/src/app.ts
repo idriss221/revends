@@ -27,6 +27,8 @@ import { referralsRouter } from './routes/referrals.routes.js';
 import { subscriptionsRouter } from './routes/subscriptions.routes.js';
 import { storefrontRouter } from './routes/storefront.routes.js';
 import { adminSubscriptionsRouter } from './routes/admin-subscriptions.routes.js';
+import { adminV8Router } from './routes/admin-v8.routes.js';
+import { cronRouter } from './routes/cron.routes.js';
 import { listPublicCategories } from './services/categories.service.js';
 
 /**
@@ -98,6 +100,13 @@ export function createApp(): express.Express {
   // Protection CSRF (double soumission, cf. `middleware/csrf.ts`) : pose le
   // cookie lisible `csrf_token` et exige l'en-tête `X-CSRF-Token` correspondant
   // sur toute méthode mutante sous `/api`. Bypass en NODE_ENV=test.
+  //
+  // Le routeur `/api/cron` est volontairement monté AVANT cette barrière : il
+  // s'authentifie par un secret serveur (CRON_SECRET), pas par cookie ; la
+  // double soumission n'a pas de sens pour un appel machine et casserait le
+  // déclenchement manuel (`x-cron-secret`). Monté très haut pour ne pas hériter
+  // de la politique CORS/Origin dédiée aux navigateurs.
+  app.use('/api/cron', cronRouter);
   app.use('/api', csrfProtection);
 
   app.use(express.json({ limit: '2mb' }));
@@ -226,6 +235,17 @@ export function createApp(): express.Express {
     }),
   );
 
+  // Branding boutique (V8-D5) : /uploads/storefront/<uuid>.<ext> — AVANT /api,
+  // racine dédiée (les assets de boutique sont publics, servis même sans cache).
+  app.use(
+    '/uploads/storefront',
+    express.static(path.resolve(config.uploadDir, '..', 'storefront'), {
+      dotfiles: 'ignore',
+      index: false,
+      fallthrough: true,
+    }),
+  );
+
   // API publique + authentifiée
   app.get('/api/categories', async (_req: Request, res: Response) => {
     res.json(await listPublicCategories());
@@ -242,6 +262,9 @@ export function createApp(): express.Express {
   app.use('/api/subscriptions', subscriptionsRouter);
   app.use('/api/storefront', storefrontRouter);
   app.use('/api/admin/subscriptions', adminSubscriptionsRouter);
+  // V8 — gouvernance additionnelle (chemins inexistants dans adminRouter :
+  // /auto-approvals, /products/:id/retrograde) ; montée AVANT /api/admin.
+  app.use('/api/admin', adminV8Router);
   app.use('/api/admin', adminRouter);
 
   // 404 JSON pour les routes API inconnues (contrat §1.1)

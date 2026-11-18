@@ -3,6 +3,7 @@ import { withTransaction } from '../utils/db.js';
 import { badRequest, conflict, forbidden, notFound } from '../utils/errors.js';
 import { insertNotification } from '../repositories/notifications.repository.js';
 import {
+  imageUrl,
   isReservedSlug,
   isSlugFormatValid,
   normalizeSlug,
@@ -13,6 +14,11 @@ import {
   type PlanRowLike,
   type StorefrontItemRow,
 } from '../utils/storefront.js';
+import { validatePaymentFields } from '../utils/storefront-validation.js';
+import { selectPublicProfile, selectProfileForOwner } from '../repositories/storefront-profiles.repository.js';
+import { BADGE_CASE_SQL, BADGE_LATERAL_JOIN } from '../utils/storefront-badges.js';
+import { afterCommit } from '../utils/db.js';
+import { sendSubscriptionActivatedMail } from './subscription-notifications.service.js';
 
 // ---------------------------------------------------------------------------
 // V7 — Hébergement des vendeurs : service métier.
@@ -45,6 +51,8 @@ interface SubscriptionRow {
   activated_by: number | null;
   activated_at: Date | string | null;
   created_at: Date | string;
+  payment_reference?: string | null;
+  payment_method?: string | null;
 }
 
 interface PlanRow extends PlanRowLike {
@@ -147,10 +155,16 @@ export interface SubscribeInput {
   planId: number;
   slug?: string;
   supersedesId?: number | null;
+  /** V8 (E1) — Wave | Orange Money | virement ; acceptés absents (legacy, DEFIANCE consignée). */
+  paymentMethod?: string;
+  paymentReference?: string;
 }
 
 /** POST /api/subscriptions — crée TOUJOURS un PENDING (jamais d'accès abonné, CA-V7-012). */
 export async function createSubscription(sellerId: number, input: SubscribeInput) {
+  // V8 (E1/CA-V8-050) — reference + méthode OBLIGATOIRES pour toute nouvelle souscription ;
+  // les lignes legacy (payment_* = NULL) restent activables côté admin (CA-V8-053).
+  const { paymentMethod, paymentReference } = validatePaymentFields(input);
   return withTransaction(async (client) => {
     const planRes = await client.query<PlanRow>(
       'SELECT id, name, price_fcfa, quota, duration_days, active FROM subscription_plans WHERE id = $1 AND active = TRUE',
@@ -219,9 +233,9 @@ export async function createSubscription(sellerId: number, input: SubscribeInput
 
     try {
       const { rows } = await client.query<SubscriptionRow>(
-        `INSERT INTO seller_subscriptions (seller_id, plan_id, slug, supersedes_id)
-           VALUES ($1, $2, $3, $4) RETURNING *`,
-        [sellerId, plan.id, slugToUse, supersedesId],
+        `INSERT INTO seller_subscriptions (seller_id, plan_id, slug, supersedes_id, payment_method, payment_reference)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [sellerId, plan.id, slugToUse, supersedesId, paymentMethod, paymentReference],
       );
       const created = rows[0]!;
       return {
@@ -311,7 +325,7 @@ export async function getMySubscription(sellerId: number) {
   );
   const sub = rows[0];
   if (!sub) {
-    return { subscription: null, usage: null, listings: [], plans };
+    return { subscription: null, usage: null, listings: [], plans, profile: null };
   }
 
   const plan = {
@@ -327,6 +341,16 @@ export async function getMySubscription(sellerId: number) {
     sub.status === 'ACTIVE' && sub.ends_at
       ? Math.max(0, Math.ceil((new Date(sub.ends_at).getTime() - Date.now()) / 86_400_000))
       : 0;
+
+  // V8 / E4 (v2.8, §14.D clos) — bloc `profile` en lecture propriétaire :
+  // AUCUNE valeur d'adresse — seul un booléen `collecteAddressSet`.
+  const profileRow = await selectProfileForOwner(sellerId);
+  const profile = {
+    logoUrl: profileRow?.logo_path ? imageUrl(profileRow.logo_path) : null,
+    bannerUrl: profileRow?.banner_path ? imageUrl(profileRow.banner_path) : null,
+    publicDescription: profileRow?.public_description ?? null,
+    collecteAddressSet: Boolean(profileRow?.collecte_address),
+  };
 
   const subscription: Record<string, unknown> = {
     id: sub.id,
@@ -346,7 +370,7 @@ export async function getMySubscription(sellerId: number) {
   }
 
   if (!isLive) {
-    return { subscription, usage: null, listings: [], plans };
+    return { subscription, usage: null, listings: [], plans, profile };
   }
 
   const used = await countLiveListings(pool, sub.id);
@@ -356,6 +380,7 @@ export async function getMySubscription(sellerId: number) {
     usage: { used, quota: plan.quota, remaining: Math.max(0, plan.quota - used) },
     listings,
     plans,
+    profile,
   };
 }
 
@@ -449,8 +474,8 @@ export async function withdrawListing(sellerId: number, listingId: number) {
 const STOREFRONT_NOT_FOUND = () => notFound('NOT_FOUND', 'Boutique introuvable');
 
 async function resolvePublicStorefront(q: Queryable, slug: string) {
-  const { rows } = await q.query<{ id: number; slug: string; display_name: string; created_at: Date }>(
-    `SELECT s.id, s.slug, u.display_name, u.created_at
+  const { rows } = await q.query<{ id: number; seller_id: number; slug: string; display_name: string; created_at: Date }>(
+    `SELECT s.id, s.seller_id, s.slug, u.display_name, u.created_at
        FROM seller_subscriptions s
        JOIN users u ON u.id = s.seller_id
       WHERE s.slug = $1 AND s.status = 'ACTIVE' AND s.ends_at > now()`,
@@ -481,10 +506,11 @@ export async function getPublicStorefront(slug: string, page: number, perPage: n
 
   const { rows: items } = await pool.query<StorefrontItemRow>(
     `SELECT p.id AS product_id, p.name, p.price, p.status,
-            pi.path AS primary_photo_path
+            pi.path AS primary_photo_path,
+            ${BADGE_CASE_SQL}
        FROM storefront_listings l
        JOIN products p ON p.id = l.product_id
-       LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = TRUE
+       LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = TRUE${BADGE_LATERAL_JOIN}
       WHERE l.subscription_id = $1
         AND l.withdrawn_at IS NULL
         AND p.status = ANY($2::product_status[])
@@ -494,8 +520,13 @@ export async function getPublicStorefront(slug: string, page: number, perPage: n
     [storefront.id, [...LIVE_PRODUCT_STATUSES], perPage, offset],
   );
 
+  // V8 / E2 (v2.8) — profil publiquement exposé UNIQUEMENT si l'abonnement est
+  // ACTIVE (le gate est déjà appliqué par resolvePublicStorefront) ; le profil
+  // est lu sans `collecte_address` (jamais publique — CA-V8-044/049/075).
+  const profileRow = await selectPublicProfile(storefront.seller_id);
+
   return {
-    storefront: serializeStorefrontPublic(storefront),
+    storefront: serializeStorefrontPublic(storefront, profileRow),
     items: items.map(serializeStorefrontItem),
     page,
     perPage,
@@ -576,10 +607,13 @@ export async function listAdminSubscriptions(query: AdminSubscriptionsQuery) {
     created_at: Date | string;
     activated_at: Date | string | null;
     activated_by: number | null;
+    payment_method: string | null;
+    payment_reference: string | null;
   }>(
     `SELECT s.id, s.seller_id, u.display_name AS seller_display_name,
             pl.name AS plan_name, pl.price_fcfa, pl.quota,
-            s.slug, s.status, s.created_at, s.activated_at, s.activated_by
+            s.slug, s.status, s.created_at, s.activated_at, s.activated_by,
+            s.payment_method, s.payment_reference
        FROM seller_subscriptions s
        JOIN users u ON u.id = s.seller_id
        JOIN subscription_plans pl ON pl.id = s.plan_id
@@ -602,6 +636,11 @@ export async function listAdminSubscriptions(query: AdminSubscriptionsQuery) {
       createdAt: toIso(row.created_at)!,
       activatedAt: toIso(row.activated_at),
       activatedBy: row.activated_by,
+      // V8 / E3 (v2.8) — champs additifs. `paymentReference` absente ⇒ NULL
+      // (libellé « référence absente » côté front). §14.D clos : l'adresse de
+      // collecte n'est JAMAIS exposée par l'API ni l'UI (admin inclus).
+      paymentMethod: row.payment_method,
+      paymentReference: row.payment_reference,
     })),
     page: query.page,
     perPage: query.perPage,
@@ -674,6 +713,16 @@ export async function activateSubscription(adminId: number, targetId: number) {
       if (!activated) {
         throw conflict('INVALID_STATUS', "Cette demande n'est pas en attente d'activation");
       }
+      // V8 — E-mail d'activation : APRÈS commit, anti-doublon daté par abonnement
+      // (clé `subscription-activated:<userId>:<subscriptionId>`), best-effort.
+      const planNameRes = await client.query<{ name: string }>(
+        'SELECT name FROM subscription_plans WHERE id = $1',
+        [activated.plan_id],
+      );
+      const planName = planNameRes.rows[0]?.name ?? 'Hébergement Boutique';
+      afterCommit(async () => {
+        await sendSubscriptionActivatedMail(activated.seller_id, planName, activated.id);
+      });
       return {
         subscription: {
           id: activated.id,

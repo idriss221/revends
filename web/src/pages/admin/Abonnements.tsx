@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { storefrontApi, storefrontError, formatFrActivation } from '../../lib/storefront'
+import { safeReference, paymentMethodLabel } from '../../lib/v8'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { useAuth } from '../../context/AuthContext'
@@ -145,6 +146,22 @@ export function Abonnements() {
       ),
     },
     {
+      key: 'payment',
+      header: 'Paiement',
+      cell: (row) => (
+        <span className="flex min-w-0 flex-col">
+          <span className="text-sm font-semibold text-ink">{paymentMethodLabel(row.paymentMethod)}</span>
+          <span
+            className="font-mono text-xs text-muted"
+            title="Référence masquée — seuls les derniers caractères sont visibles"
+          >
+            {safeReference(row.paymentReference)}
+          </span>
+        </span>
+      ),
+    },
+    // §14.D clos — aucune adresse de collecte dans l'UI (admin inclus).
+    {
       key: 'created',
       header: 'Demande',
       cell: (row) => <span className="text-muted">{formatFrActivation(row.createdAt)}</span>,
@@ -286,6 +303,12 @@ export function Abonnements() {
         )}
       </div>
 
+      <p className="mb-3 text-xs text-muted">
+        La référence Wave / Orange Money / virement est affichée <strong>masquée</strong> (préfixe + 3 derniers
+        caractères) ; « référence absente » = demande héritée, activable. L’adresse de collecte est{' '}
+        <strong>interne</strong> — visible uniquement ici, jamais publique.
+      </p>
+
       <div
         id="subscriptions-panel"
         role="tabpanel"
@@ -364,6 +387,10 @@ export function Abonnements() {
         }
         consequences={[
           { icon: 'fa-store', text: 'La boutique devient publique immédiatement.' },
+          {
+            icon: 'fa-money-bill-wave',
+            text: `Paiement à vérifier : ${paymentMethodLabel(target?.paymentMethod)} — référence masquée ${safeReference(target?.paymentReference)}`,
+          },
           { icon: 'fa-signature', text: 'Votre nom et la date seront enregistrés (activated_by, activated_at).' },
         ]}
       />

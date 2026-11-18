@@ -48,12 +48,14 @@ export interface StorefrontListingView {
   createdAt: string
 }
 
-/** §7.2 `GET /api/subscriptions/me` — sans abonnement : `subscription: null`. */
+/** §7.2 `GET /api/subscriptions/me` — sans abonnement : `subscription: null`. Extension V8/E4 : `profile{collecteAddressSet}`. */
 export interface MySubscriptionResponse {
   subscription: Subscription | null
   usage: SubscriptionUsage | null
   listings: StorefrontListingView[]
   plans: SubscriptionPlan[]
+  /** E4 (v2.8) — bloc profil propriétaire : booléen `collecteAddressSet` UNIQUEMENT (jamais la valeur). */
+  profile?: StorefrontProfileSummary | null
 }
 
 export interface SubscribeResponse {
@@ -67,13 +69,15 @@ export interface SubscribeResponse {
   }
 }
 
-/** §6.4 `StorefrontPublic` (boutique publique). */
+/** §6.4 `StorefrontPublic` (boutique publique) — extension V8/E2 additive (champs absents si hors ACTIVE). */
 export interface StorefrontItemPublic {
   id: number
   name: string
   price: number
   primaryPhotoUrl: string | null
   effectiveStatus: 'PENDING' | 'AVAILABLE' | 'RESERVED'
+  /** E5 (v2.8) — badge palier dérivé côté serveur ; null ailleurs. */
+  sellerBadge?: SellerBadgeKind | null
 }
 
 export interface StorefrontPublicResponse {
@@ -85,6 +89,10 @@ export interface StorefrontPublicResponse {
      * 17/11/2026). Aucune autre donnée personnelle n'est renvoyée.
      */
     memberSince: number
+    /** E2 (v2.8) — présents uniquement si abonnement ACTIVE + profil présent. */
+    logoUrl?: string
+    bannerUrl?: string
+    publicDescription?: string
   }
   items: StorefrontItemPublic[]
   page: number
@@ -107,6 +115,10 @@ export interface SubscriptionAdminItem {
   activatedAt: string | null
   /** `users.id` de l'admin ayant activé — jamais un nom (contrat §6.5). */
   activatedBy: number | null
+  /** E3 (v2.8) — `wave | orange_money | virement | null` (legacy = référence NULL, activable — CA-V8-053). */
+  paymentMethod?: 'wave' | 'orange_money' | 'virement' | null
+  /** E3 (v2.8) — référence du paiement, JAMAIS publique : à masquer en UI via `safeReference()`. */
+  paymentReference?: string | null
 }
 
 export interface SubscriptionAdminListResponse {
@@ -137,4 +149,96 @@ export interface AddListingResponse {
     productId: number
     createdAt: string
   }
+}
+
+/* ====================================================================
+   V8 — « Hébergement Boutique » (docs/api.md v2.8, §3.10 + §6)
+   Champs ADDITIFS uniquement — aucun champ V7 renommé ou retypé.
+   ==================================================================== */
+
+/** Badge de palier sérialisé par l'API (E5) — libellés FR côté front (`lib/sellerBadge.ts`). */
+export type SellerBadgeKind = 'pro' | 'verifiee' | 'boutique'
+
+/** Bloc `profile` E4 de `GET /api/subscriptions/me` (lecture propriétaire). Jamais la valeur de l'adresse. */
+export interface StorefrontProfileSummary {
+  logoUrl: string | null
+  bannerUrl: string | null
+  publicDescription: string | null
+  /** true si une adresse de collecte existe — la valeur n'est JAMAIS renvoyée ici. */
+  collecteAddressSet: boolean
+}
+
+/** `GET /api/storefront/profile` — vue propriétaire (R1c). §14.D clos : l'adresse de collecte n'apparaît JAMAIS dans l'API (propriétaire inclus). */
+export interface StorefrontProfileOwner {
+  logoUrl: string | null
+  bannerUrl: string | null
+  publicDescription: string | null
+  collecteAddressSet: boolean
+  updatedAt: string | null
+  /** Badge de palier dérivé (présent à la lecture propriétaire). */
+  sellerBadge?: SellerBadgeKind | null
+}
+
+export interface StorefrontProfileResponse {
+  profile: StorefrontProfileOwner
+}
+
+/** `PUT /api/storefront/profile` (multipart) et `POST /api/storefront/profile` (JSON sans fichiers) — même réponse. */
+export type SaveStorefrontProfileResponse = StorefrontProfileResponse
+
+/** R4 — `GET /api/subscriptions/me/stats` (requireAuth, périmètre session). */
+export interface StatsSubscriptionBlock {
+  id: number | null
+  status: string | null
+  plan: { name: string; quota: number } | null
+  endsAt: string | null
+  daysRemaining: number
+}
+
+export interface StatsCurrentWindow {
+  windowDays: number
+  /** Vues cumulées (all-time) — libellé explicite pour éviter la fausse impression d'un delta 30 j. */
+  viewsCumulated: number
+  salesCount: number
+  revenueFcfa: number
+  netRevenueFcfa: number
+  commissionFcfa: number
+  avgBasketFcfa: number | null
+  bestProduct: { id: number; name: string; sales: number } | null
+  /** ventes / vues ; null si 0 vue → afficher « — » */
+  conversionRate: number | null
+  /** Taux 30 j — dénominateur = vues cumulées, donc « all-time », pas un delta mensuel. */
+  conversionRateAllTime: number | null
+}
+
+export interface StatsReportEntry {
+  period: string
+  views: number
+  viewsLabel: 'vues du mois' | 'vues cumulées (1er relevé)'
+  salesCount: number
+  revenueFcfa: number
+  netRevenueFcfa: number
+  commissionFcfa: number
+  avgBasketFcfa: number | null
+  bestProduct: { id: number; name: string; sales: number } | null
+  conversionRate: number | null
+  emailStatus: 'SENT' | 'FAILED'
+  sentAt: string | null
+}
+
+export interface MyStatsResponse {
+  subscription: StatsSubscriptionBlock | null
+  current: StatsCurrentWindow
+  latestReport: StatsReportEntry | null
+  history: StatsReportEntry[]
+  isFirstReport: boolean
+}
+
+/** Corps E1 — `POST /api/subscriptions` (référence de paiement obligatoire côté front). */
+export interface SubscribeWithPaymentBody {
+  planId: number
+  slug: string
+  supersedesId?: number
+  paymentMethod: 'wave' | 'orange_money' | 'virement'
+  paymentReference: string
 }
