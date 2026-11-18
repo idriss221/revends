@@ -4710,3 +4710,17 @@ sémantique à trois branches :
 
 **Rappel** — back-office `/admin/abonnements` pour vérifier/refuser les souscriptions ; vérifier également
 la référence Wave côté Wave app (réponse automatique absente de l'échange opérationnel explicite).
+
+## 18/11/2026 — Fix overflow mobile /mon-abonnement
+
+**Bug** : `/mon-abonnement` débordait latéralement en < ~376 px (320-375 px testés).
+Cause racine : un contenu à `min-content` > 336 px (bouton « Passer à X — 2 000 FCFA/mois · quota 10 » `nowrap`) forcait le track unique à s'étendre à 421 px — les enfants s'agrandissaient en `minmax(auto, 1fr)`.
+
+**Fix (storefront.css)** :
+- `.rv-shop-layout`, `.rv-shop-plans`, `.rv-brand-row` → `minmax(0, 1fr)` au lieu de `1fr` (seule la track à 1fr devenait `minmax(auto, 1fr)` et se bloquait au `min-content`).
+- Règles croisées bureau.css : `.editorial .wrap` et `.trust .wrap` → `minmax(0, 1fr)`.
+- `.rv-shop-sticky`/`.rv-shop-panel`/`.rv-shop-gauge`/`.rv-shop-altplans` → ajout `grid-template-columns: minmax(0, 1fr); min-width: 0`.
+- `.field`/`.field-input` → `min-width: 0; max-width: 100%` (rétrécissement du formulaire/test si un label est long).
+- Images `.rv-shop-* img` → `max-width: 100%`.
+
+**Vérif prod** via Playwright : `/mon-abonnement` à 280/320/360/375 px → `scrollWidth = viewport` (280, 320, 360, 375 restent égaux). `/mes-articles` et `/boutique/mac-...` au check visuel OK.
