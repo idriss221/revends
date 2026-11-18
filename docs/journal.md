@@ -4665,3 +4665,15 @@ manuellement** (`RUN_MIGRATIONS=false`) AVANT tout déploiement.
 **Résultats vérifiés** — `/api/storefront/smoke-v7-...` → 404 ; `/api/storefront/smoke2-...` → 404 ;
 `/api/storefront/smoke-v8-...` → 404 ; produit 39 invisible (deleted_at).
 **État** — la prod ne porte aucun reste de smoke visible. Comptes `@test.revends` conservés (inoffensifs : aucun produit public, aucun abonnement).
+
+## 18/11/2026 — V8.1 « Contrôle boutique » : LIVRÉ ET DÉPLOYÉ
+
+**Backend** (`server/src/services/storefront-admin-ctl.service.ts`, routes `admin-storefront-ctl.routes.ts`, `me-products.service.ts`, `me-products.routes.ts`) — 14 tests verts (`storefront-admin-ctl.test.ts`, 36 autres), golden master V7 → 0 régression, pipeline intact.
+
+**Web** — `/admin/abonnements` : onglet « Tous » : lignes `ACTIVE` → « Désactiver » (réversible) + « Supprimer définitivement » (danger, confirmation saisie « Supprimer ») ; `CANCELLED` → « Supprimer définitivement » uniquement. `/mes-articles` : bouton « Supprimer » par article (propriétaire), 409 `PRODUCT_ORDER_ACTIVE` humanisé, +2 tests v81.
+
+**Smoke production réel** — (1) inscription vendeur smoke-v81 → souscription → activation → création article (`AVAILABLE`, auto-approve) ; (2) **vendeur supprime SON article → 204, fiche 404, catalogue `total=0`** ; (3) **admin désactive abonnement → CANCELLED, boutique passe 404** ; (4) **admin supprime définitivement → CANCELLED, boutique reste 404** ; (5) preuves sql (listing supprimé, subscription supprimée). Comptes smoke tous nettoyés.
+
+**Emergency** — le forfait source `mbour` reste ACTIVE (sous-données du partenaire).
+
+**Actions** — vérifier que l'interface admin se construit bien, `PRODUCT_HAS_ACTIVE_ORDER` réagir sur le 409 n'apparaît pas mieux, contrôler l'invalidation react-query cross-pages.
