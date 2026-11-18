@@ -32,7 +32,7 @@
 .market-site .rv-shop-priv { font: 500 var(--fs-meta)/1.5 var(--font-sans); color: var(--text-tertiary) }
 
 /* Deux colonnes ≥ 1024 px : contenu 8 / sidebar contact 4 (sticky) */
-.market-site .rv-shop-layout { display: grid; grid-template-columns: 1fr; gap: clamp(28px, 4vw, 56px); align-items: start }
+.market-site .rv-shop-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start }
 @media (min-width: 1024px) {
   .market-site .rv-shop-layout { grid-template-columns: minmax(0, 8fr) minmax(300px, 4fr) }
   .market-site .rv-shop-aside,
@@ -56,7 +56,7 @@
    4. Choix du forfait (design §3.1 `PlanPicker`)
    Radios NATIFS (clavier gratuit), carte entière cliquable.
    --------------------------------------------------------------- */
-.market-site .rv-shop-plans { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 0; padding: 0; border: 0 }
+.market-site .rv-shop-plans { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; border: 0 }
 @media (min-width: 768px) { .market-site .rv-shop-plans { grid-template-columns: repeat(3, 1fr) } }
 .market-site .rv-shop-plan { position: relative; display: block; margin: 0; cursor: pointer }
 .market-site .rv-shop-plan-card {
@@ -212,7 +212,7 @@
 .market-site .rv-brand-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
 .market-site .rv-brand-check { display: flex; gap: 8px; align-items: center; font: 500 var(--fs-meta)/1.5 var(--font-sans); color: var(--text-secondary); margin-top: 8px }
 @media (max-width: 560px) {
-  .market-site .rv-brand-row { grid-template-columns: 1fr }
+  .market-site .rv-brand-row { grid-template-columns: minmax(0, 1fr) }
 }
 
 /* ── Statistiques (onglet /mon-abonnement) ──────────────────────── */

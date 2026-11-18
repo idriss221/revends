@@ -1070,10 +1070,10 @@
   .market-site .sopt:last-child{border-bottom:0}
   .market-site .sopt.on{color:var(--accent-text)}
   .market-site .sopt .i{width:18px;height:18px}
-  .market-site .trust .wrap{grid-template-columns:1fr}
+  .market-site .trust .wrap{grid-template-columns:minmax(0,1fr)}
   .market-site .trust .it{border-right:0;border-bottom:1px solid var(--line);padding-inline:0}
   .market-site .trust .it:last-child{border-bottom:0}
-  .market-site .editorial .wrap{grid-template-columns:1fr}
+  .market-site .editorial .wrap{grid-template-columns:minmax(0,1fr)}
   .market-site .rv-grid{grid-template-columns:repeat(2,1fr)}
   .market-site .line{grid-template-columns:76px 1fr;gap:14px}
   .market-site .line .pr{grid-column:1/-1;text-align:left}
