@@ -11,7 +11,7 @@
  *   filtres de prix compatibles boost · profil boutique (logo/bannière > 2/4 Mo,
  *   description 500 graphèmes Unicode, adresse 10–500, magic bytes, XSS inerte,
  *   idempotence du retrait) · boutique publique étendue (logoUrl/bannerUrl/
- *   publicDescription, collecteAddress JAMAIS exposée) · admin voit la
+ *   publicDescription, collecteAddress JAMAIS exposée (ni propriétaire, ni admin)).
  *   référence (E3) · E1 paiement (Wave/OM/virement, codes dédiés) ·
  *   E4 bloc profile · stats 30 j + 12 m · bilan mensuel (idempotence,
  *   relevé, FAILED si SMTP coupé, EXPIRED exclu) · rappel J-3 ·
@@ -66,10 +66,12 @@ const previousCronSecret = config.cronSecret;
 // ---------------------------------------------------------------------------
 
 async function activateFor(user: TestUser, planId: number, slug: string, payment?: { method: string; reference: string }) {
+  const pay = payment ?? { method: 'wave', reference: 'WAVE-TEST-0000001' };
   const res = await user.client.post('/api/subscriptions', {
     planId,
     slug,
-    ...(payment ? { paymentMethod: payment.method, paymentReference: payment.reference } : {}),
+    paymentMethod: pay.method,
+    paymentReference: pay.reference,
   });
   assert.equal(res.status, 201, `subscribe → ${res.status} ${JSON.stringify(res.body)}`);
   const subId = (res.body as any).subscription.id as number;
@@ -161,7 +163,7 @@ describe('V8-D2 — publication directe pour vendeurs éligibles', () => {
 
   it('non éligible : abonnement PENDING (non activé) → PENDING', async () => {
     const seller = await registerUser(server, 'v8pend2');
-    await seller.client.post('/api/subscriptions', { planId: 1, slug: 'Pending Pas Encore' });
+    await seller.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'Pending Pas Encore' });
     const { product } = await createProduct(seller.client, { name: 'V8Pend Second' });
     assert.equal((product as any).status, 'PENDING');
   });
@@ -339,7 +341,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
     return fd;
   }
 
-  it('PUT multipart : logo + bannière + description + collecteAddress (owner, visible par le propriétaire)', async () => {
+  it('PUT multipart : logo + bannière + description + collecteAddress (§14.D clos : l’adresse n’apparaît JAMAIS dans l’API — propriétaire inclus)', async () => {
     const seller = await registerUser(server, 'v8prof1');
     const address = 'Sandaga, Dakar — 12 rue Carnot, porte B';
     const res = await seller.client.request('/api/storefront/profile', 'PUT', {
@@ -356,12 +358,13 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
     assert.ok(profile.logoUrl, 'logoUrl attendu');
     assert.ok(profile.bannerUrl, 'bannerUrl attendu');
     assert.equal(profile.publicDescription, 'Notre atelier répare et vend des téléphones.');
-    assert.equal(profile.collecteAddress, address, 'le propriétaire voit SON adresse');
     assert.equal(profile.collecteAddressSet, true);
+    assert.equal(profile.collecteAddress, undefined, "§14.D clos : l'adresse n'apparaît nulle part dans l'API");
 
     const get = await seller.client.get('/api/storefront/profile');
     assert.equal(get.status, 200);
-    assert.equal((get.body as any).profile.collecteAddress, address);
+    assert.equal((get.body as any).profile.collecteAddressSet, true);
+    assert.equal((get.body as any).profile.collecteAddress, undefined, "§14.D clos : jamais de valeur en lecture");
 
     const row = await dbQuery<{ logo_path: string | null; banner_path: string | null; collecte_address: string }>(
       'SELECT logo_path, banner_path, collecte_address FROM storefront_profiles WHERE seller_id = $1',
@@ -431,7 +434,7 @@ describe('V8-D5 — profil boutique (PUT/POST/DELETE logo & bannière)', () => {
 
   it('POST JSON : écriture sans fichiers (profil accessible dès PENDING)', async () => {
     const seller = await registerUser(server, 'v8prof6');
-    await seller.client.post('/api/subscriptions', { planId: 1, slug: 'Profil Pending Prepa' });
+    await seller.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'Profil Pending Prepa' });
     const r = await seller.client.post('/api/storefront/profile', {
       publicDescription: 'Description avant activation',
       collecteAddress: 'Liberté 6, Dakar — derrière la mosquée',
@@ -533,7 +536,7 @@ describe('V8-D8 / E1 — souscription avec référence de paiement (Wave | Orang
     const item = (file.body as any).items.find((i: any) => i.id === subId);
     assert.equal(item.paymentMethod, 'wave');
     assert.equal(item.paymentReference, 'WAVE-2026-000123');
-    assert.ok('collecteAddress' in item, 'la file admin expose collecteAddress (consigne V8)');
+    assert.ok(!('collecteAddress' in item), "§14.D clos : la valeur n'apparaît jamais dans la file admin ; booléen seul");
   });
 
   it('paymentMethod hors enum → 400 INVALID_PAYMENT_METHOD', async () => {
@@ -562,10 +565,29 @@ describe('V8-D8 / E1 — souscription avec référence de paiement (Wave | Orang
     assert.equal(errorCode(r2.body), 'INVALID_PAYMENT_REFERENCE');
   });
 
-  it('référence ABSENTE (legacy V7) → acceptée (CA-V8-053, DEFIANCE consignée) ; file admin : paymentReference null', async () => {
-    const seller = await registerUser(server, 'v8legacy');
-    const res = await seller.client.post('/api/subscriptions', { planId: 1, slug: 'Legacy Sans Ref' });
-    assert.equal(res.status, 201, 'l’obligation stricte casserait les suites V7 (tests DO NOT CHANGE)');
+  it('CA-V8-050/053 — la référence est OBLIGATOIRE pour toute nouvelle souscription (400 sinon) ; un PENDING legacy (NULL) reste activable', async () => {
+    const seller = await registerUser(server, 'v8req');
+    const noRef = await seller.client.post('/api/subscriptions', {
+      planId: 1, slug: 'Sans Ref', paymentMethod: 'wave',
+      // paymentReference volontairement ABSENTE (CA-V8-050)
+    });
+    assert.equal(noRef.status, 400);
+    assert.equal(errorCode(noRef.body), 'PAYMENT_REFERENCE_REQUIRED');
+    const noMethod = await seller.client.post('/api/subscriptions', {
+      planId: 1, slug: 'Sans Methode', paymentReference: 'WAVE-12345',
+      // paymentMethod volontairement ABSENTE (CA-V8-050)
+    });
+    assert.equal(noMethod.status, 400);
+    assert.equal(errorCode(noMethod.body), 'INVALID_PAYMENT_METHOD');
+    // Legacy (lignes antérieures à V8, payment_* = NULL) : activation non bloquée.
+    const legacy = await seller.client.post('/api/subscriptions', {
+      planId: 2, slug: 'Legacy Pre-v8', paymentMethod: 'wave', paymentReference: 'WAVE-2026-LEGACY-001',
+    });
+    assert.equal(legacy.status, 201);
+    const legacyId = (legacy.body as any).subscription.id as number;
+    await dbQuery('UPDATE seller_subscriptions SET payment_method = NULL, payment_reference = NULL WHERE id = $1', [legacyId]);
+    const activate = await admin.post(`/api/admin/subscriptions/${legacyId}/activate`, {});
+    assert.equal(activate.status, 200, `legacy activable → ${activate.status} ${JSON.stringify(activate.body)}`);
   });
 
   it('la file /api/admin/subscriptions est réservée aux admins (403 pour un user)', async () => {
@@ -687,16 +709,19 @@ describe('V8-D7 — bilan mensuel : calcul, idempotence, PDF, rappel J-3, stats'
     await dbQuery('UPDATE products SET view_count = 700 WHERE id = $1', [product.id]);
 
     const { period, when } = previousMonth(new Date());
-    const snap = await runViewSnapshot(when, period);
-    assert.equal(snap.processed >= 1, true);
-    const baseline = await dbQuery<{ views_baseline: number }>(
-      'SELECT views_baseline FROM monthly_metrics WHERE subscription_id = $1 AND period = $2',
+    // Relevé de BASE (1er du mois) puis relevé final (dernier jour).
+    const snap1 = await runViewSnapshot(when, period, 'baseline');
+    assert.equal(snap1.processed >= 1, true);
+    // Le vendeur gagne 250 vues de plus.
+    await dbQuery('UPDATE products SET view_count = 950 WHERE id = $1', [product.id]);
+    const snap2 = await runViewSnapshot(new Date(Date.UTC(when.getUTCFullYear(), when.getUTCMonth(), 28, 6, 0, 0)), period, 'sum');
+    assert.equal(snap2.processed >= 1, true);
+    const row = await dbQuery<{ views_baseline: number; views_sum: number }>(
+      'SELECT views_baseline, views_sum FROM monthly_metrics WHERE subscription_id = $1 AND period = $2',
       [subId, period],
     );
-    assert.equal(baseline[0]!.views_baseline, 700);
-
-    // Le vendeur gagne 250 vues de plus avant le bilan.
-    await dbQuery('UPDATE products SET view_count = 950 WHERE id = $1', [product.id]);
+    assert.equal(row[0]!.views_baseline, 700);
+    assert.equal(row[0]!.views_sum, 950);
     const metrics = await computeMonthlyMetrics(subId, period, undefined as any);
     assert.equal(metrics.views, 250, `delta attendu 250 → ${metrics.views}`);
     assert.equal(metrics.viewsLabel, 'vues du mois');
@@ -813,16 +838,16 @@ describe('V8-D7 — bilan mensuel : calcul, idempotence, PDF, rappel J-3, stats'
     assert.equal(deliveries.length, 1);
   });
 
-  it('e-mail d’activation : envoyé après activation admin (subscription-activated:<userId>)', async () => {
+  it('e-mail d’activation : envoyé après activation admin (subscription-activated:<userId>:<subscriptionId>)', async () => {
     const seller = await registerUser(server, 'v8act1');
     clearSentMails();
-    await activateFor(seller, 1, 'Activation Mail V8');
+    const subId = await activateFor(seller, 1, 'Activation Mail V8');
     await flushAfterCommit();
     const mine = recentSentMails().filter((m) => m.event === 'subscription_activated' && m.to === seller.email.toLowerCase());
     assert.equal(mine.length, 1, JSON.stringify(recentSentMails()));
     const deliveries = await dbQuery<{ status: string }>(
       `SELECT status FROM notification_deliveries WHERE idempotency_key = $1`,
-      [`subscription-activated:${seller.id!}`],
+      [`subscription-activated:${seller.id!}:${subId}`],
     );
     assert.equal(deliveries[0]?.status, 'SENT');
   });
@@ -922,7 +947,7 @@ describe('V8-D7 — bilan mensuel : calcul, idempotence, PDF, rappel J-3, stats'
 
     assert.equal(body.subscription.plan.name, 'Découverte');
     assert.equal(body.current.windowDays, 30);
-    assert.equal(body.current.viewsTotal, 500);
+    assert.equal(body.current.viewsCumulated, 500);
     assert.equal(body.current.salesCount, 1, 'seule la vente des 30 derniers jours compte');
     assert.equal(body.current.revenueFcfa, 60_000);
     assert.equal(body.current.netRevenueFcfa, 54_000, 'CA net = seller_amount (60 000 − 10 %)');
@@ -1021,5 +1046,18 @@ describe('V8 — GET /api/subscriptions/me/report : PDF du bilan de la période'
     assert.equal(typeof res.body, 'string', 'corps binaire relu en texte (client de test)');
     assert.equal((res.body as string).slice(0, 5), '%PDF-', 'magic bytes %PDF-');
     void subId;
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CA-V8-15/badges : contrat de plan — les noms de palier sont EXACTEMENT ceux
+// attendus par badgeFromPlanName/BADGE_CASE_SQL (seed 019 / migration 020).
+// ---------------------------------------------------------------------------
+describe('CA-V8-010/badged — contrat des noms de paliers (protection du mapping)', () => {
+  it('les 3 paliers portent exactement les noms attendus (seed 019 + 020)', async () => {
+    const rows = await dbQuery<{ name: string }>(
+      'SELECT name FROM subscription_plans ORDER BY price_fcfa',
+    );
+    assert.deepEqual(rows.map((r) => r.name), ['Découverte', 'Boutique', 'Atelier']);
   });
 });

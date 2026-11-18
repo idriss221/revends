@@ -100,6 +100,13 @@ export function createApp(): express.Express {
   // Protection CSRF (double soumission, cf. `middleware/csrf.ts`) : pose le
   // cookie lisible `csrf_token` et exige l'en-tête `X-CSRF-Token` correspondant
   // sur toute méthode mutante sous `/api`. Bypass en NODE_ENV=test.
+  //
+  // Le routeur `/api/cron` est volontairement monté AVANT cette barrière : il
+  // s'authentifie par un secret serveur (CRON_SECRET), pas par cookie ; la
+  // double soumission n'a pas de sens pour un appel machine et casserait le
+  // déclenchement manuel (`x-cron-secret`). Monté très haut pour ne pas hériter
+  // de la politique CORS/Origin dédiée aux navigateurs.
+  app.use('/api/cron', cronRouter);
   app.use('/api', csrfProtection);
 
   app.use(express.json({ limit: '2mb' }));
@@ -259,8 +266,6 @@ export function createApp(): express.Express {
   // /auto-approvals, /products/:id/retrograde) ; montée AVANT /api/admin.
   app.use('/api/admin', adminV8Router);
   app.use('/api/admin', adminRouter);
-  // V8 (R7) — cron du bilan mensuel (dual-auth Bearer/x-cron-secret).
-  app.use('/api/cron', cronRouter);
 
   // 404 JSON pour les routes API inconnues (contrat §1.1)
   app.use('/api', notFoundHandler);

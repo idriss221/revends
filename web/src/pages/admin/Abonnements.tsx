@@ -160,15 +160,7 @@ export function Abonnements() {
         </span>
       ),
     },
-    {
-      key: 'collecte',
-      header: 'Adresse de collecte',
-      cell: (row) => (
-        <span className="block max-w-[220px] break-words text-xs text-ink" title="INTERNE — jamais publique">
-          {row.collecteAddress ?? '—'}
-        </span>
-      ),
-    },
+    // §14.D clos — aucune adresse de collecte dans l'UI (admin inclus).
     {
       key: 'created',
       header: 'Demande',

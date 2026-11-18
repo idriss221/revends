@@ -635,7 +635,8 @@ Bloc dans `pages/MySubscriptionPage.tsx` (existant, +1 onglet) : KPIs du dernier
 
 | Run | Déclencheur (§11) — **1 cron quotidien `0 6 * * *`, dispatch interne (§14.F clos)** | Action |
 |---|---|---|
-| **Relevé** (dernier jour de M, 28–31 à 06:00) | Branche « relevé » du cron quotidien : `date_trunc('month', now() + interval '1 day') > date_trunc('month', now())`, sinon `noop` | Pour chaque abonnement `ACTIVE` : `INSERT INTO monthly_metrics(subscription_id, period, views_baseline, views_sum=0, …) VALUES (…, to_char(now(),'YYYY-MM'), (SELECT Σ p.view_count …), 0) ON CONFLICT (subscription_id, period) DO UPDATE SET views_baseline = EXCLUDED.views_baseline, computed_at = now() WHERE monthly_metrics.email_status IS NULL` |
+| **Relevé de base** (`views_baseline`, au 1er 06:00) | Branche « 1er » du dispatch (jour 1) | Pour chaque abonnement `ACTIVE` : `INSERT INTO monthly_metrics(subscription_id, period, views_baseline, views_sum=0, …) VALUES (…) ON CONFLICT (subscription_id, period) DO UPDATE SET views_baseline = EXCLUDED.views_baseline, computed_at = now() WHERE monthly_metrics.email_status IS NULL` (joint au `runMonthlyReport` du 1er) |
+| **Relevé final** (`views_sum`, dernier jour 06:00) | Branche « dernier jour » du dispatch | Même chose mais `views_sum = (SELECT Σ p.view_count …)` ; `views_sum` n'est **jamais** écrasé par le bilan (persisté=cible delta `views_sum − views_baseline` uniquement au calcul/restitution, jamais en base) |
 | **Bilan** (1er de M+1, 06:00) | Branche « bilan » du cron quotidien : `date_part('day', now()) = 1` | §8.4 — calcul + e-mail + PDF + upsert idempotent |
 
 - `views_baseline` (RETENUE, §14.C clos) = cumul `view_count` capturé au relevé (dernier jour de M, 06:00). Au bilan : `delta = cumul(1er M+1) − views_baseline(M)`. Aucun relevé préalable (abonnement activé après le dernier relevé) → `delta = cumul(1er)`, libellé **« vues cumulées (1er relevé) »** (CA-V8-070, premier bilan).
@@ -1075,3 +1076,8 @@ grep -rn 'ALTER TYPE\|CREATE TRIGGER' server/migrations/020_storefront_v8.sql   
 | Contrats | `docs/api.md` v2.7 (fusion v2.8 due — CA-V8-085) · `docs/api-v7-hebergement-vendeurs.md` · §1.4/§1.5 (exceptions, pagination) |
 | Docs Vercel Cron (consultées 18/11/2026) | `Authorization: Bearer $CRON_SECRET`, HTTP GET, prod uniquement, `x-vercel-cron-schedule` non fiable comme frontière de sécurité |
 | npm (consulté 18/11/2026) | `pdfkit@0.20.2` (dernière, deps 100 % JS), `jspdf@4.2.1`, `pdf-lib`/`react-pdf` absents du repo |
+
+
+---
+
+> **MAJ 18/11/2026 (intégration de la revue de code)** : (1) `runViewSnapshot(now, period, kind)` accepte `baseline|sum` ; le 1er pose `views_baseline` (cumul), le dernier jour pose `views_sum` — jamais le delta persisté. (2) Cron monté **avant** la protection CSRF (`/api/cron` n'est pas protégé par double soumission — il s'authentifie par `CRON_SECRET`) ; Vercel Cron utilise toujours `GET` + `Authorization: Bearer`. (3) Déduplication `duplicate` ≠ `SENT` : bilan orpheline = FAILED + trace out-of-box. (4) `collecte_address` JAMAIS exposée (§14.D) — propriétaire/admin inclus (le propriétaire écrit via POST/PUT ; la logistique manuelle passe par SQL trusted). (5) Commission de repli = `config.commissionRate` (floor), jamais « 10 % » codé en dur.

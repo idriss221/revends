@@ -162,8 +162,8 @@ export interface SubscribeInput {
 
 /** POST /api/subscriptions — crée TOUJOURS un PENDING (jamais d'accès abonné, CA-V7-012). */
 export async function createSubscription(sellerId: number, input: SubscribeInput) {
-  // V8 (E1) — validation stricte DÈS QU'UNE VALEUR EST FOURNIE (codes dédiés) ;
-  // absence acceptée (legacy V7, CA-V8-053) — DEFIANCE consignée (tests V7 intacts).
+  // V8 (E1/CA-V8-050) — reference + méthode OBLIGATOIRES pour toute nouvelle souscription ;
+  // les lignes legacy (payment_* = NULL) restent activables côté admin (CA-V8-053).
   const { paymentMethod, paymentReference } = validatePaymentFields(input);
   return withTransaction(async (client) => {
     const planRes = await client.query<PlanRow>(
@@ -609,17 +609,14 @@ export async function listAdminSubscriptions(query: AdminSubscriptionsQuery) {
     activated_by: number | null;
     payment_method: string | null;
     payment_reference: string | null;
-    collecte_address: string | null;
   }>(
     `SELECT s.id, s.seller_id, u.display_name AS seller_display_name,
             pl.name AS plan_name, pl.price_fcfa, pl.quota,
             s.slug, s.status, s.created_at, s.activated_at, s.activated_by,
-            s.payment_method, s.payment_reference,
-            sp.collecte_address
+            s.payment_method, s.payment_reference
        FROM seller_subscriptions s
        JOIN users u ON u.id = s.seller_id
        JOIN subscription_plans pl ON pl.id = s.plan_id
-       LEFT JOIN storefront_profiles sp ON sp.seller_id = s.seller_id
       WHERE s.status = $1
       ORDER BY s.created_at DESC, s.id DESC
       LIMIT $2 OFFSET $3`,
@@ -640,11 +637,10 @@ export async function listAdminSubscriptions(query: AdminSubscriptionsQuery) {
       activatedAt: toIso(row.activated_at),
       activatedBy: row.activated_by,
       // V8 / E3 (v2.8) — champs additifs. `paymentReference` absente ⇒ NULL
-      // (libellé « référence absente » côté front). V8 consigne produit :
-      // `collecteAddress` visible de l'admin UNIQUEMENT (jamais publique).
+      // (libellé « référence absente » côté front). §14.D clos : l'adresse de
+      // collecte n'est JAMAIS exposée par l'API ni l'UI (admin inclus).
       paymentMethod: row.payment_method,
       paymentReference: row.payment_reference,
-      collecteAddress: row.collecte_address,
     })),
     page: query.page,
     perPage: query.perPage,
@@ -717,15 +713,15 @@ export async function activateSubscription(adminId: number, targetId: number) {
       if (!activated) {
         throw conflict('INVALID_STATUS', "Cette demande n'est pas en attente d'activation");
       }
-      // V8 — E-mail d'activation : APRÈS commit, anti-doublon
-      // (clé `subscription-activated:<userId>`), best-effort.
+      // V8 — E-mail d'activation : APRÈS commit, anti-doublon daté par abonnement
+      // (clé `subscription-activated:<userId>:<subscriptionId>`), best-effort.
       const planNameRes = await client.query<{ name: string }>(
         'SELECT name FROM subscription_plans WHERE id = $1',
         [activated.plan_id],
       );
       const planName = planNameRes.rows[0]?.name ?? 'Hébergement Boutique';
       afterCommit(async () => {
-        await sendSubscriptionActivatedMail(activated.seller_id, planName);
+        await sendSubscriptionActivatedMail(activated.seller_id, planName, activated.id);
       });
       return {
         subscription: {

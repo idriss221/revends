@@ -62,11 +62,11 @@ export async function sendAntiDuplicateMail(input: AntiDuplicateInput): Promise<
   }
 }
 
-/** E-mail d'activation (§7 V8) — clé `subscription-activated:<userId>`. */
-export async function sendSubscriptionActivatedMail(userId: number, planName: string): Promise<DeliveryOutcome> {
+/** E-mail d'activation (§7 V8) — clé datée par abonnement : chaque (re)activation est notifiée, les doublons restent bloqués. */
+export async function sendSubscriptionActivatedMail(userId: number, planName: string, subscriptionId: number): Promise<DeliveryOutcome> {
   return sendAntiDuplicateMail({
     userId,
-    idempotencyKey: `subscription-activated:${userId}`,
+    idempotencyKey: `subscription-activated:${userId}:${subscriptionId}`,
     event: 'subscription_activated',
     vars: { planName, linkPath: '/mon-abonnement' },
   });

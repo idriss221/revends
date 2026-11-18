@@ -100,31 +100,32 @@ export type ContactInput = z.infer<typeof contactSchema>;
 //                INVALID_IMAGE / FILE_TOO_LARGE / VALIDATION_ERROR
 // ---------------------------------------------------------------------------
 
-/** Valide (et normalise) paymentMethod/paymentReference fournis. Lève AppError 400 dédiée sinon. */
+/** Valide (et normalise) paymentMethod/paymentReference fournis requis. Lève AppError 400 dédiée sinon. */
 export function validatePaymentFields(input: { paymentMethod?: string; paymentReference?: string }): {
-  paymentMethod: PaymentMethod | null;
-  paymentReference: string | null;
+  paymentMethod: PaymentMethod;
+  paymentReference: string;
 } {
-  let paymentMethod: PaymentMethod | null = null;
-  if (input.paymentMethod !== undefined && input.paymentMethod !== '') {
-    const m = input.paymentMethod.trim().toLowerCase();
-    if (!(PAYMENT_METHODS as readonly string[]).includes(m)) {
-      throw badRequest('INVALID_PAYMENT_METHOD', 'paymentMethod doit valoir wave, orange_money ou virement');
-    }
-    paymentMethod = m as PaymentMethod;
+  let paymentMethod: PaymentMethod;
+  const m = (input.paymentMethod ?? '').trim().toLowerCase();
+  if (m === '') {
+    throw badRequest('INVALID_PAYMENT_METHOD', 'paymentMethod doit valoir wave, orange_money ou virement');
   }
-  let paymentReference: string | null = null;
-  if (input.paymentReference !== undefined && input.paymentReference !== '') {
-    const ref = input.paymentReference.trim();
-    if (ref.length < 4 || ref.length > 64 || !PAYMENT_REFERENCE_REGEX.test(ref)) {
-      throw badRequest(
-        'INVALID_PAYMENT_REFERENCE',
-        'La référence de paiement doit contenir entre 4 et 64 caractères (lettres, chiffres, espaces, points, tirets, underscores, slashs) et commencer par une lettre ou un chiffre',
-      );
-    }
-    paymentReference = ref;
+  if (!(PAYMENT_METHODS as readonly string[]).includes(m)) {
+    throw badRequest('INVALID_PAYMENT_METHOD', 'paymentMethod doit valoir wave, orange_money ou virement');
   }
-  return { paymentMethod, paymentReference };
+  paymentMethod = m as PaymentMethod;
+
+  const ref = (input.paymentReference ?? '').trim();
+  if (ref === '') {
+    throw badRequest('PAYMENT_REFERENCE_REQUIRED', 'La référence de paiement est requise à la souscription');
+  }
+  if (ref.length < 4 || ref.length > 64 || !PAYMENT_REFERENCE_REGEX.test(ref)) {
+    throw badRequest(
+      'INVALID_PAYMENT_REFERENCE',
+      'La référence de paiement doit contenir entre 4 et 64 caractères (lettres, chiffres, espaces, points, tirets, underscores, slashs) et commencer par une lettre ou un chiffre',
+    );
+  }
+  return { paymentMethod, paymentReference: ref };
 }
 
 /** Comptage de graphèmes (Unicode) — Intl.Segmenter (👨‍👩‍👧 = 1 grapheme). */

@@ -1,9 +1,10 @@
 import { pool, type Queryable } from '../db/pool.js';
 
 // ---------------------------------------------------------------------------
-// V8-D5 — Profil branding 1:1 vendeur (storefront_profiles). SEULE vue qui
-// autorise `collecte_address` : propriétaire (GET/POST/PUT /api/storefront/
-// profile) et admin (file /api/admin/subscriptions). JAMAIS publique.
+// V8-D5 — Profil branding 1:1 vendeur (storefront_profiles).
+// `collecte_address` : AUCUNE surface API (§14.D clos — propriétaire, admin et
+// public inclus) ; le propriétaire écrit via le profil, la logistique manuelle
+// se fait via SQL/trusted uniquement. JAMAIS exposée.
 // ---------------------------------------------------------------------------
 
 export interface StorefrontProfileRow {
@@ -62,7 +63,7 @@ export async function upsertProfileFields(
   return updated.rows[0]!;
 }
 
-/** Lecture propriétaire (avec `collecte_address`) — JAMAIS publique. */
+/** Lecture interne (services) — inclut `collecte_address` ; JAMAIS sérialisée vers l'API/UI. */
 export async function selectProfileForOwner(sellerId: number, q: Queryable = pool): Promise<StorefrontProfileRow | null> {
   const { rows } = await q.query<StorefrontProfileRow>(
     'SELECT * FROM storefront_profiles WHERE seller_id = $1',

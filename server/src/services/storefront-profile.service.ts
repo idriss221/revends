@@ -40,14 +40,13 @@ export interface ProfileTextInput {
   collecteAddress?: string;
 }
 
-/** Sérialisation PROPRIÉTAIRE/ADMIN uniquement (jamais publique). */
+/** Sérialisation PROPRIÉTAIRE — l'adresse de collecte n'est JAMAIS exposée (§14.D clos) : seul un booléen. */
 export function serializeProfileOwner(row: StorefrontProfileRow | null): Record<string, unknown> {
   if (!row) {
     return {
       logoUrl: null,
       bannerUrl: null,
       publicDescription: null,
-      collecteAddress: null,
       collecteAddressSet: false,
       updatedAt: null,
     };
@@ -56,7 +55,6 @@ export function serializeProfileOwner(row: StorefrontProfileRow | null): Record<
     logoUrl: row.logo_path ? imageUrl(row.logo_path) : null,
     bannerUrl: row.banner_path ? imageUrl(row.banner_path) : null,
     publicDescription: row.public_description,
-    collecteAddress: row.collecte_address,
     collecteAddressSet: row.collecte_address !== null && row.collecte_address.length > 0,
     updatedAt: new Date(row.updated_at).toISOString(),
   };

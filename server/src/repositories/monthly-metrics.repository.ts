@@ -18,7 +18,7 @@ export interface MonthlyMetricsRow {
   computed_at: Date | string;
 }
 
-/** Relevé du dernier jour : pose/rafraîchit `views_baseline` (delta au bilan). */
+/** Pose le relevé du 1er de M : baseline = cumul du 1er (delta au bilan). */
 export async function upsertViewSnapshot(
   client: Queryable,
   subscriptionId: number,
@@ -35,15 +35,35 @@ export async function upsertViewSnapshot(
   );
 }
 
+/** Pose le relevé du dernier jour de M : views_sum = cumul du jour (delta au bilan). */
+export async function upsertViewsSum(
+  client: Queryable,
+  subscriptionId: number,
+  period: string,
+  viewsSum: number,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO monthly_metrics (subscription_id, period, views_sum, views_baseline, sales_count, ca_fcfa, computed_at)
+     VALUES ($1, $2, $3, 0, 0, 0, now())
+     ON CONFLICT (subscription_id, period) DO UPDATE
+        SET views_sum = EXCLUDED.views_sum, computed_at = now()
+      WHERE monthly_metrics.email_status IS NULL`,
+    [subscriptionId, period, viewsSum],
+  );
+}
+
 /**
- * Upsert du bilan (1er) : ne touche la ligne QUE si `email_status IS NULL`.
- * Retourne le nombre de lignes affectées — 0 ⇒ un bilan concurrent a gagné la course.
+ * Upsert du bilan (1er de M+1 pour la période M) : écrit les métriques de la
+ * période SANS jamais réécrire les relevés bruts (views_baseline / views_sum)
+ * — le delta est dérivé à la lecture. Retourne le nombre de lignes affectées —
+ * 0 ⇒ un bilan concurrent a gagné la course.
  */
 export async function upsertMonthlyReport(
   client: Queryable,
   row: {
     subscriptionId: number;
     period: string;
+    /** Cumul brut relevé pour la période (views_sum) — jamais le delta. */
     viewsSum: number;
     salesCount: number;
     caFcfa: number;
@@ -55,9 +75,10 @@ export async function upsertMonthlyReport(
        (subscription_id, period, views_sum, sales_count, ca_fcfa, views_baseline, computed_at)
      VALUES ($1, $2, $3, $4, $5, $6, now())
      ON CONFLICT (subscription_id, period) DO UPDATE
-        SET views_sum = EXCLUDED.views_sum,
-            sales_count = EXCLUDED.sales_count,
+        SET sales_count = EXCLUDED.sales_count,
             ca_fcfa = EXCLUDED.ca_fcfa,
+            views_sum = COALESCE(monthly_metrics.views_sum, EXCLUDED.views_sum),
+            views_baseline = COALESCE(monthly_metrics.views_baseline, EXCLUDED.views_baseline),
             computed_at = now()
       WHERE monthly_metrics.email_status IS NULL`,
     [row.subscriptionId, row.period, row.viewsSum, row.salesCount, row.caFcfa, row.viewsBaseline],
@@ -93,8 +114,8 @@ export async function selectReportRow(
   return rows[0] ?? null;
 }
 
-/** Relevé (baseline) d'un mois donné — NULL si absent. */
-export async function selectViewBaseline(
+/** Relevé (baseline + views_sum) d'un mois donné — NULL si absent. */
+export async function selectViewSnapshot(
   q: Queryable,
   subscriptionId: number,
   period: string,

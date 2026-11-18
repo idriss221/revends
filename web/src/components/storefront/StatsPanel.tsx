@@ -172,8 +172,8 @@ export function StatsPanel({ slug, planName, priceFcfa, activatedAt, endsAt }: S
       {/* ── Fenêtre 30 jours (à la volée) ──────────────────────────── */}
       <p className="rv-stats-window" aria-label="Fenêtre des 30 derniers jours">
         <strong>Sur 30 jours</strong> — {formatNumber(data.current.salesCount)} vente{data.current.salesCount > 1 ? 's' : ''},{' '}
-        {formatFcfa(data.current.netRevenueFcfa)} nets, {formatNumber(data.current.viewsTotal)} vues cumulées, conversion{' '}
-        {formatRate(data.current.conversionRate)}.
+        {formatFcfa(data.current.netRevenueFcfa)} nets, {formatNumber(data.current.viewsCumulated)} vues cumulées, conversion{' '}
+        {formatRate(data.current.conversionRateAllTime)}.
       </p>
 
       {/* ── Historique 12 mois ─────────────────────────────────────── */}

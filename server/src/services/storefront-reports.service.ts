@@ -7,10 +7,11 @@ import { renderBilanPdf } from '../utils/bilan-pdf.js';
 import {
   selectReportHistory,
   selectReportRow,
-  selectViewBaseline,
+  selectViewSnapshot,
   setReportEmailStatus,
   upsertMonthlyReport,
   upsertViewSnapshot,
+  upsertViewsSum,
 } from '../repositories/monthly-metrics.repository.js';
 import { sendAntiDuplicateMail, sendSubscriptionExpiryReminderMail } from './subscription-notifications.service.js';
 import { materializeExpiredSubscriptions } from './storefront.service.js';
@@ -96,14 +97,20 @@ export async function computeMonthlyMetrics(
   const periodStart = new Date(Date.UTC(y!, m! - 1, 1));
   const periodEnd = new Date(Date.UTC(y!, m!, 1)); // exclu
 
+  const snap = await selectViewSnapshot(client, subscriptionId, period);
   const viewsNow = await sumSellerViews(client, sellerId);
-  const baseline = await selectViewBaseline(client, subscriptionId, period);
   let views: number;
   let viewsLabel: ReportMetrics['viewsLabel'];
-  if (baseline) {
-    views = Math.max(0, viewsNow - baseline.viewsBaseline);
+  if (snap && snap.viewsSum > 0) {
+    // Relevés présents aux deux bornes (1er + dernier jour) : delta réel.
+    views = Math.max(0, snap.viewsSum - snap.viewsBaseline);
+    viewsLabel = 'vues du mois';
+  } else if (snap && snap.viewsBaseline > 0) {
+    // Baseline posée mais dernier relevé absent (mois courant, e.g. bilan en cours) : delta live.
+    views = Math.max(0, viewsNow - snap.viewsBaseline);
     viewsLabel = 'vues du mois';
   } else {
+    // Aucune baseline du mois : premier relevé connu — vues cumulées.
     views = viewsNow;
     viewsLabel = 'vues cumulées (1er relevé)';
   }
@@ -157,8 +164,8 @@ export async function computeMonthlyMetrics(
   };
 }
 
-/** Relevé du dernier jour de M : capture le cumul (P11, upsert). */
-export async function runViewSnapshot(now: Date, periodOverride?: string): Promise<{ processed: number }> {
+/** Relevé d'un mois : baseline (1er) ou sum (dernier jour) — upsert idempotent. */
+export async function runViewSnapshot(now: Date, periodOverride?: string, kind: 'baseline' | 'sum' = 'baseline'): Promise<{ processed: number }> {
   const period = periodOverride ?? toPeriodUTC(now);
   return withTransaction(async (client) => {
     await materializeExpiredSubscriptions(client, { });
@@ -166,7 +173,8 @@ export async function runViewSnapshot(now: Date, periodOverride?: string): Promi
     let processed = 0;
     for (const candidate of candidates) {
       const viewsNow = await sumSellerViews(client, candidate.seller_id);
-      await upsertViewSnapshot(client, candidate.id, period, viewsNow);
+      if (kind === 'baseline') await upsertViewSnapshot(client, candidate.id, period, viewsNow);
+      else await upsertViewsSum(client, candidate.id, period, viewsNow);
       processed += 1;
     }
     return { processed };
@@ -195,12 +203,15 @@ export async function runMonthlyReport(
         if (existing && existing.email_status !== null) return 'skipped' as const;
 
         const metrics = await computeMonthlyMetrics(candidate.id, period, client);
-        const baselineRow = await selectViewBaseline(client, candidate.id, period);
-        const viewsBaseline = baselineRow?.viewsBaseline ?? 0;
+        // Bilan : la ligne montée persistée garde les relevés brut ; vues brutes
+        // = dernier relevé connu (ou cumul live si le dernier relevé manque).
+        const viewSnapshot = await selectViewSnapshot(client, candidate.id, period);
+        const rawViews = viewSnapshot && viewSnapshot.viewsSum > 0 ? viewSnapshot.viewsSum : await sumSellerViews(client, candidate.seller_id);
+        const viewsBaseline = viewSnapshot?.viewsBaseline ?? 0;
         const affected = await upsertMonthlyReport(client, {
           subscriptionId: candidate.id,
           period,
-          viewsSum: metrics.views,
+          viewsSum: rawViews,
           salesCount: metrics.salesCount,
           caFcfa: metrics.caBrut,
           viewsBaseline,
@@ -260,7 +271,17 @@ export async function runMonthlyReport(
         ],
       });
 
-      const status = delivery === 'sent' || delivery === 'duplicate' ? 'SENT' : 'FAILED';
+      // Doublon = exécution précédente interrompue avant l'envoi (fiche FAILED
+      // ou PENDING orpheline dans notification_deliveries) : on NE marque PAS
+      // SENT, et on trace, pour que K9/recette sachent que le bilan n'a pas
+      // été reçu. L'utilisateur ne reçoit rien — le renvoi manuel est V9.
+      const status = delivery === 'sent' ? 'SENT' : 'FAILED';
+      if (delivery === 'duplicate') {
+        logger.error('bilan mensuel : envoi ignoré — doublon (delivery orpheline)', {
+          eventKey: `storefront-monthly-report:${candidate.id}:${period}`,
+          subscriptionId: candidate.id, period,
+        });
+      }
       await setReportEmailStatus(pool, candidate.id, period, status);
       if (status === 'SENT') summary.sent += 1;
       else summary.failed += 1;
@@ -323,10 +344,13 @@ export async function runMonthlyReportIfDue(now: Date = new Date()): Promise<Cro
 
   if (isFirstOfMonth) {
     const report = await runMonthlyReport(now);
+    // Au premier du mois M : on pose aussi le relevé de BASE pour M (delta au bilan suivant).
+    const snapshot = await runViewSnapshot(now, undefined, 'baseline');
     return { mode: 'report', report, reminders };
   }
   if (isLastDayOfMonth) {
-    const snapshot = await runViewSnapshot(now);
+    // Au dernier jour 06:00 de M : on pose le relevé final (views_sum) pour M.
+    const snapshot = await runViewSnapshot(now, undefined, 'sum');
     return { mode: 'snapshot', snapshot, reminders };
   }
   return { mode: 'noop', reminders };
@@ -418,7 +442,7 @@ export async function getMyReportPdf(sellerId: number, period: string): Promise<
     [sellerId, periodStart, periodEnd],
   );
   const persisted = commissionRes.rows[0];
-  const commissionFcfa = persisted ? Number(persisted.commission) : Math.round(caBrut * 0.1);
+  const commissionFcfa = persisted ? Number(persisted.commission) : Math.floor(caBrut * config.commissionRate);
   const netRevenueFcfa = caBrut - commissionFcfa;
   const avgBasketFcfa = salesCount > 0 ? Math.floor(caBrut / salesCount) : null;
   const conversionRate = views > 0 ? salesCount / views : null;
@@ -495,11 +519,11 @@ export async function getMyStats(sellerId: number): Promise<Record<string, unkno
     : null;
 
   // ---------- Plage 30 jours (calcul à la volée) ----------
-  const viewsTotalRes = await pool.query<{ total: string }>(
+  const viewsCumulatedRes = await pool.query<{ total: string }>(
     'SELECT COALESCE(SUM(p.view_count), 0)::int AS total FROM products p WHERE p.owner_id = $1 AND p.deleted_at IS NULL',
     [sellerId],
   );
-  const viewsTotal = Number(viewsTotalRes.rows[0]?.total ?? 0);
+  const viewsCumulated = Number(viewsCumulatedRes.rows[0]?.total ?? 0);
 
   const since30 = new Date(Date.now() - 30 * 86_400_000);
   const currentRes = await pool.query<{
@@ -538,7 +562,7 @@ export async function getMyStats(sellerId: number): Promise<Record<string, unkno
 
   const current = {
     windowDays: 30,
-    viewsTotal,
+    viewsCumulated,
     salesCount: sales30,
     revenueFcfa: brut30,
     netRevenueFcfa: net30,
@@ -547,7 +571,8 @@ export async function getMyStats(sellerId: number): Promise<Record<string, unkno
     bestProduct: best30
       ? { id: Number(best30.id), name: best30.name, sales: Number(best30.sales) }
       : null,
-    conversionRate: viewsTotal > 0 ? sales30 / viewsTotal : null,
+    // Numérateur 30 j / dénominateur cumulées — libellé affiche « vues cumulées ».
+    conversionRateAllTime: viewsCumulated > 0 ? sales30 / viewsCumulated : null,
   };
 
   // ---------- Historique 12 mois (persisté + recomputé à la lecture) ----------
@@ -604,7 +629,7 @@ export async function getMyStats(sellerId: number): Promise<Record<string, unkno
     const caBrut = Number(row.ca_fcfa);
     const persisted = commissionByPeriod.get(row.period);
     // commission/brut/sales recalculés (immuables) ; commission dérivée de ca brut − net si disponible.
-    const commissionFcfa = persisted ? persisted.commission : Math.round(caBrut * 0.1);
+    const commissionFcfa = persisted ? Number(persisted.commission) : Math.floor(caBrut * config.commissionRate);
     const netRevenueFcfa = caBrut - commissionFcfa;
     const views = row.views_sum;
     const salesCount = row.sales_count;

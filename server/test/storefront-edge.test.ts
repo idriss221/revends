@@ -40,7 +40,7 @@ async function subscribeAndActivate(
   slug: string,
   supersedesId?: number,
 ) {
-  const res = await user.client.post('/api/subscriptions', { planId, slug, supersedesId });
+  const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId, slug, supersedesId });
   assert.equal(res.status, 201, `subscribe → ${res.status} ${JSON.stringify(res.body)}`);
   const subId = (res.body as any).subscription.id as number;
   const act = await admin.post(`/api/admin/subscriptions/${subId}/activate`, {});
@@ -121,35 +121,35 @@ describe('CA-V7-001/002/014 — audit runtime : schéma additif, rôles, aucune 
 describe('CA-V7-022 — bornes EXACTES du slug (3 et 40) et variantes refusées', () => {
   it('slug de exactement 3 caractères « abc » → 201', async () => {
     const user = await registerUser(server, 'cv7b3');
-    const res = await user.client.post('/api/subscriptions', { planId: 1, slug: 'abc' });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'abc' });
     assert.equal(res.status, 201, JSON.stringify(res.body));
     assert.equal((res.body as any).subscription.slug, 'abc');
   });
 
   it('slug de exactement 3 caractères avec tiret central « a-b » → 201', async () => {
     const user = await registerUser(server, 'cv7ab');
-    const res = await user.client.post('/api/subscriptions', { planId: 1, slug: 'a-b' });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'a-b' });
     assert.equal(res.status, 201, JSON.stringify(res.body));
   });
 
   it('slug de exactement 40 caractères → 201', async () => {
     const user = await registerUser(server, 'cv740');
     const slug40 = 'a'.repeat(40); // 40 caractères, regex valide
-    const res = await user.client.post('/api/subscriptions', { planId: 1, slug: slug40 });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: slug40 });
     assert.equal(res.status, 201, JSON.stringify(res.body));
     assert.equal((res.body as any).subscription.slug, slug40);
   });
 
   it('slug de exactement 41 caractères → 400 (déjà couvert indirectement : limite 40)', async () => {
     const user = await registerUser(server, 'cv741');
-    const res = await user.client.post('/api/subscriptions', { planId: 1, slug: 'a'.repeat(41) });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'a'.repeat(41) });
     assert.equal(res.status, 400);
   });
 
   it('tiret final « mode- » et tiret initial « -mode » → 400', async () => {
     const user = await registerUser(server, 'cv7dash');
     for (const slug of ['mode-', '-mode', 'a--b', 'a---b']) {
-      const res = await user.client.post('/api/subscriptions', { planId: 1, slug });
+      const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug });
       assert.equal(res.status, 400, `slug « ${slug} » attendu 400, reçu ${res.status}`);
     }
   });
@@ -157,7 +157,7 @@ describe('CA-V7-022 — bornes EXACTES du slug (3 et 40) et variantes refusées'
   it('slugs de 1 et 2 caractères → 400 (jamais 3)', async () => {
     const user = await registerUser(server, 'cv7tiny');
     for (const slug of ['a', 'ab']) {
-      const res = await user.client.post('/api/subscriptions', { planId: 1, slug });
+      const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug });
       assert.equal(res.status, 400);
     }
   });
@@ -166,18 +166,18 @@ describe('CA-V7-022 — bornes EXACTES du slug (3 et 40) et variantes refusées'
 describe('CA-V7-020/021 — normalisation casse + réservation à vie (même après CANCELLED)', () => {
   it('« MODE-DAKAR » (majuscules) est normalisé et rejeté 409 si pris', async () => {
     const owner = await registerUser(server, 'cv7case1');
-    const res1 = await owner.client.post('/api/subscriptions', { planId: 1, slug: 'case-shop' });
+    const res1 = await owner.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'case-shop' });
     assert.equal(res1.status, 201);
 
     const other = await registerUser(server, 'cv7case2');
-    const res2 = await other.client.post('/api/subscriptions', { planId: 1, slug: 'CASE-SHOP' });
+    const res2 = await other.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'CASE-SHOP' });
     assert.equal(res2.status, 409);
     assert.equal(errorCode(res2.body), 'SLUG_TAKEN');
   });
 
   it('« ADMIN » (casse mixte) est normalisé puis refusé 400 SLUG_RESERVED', async () => {
     const user = await registerUser(server, 'cv7case3');
-    const res = await user.client.post('/api/subscriptions', { planId: 1, slug: 'ADMIN' });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'ADMIN' });
     assert.equal(res.status, 400);
     assert.equal(errorCode(res.body), 'SLUG_RESERVED');
   });
@@ -185,14 +185,14 @@ describe('CA-V7-020/021 — normalisation casse + réservation à vie (même apr
   it('après un changement de forfait (ancien CANCELLED), le slug reste réservé au vendeur A', async () => {
     const sellerA = await registerUser(server, 'cv7resvA');
     const { subId: oldId } = await subscribeAndActivate(sellerA, 2, 'Boutique Slug Cancelled');
-    const res = await sellerA.client.post('/api/subscriptions', { planId: 3, supersedesId: oldId });
+    const res = await sellerA.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 3, supersedesId: oldId });
     assert.equal(res.status, 201);
     const newId = (res.body as any).subscription.id as number;
     const act = await admin.post(`/api/admin/subscriptions/${newId}/activate`, {});
     assert.equal(act.status, 200);
     // L'ancien est CANCELLED, le slug lui reste réservé.
     const sellerB = await registerUser(server, 'cv7resvB');
-    const takeover = await sellerB.client.post('/api/subscriptions', { planId: 1, slug: 'boutique-slug-cancelled' });
+    const takeover = await sellerB.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'boutique-slug-cancelled' });
     assert.equal(takeover.status, 409);
     assert.equal(errorCode(takeover.body), 'SLUG_TAKEN');
   });
@@ -204,7 +204,7 @@ describe('CA-V7-020/021 — normalisation casse + réservation à vie (même apr
 describe('CA-V7-030/015 — planId inconnu, bornes numériques, supersedesId non autorisé', () => {
   it('planId inexistant → 404 PLAN_NOT_FOUND', async () => {
     const user = await registerUser(server, 'cv7plan404');
-    const res = await user.client.post('/api/subscriptions', { planId: 999999, slug: 'Plan Inexistant' });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 999999, slug: 'Plan Inexistant' });
     assert.equal(res.status, 404);
     assert.equal(errorCode(res.body), 'PLAN_NOT_FOUND');
   });
@@ -212,7 +212,7 @@ describe('CA-V7-030/015 — planId inconnu, bornes numériques, supersedesId non
   it('planId = 0 / négatif / non numérique → 400 VALIDATION_ERROR', async () => {
     const user = await registerUser(server, 'cv7plan400');
     for (const planId of [0, -3, 'abc']) {
-      const res = await user.client.post('/api/subscriptions', { planId: planId as any, slug: 'Plan Bord' });
+      const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: planId as any, slug: 'Plan Bord' });
       assert.equal(res.status, 400, `planId « ${String(planId)} » attendu 400`);
     }
   });
@@ -221,17 +221,17 @@ describe('CA-V7-030/015 — planId inconnu, bornes numériques, supersedesId non
     const owner = await registerUser(server, 'cv7superA');
     const { subId } = await subscribeAndActivate(owner, 1, 'Boutique Super Own');
     const other = await registerUser(server, 'cv7superB');
-    const res = await other.client.post('/api/subscriptions', { planId: 1, supersedesId: subId });
+    const res = await other.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, supersedesId: subId });
     assert.equal(res.status, 404);
     assert.equal(errorCode(res.body), 'NOT_FOUND');
   });
 
   it('supersedesId pointant sur son propre abonnement PENDING (≠ ACTIVE) → 400 INVALID_SUPERSEDES', async () => {
     const user = await registerUser(server, 'cv7superP');
-    const res = await user.client.post('/api/subscriptions', { planId: 1, slug: 'Boutique Super Pend' });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'Boutique Super Pend' });
     assert.equal(res.status, 201);
     const pendingId = (res.body as any).subscription.id as number;
-    const res2 = await user.client.post('/api/subscriptions', { planId: 2, supersedesId: pendingId });
+    const res2 = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 2, supersedesId: pendingId });
     assert.equal(res2.status, 400);
     assert.equal(errorCode(res2.body), 'INVALID_SUPERSEDES');
   });
@@ -371,7 +371,7 @@ describe('CA-V7-031 — concurrence quota : 3 ajouts simultanés à 9/10 → exa
 describe('CA-V7-013/011 — activation concurrente : exactement une activation réussit', () => {
   it('deux activations PARALLÈLES du même abonnement PENDING → une 200, une 409, COUNT(ACTIVE)=1', async () => {
     const user = await registerUser(server, 'cv7actpar');
-    const res = await user.client.post('/api/subscriptions', { planId: 1, slug: 'Boutique Activation Parallele' });
+    const res = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'Boutique Activation Parallele' });
     assert.equal(res.status, 201);
     const subId = (res.body as any).subscription.id as number;
 
@@ -398,9 +398,9 @@ describe('CA-V7-013/011 — activation concurrente : exactement une activation r
     // départ, les deux activations voient « pas d'ACTIVE » dans le service —
     // la contrainte partielle uq_one_active_subscription_per_seller tranche.
     const user = await registerUser(server, 'cv7indpar');
-    const p1 = await user.client.post('/api/subscriptions', { planId: 1, slug: 'Boutique Parallele Indep' });
+    const p1 = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'Boutique Parallele Indep' });
     assert.equal(p1.status, 201);
-    const p2 = await user.client.post('/api/subscriptions', { planId: 2 }); // slug récupéré automatiquement
+    const p2 = await user.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 2 }); // slug récupéré automatiquement
     assert.equal(p2.status, 201);
     const id1 = (p1.body as any).subscription.id as number;
     const id2 = (p2.body as any).subscription.id as number;
@@ -605,7 +605,7 @@ describe('CA-V7-039 — non-abonné : 15 publications catalogue, toutes 201', ()
 describe('CA-V7-013/030/045 — sans session : 401 UNAUTHENTICATED sur toutes les routes privées', () => {
   it('POST /api/subscriptions, GET /me, POST/DELETE listings, POST contact → 401', async () => {
     const anon = server.newClient();
-    const sub = await anon.post('/api/subscriptions', { planId: 1, slug: 'Anon Sans Session' });
+    const sub = await anon.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug: 'Anon Sans Session' });
     assert.equal(sub.status, 401);
     const me = await anon.get('/api/subscriptions/me');
     assert.equal(me.status, 401);
@@ -659,7 +659,7 @@ describe('Revue V7 — correctifs I-2/I-3 : plan change après expiration, cours
     // Force l'ACTIVE à être déjà expirée à l'activation du plan change.
     await dbQuery("UPDATE seller_subscriptions SET started_at = now() - interval '40 days', ends_at = now() - interval '1 day' WHERE id = $1", [oldId]);
     // Demande de changement de forfait (nouvel abonnement PENDING).
-    const move = await seller.client.post('/api/subscriptions', { planId: 3, supersedesId: oldId });
+    const move = await seller.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 3, supersedesId: oldId });
     assert.equal(move.status, 201);
     const newId = (move.body as any).subscription.id as number;
     const act = await admin.post(`/api/admin/subscriptions/${newId}/activate`, {});
@@ -677,8 +677,8 @@ describe('Revue V7 — correctifs I-2/I-3 : plan change après expiration, cours
     const sellerB = await registerUser(server, 'cv7raceB');
     const slug = `cv7race-win-${Date.now().toString(36)}`;
     const [a, b] = await Promise.all([
-      sellerA.client.post('/api/subscriptions', { planId: 1, slug }),
-      sellerB.client.post('/api/subscriptions', { planId: 1, slug }),
+      sellerA.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug }),
+      sellerB.client.post('/api/subscriptions', { paymentMethod: 'wave', paymentReference: 'WAVE-TEST-0000001', planId: 1, slug }),
     ]);
     const statuses = [a.status, b.status].sort((x, y) => x - y);
     assert.deepEqual(statuses, [201, 409], `statuts=${statuses.join(',')} bodies=${JSON.stringify([a.body, b.body])}`);

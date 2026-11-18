@@ -119,8 +119,6 @@ export interface SubscriptionAdminItem {
   paymentMethod?: 'wave' | 'orange_money' | 'virement' | null
   /** E3 (v2.8) — référence du paiement, JAMAIS publique : à masquer en UI via `safeReference()`. */
   paymentReference?: string | null
-  /** E3 (v2.8) — INTERNE : visible UNIQUEMENT ici (file admin). Jamais publique. */
-  collecteAddress?: string | null
 }
 
 export interface SubscriptionAdminListResponse {
@@ -170,13 +168,11 @@ export interface StorefrontProfileSummary {
   collecteAddressSet: boolean
 }
 
-/** `GET /api/storefront/profile` — vue propriétaire (R1c). `collecteAddress` = valeur réelle (propriétaire uniquement). */
+/** `GET /api/storefront/profile` — vue propriétaire (R1c). §14.D clos : l'adresse de collecte n'apparaît JAMAIS dans l'API (propriétaire inclus). */
 export interface StorefrontProfileOwner {
   logoUrl: string | null
   bannerUrl: string | null
   publicDescription: string | null
-  /** Adresse de collecte (INTERNE) — visible du propriétaire ; JAMAIS publique. */
-  collecteAddress: string | null
   collecteAddressSet: boolean
   updatedAt: string | null
   /** Badge de palier dérivé (présent à la lecture propriétaire). */
@@ -201,7 +197,8 @@ export interface StatsSubscriptionBlock {
 
 export interface StatsCurrentWindow {
   windowDays: number
-  viewsTotal: number
+  /** Vues cumulées (all-time) — libellé explicite pour éviter la fausse impression d'un delta 30 j. */
+  viewsCumulated: number
   salesCount: number
   revenueFcfa: number
   netRevenueFcfa: number
@@ -210,6 +207,8 @@ export interface StatsCurrentWindow {
   bestProduct: { id: number; name: string; sales: number } | null
   /** ventes / vues ; null si 0 vue → afficher « — » */
   conversionRate: number | null
+  /** Taux 30 j — dénominateur = vues cumulées, donc « all-time », pas un delta mensuel. */
+  conversionRateAllTime: number | null
 }
 
 export interface StatsReportEntry {
