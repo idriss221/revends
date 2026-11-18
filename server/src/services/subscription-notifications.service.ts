@@ -72,6 +72,21 @@ export async function sendSubscriptionActivatedMail(userId: number, planName: st
   });
 }
 
+/** Abonnement refusé (§3 V8.2) — motif admin communiqué au vendeur, anti-doublon par abonnement. */
+export async function sendSubscriptionRefusedMail(
+  userId: number,
+  planName: string,
+  subscriptionId: number,
+  reason: string,
+): Promise<DeliveryOutcome> {
+  return sendAntiDuplicateMail({
+    userId,
+    idempotencyKey: `subscription-refused:${userId}:${subscriptionId}`,
+    event: 'subscription_refused',
+    vars: { planName, reason, linkPath: '/mon-abonnement' },
+  });
+}
+
 /** Rappel J-3 (§7 V8) — clé `subscription-expiry-reminder:<userId>:YYYY-MM`. */
 export async function sendSubscriptionExpiryReminderMail(
   userId: number,

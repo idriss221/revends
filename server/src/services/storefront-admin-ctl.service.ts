@@ -1,6 +1,7 @@
 import { type Queryable } from '../db/pool.js';
 import { withTransaction } from '../utils/db.js';
-import { notFound } from '../utils/errors.js';
+import { badRequest, conflict, notFound } from '../utils/errors.js';
+import { sendSubscriptionRefusedMail } from './subscription-notifications.service.js';
 
 // ---------------------------------------------------------------------------
 // V8.1 — « Contrôle boutique » — gouvernance admin des abonnements.
@@ -30,6 +31,12 @@ interface SubscriptionCtlRow {
 }
 
 /** Vue de réponse commune aux deux routes (jamais de PII vendeur). */
+/** Réaction admin au refus d’un paiement (Demands → CANCELLED avec motif, notification vendeur best-effort). */
+export interface RejectSubscriptionOutcome {
+  subscription: Record<string, unknown>;
+  mailAfterCommit: { userId: number; planName: string; subscriptionId: number; reason: string };
+}
+
 export function serializeSubscriptionCtl(row: SubscriptionCtlRow): Record<string, unknown> {
   return {
     subscription: {
@@ -123,5 +130,49 @@ export async function deleteSubscription(adminId: number, subscriptionId: number
       description: `Abonnement supprimé définitivement — slug ${subscription.slug} (vendeur #${subscription.seller_id})`,
     });
     return serializeSubscriptionCtl(subscription);
+  });
+}
+
+/** POST /api/admin/subscriptions/:id/reject — PENDING → CANCELLED + e-mail vendeur (motif). */
+export async function rejectSubscription(adminId: number, subscriptionId: number, reason: string): Promise<RejectSubscriptionOutcome> {
+  const trimmed = reason.trim();
+  if (trimmed.length < 10) {
+    throw badRequest('VALIDATION_ERROR', 'Le motif doit contenir au moins 10 caractères', [
+      { field: 'reason', message: 'Au moins 10 caractères' },
+    ]);
+  }
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<SubscriptionCtlRow>(SELECT_FOR_UPDATE, [subscriptionId]);
+    const target = rows[0];
+    if (!target) throw notFound('NOT_FOUND', 'Abonnement introuvable');
+    if (target.status !== 'PENDING') {
+      throw conflict('INVALID_STATUS', "Seul un abonnement en attente peut être refusé (celui-ci est déjà actif/expiré/annulé).");
+    }
+    const { rows: updated } = await client.query<SubscriptionCtlRow>(
+      `UPDATE seller_subscriptions SET status = 'CANCELLED'
+        WHERE id = $1 AND status = 'PENDING'
+        RETURNING id, seller_id, status, slug`,
+      [target.id],
+    );
+    const subscription = updated[0];
+    if (!subscription) throw notFound('NOT_FOUND', 'Abonnement introuvable'); // course : devenu non-PENDING entre-temps
+
+    await client.query(
+      `INSERT INTO admin_actions (admin_id, action, target_type, target_id, description)
+       VALUES ($1, 'subscription.refused', 'subscription', $2, $3)`,
+      [adminId, subscription.id, `Abonnement refusé — slug ${subscription.slug} — motif : ${trimmed.slice(0, 2000)}`],
+    );
+
+    // Plan name pour le mail (lecture dans la transaction).
+    const planRows = await client.query<{ name: string }>(
+      'SELECT p.name FROM subscription_plans p JOIN seller_subscriptions s ON s.plan_id = p.id WHERE s.id = $1',
+      [subscription.id],
+    );
+    const planName = planRows.rows[0]?.name ?? 'Hébergement Boutique';
+
+    return {
+      subscription: serializeSubscriptionCtl(subscription),
+      mailAfterCommit: { userId: subscription.seller_id, planName, subscriptionId: subscription.id, reason: trimmed },
+    } as RejectSubscriptionOutcome;
   });
 }

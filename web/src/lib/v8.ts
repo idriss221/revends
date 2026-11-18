@@ -111,3 +111,29 @@ export function formatDeltaPct(delta: number | null): string {
   const sign = delta > 0 ? '+' : delta < 0 ? '−' : ''
   return `${sign}${Math.abs(delta)} %`
 }
+
+/** Âge lisible « hh:mm » depuis une date ISO — pour la SLA 24h des demandes PENDING. */
+export function formatRemainingAge(iso: string, nowMs: number = Date.now()): string {
+  const start = new Date(iso).getTime()
+  if (!Number.isFinite(start)) return 'âge inconnu'
+  const diffMs = Math.max(0, nowMs - start)
+  const hours = Math.floor(diffMs / (3_600_000))
+  const minutes = Math.floor((diffMs % 3_600_000) / 60_000)
+  if (hours < 1) return `${minutes} min`
+  return `${hours}h${String(minutes).padStart(2, '0')}`
+}
+
+/** Vrai si la date ISO a dépassé le seuil en heures. */
+export function isOlderThanHours(iso: string, thresholdHours: number, nowMs: number = Date.now()): boolean {
+  const start = new Date(iso).getTime()
+  if (!Number.isFinite(start)) return false
+  return nowMs - start >= thresholdHours * 3_600_000
+}
+
+/** > 24h : SLA dépassé (R-V8-03/PO-V8-06-like). */
+export const SLA_AGE_THRESHOLD_HOURS = 24
+
+/** Plusieurs fois « en retard SLA » si ancien. */
+export function isSlaBreach(iso: string): boolean {
+  return isOlderThanHours(iso, SLA_AGE_THRESHOLD_HOURS)
+}

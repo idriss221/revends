@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { storefrontApi, storefrontError, formatFrActivation } from '../../lib/storefront'
-import { safeReference, paymentMethodLabel } from '../../lib/v8'
+import { paymentMethodLabel, formatRemainingAge, isSlaBreach } from '../../lib/v8'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
 import { useAuth } from '../../context/AuthContext'
@@ -11,6 +11,7 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout'
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader'
 import { AdminTable, type AdminColumn } from '../../components/admin/AdminTable'
 import { ConfirmAction } from '../../components/admin/ConfirmAction'
+import { Modal } from '../../components/ui/Modal'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../lib/toast'
@@ -75,6 +76,9 @@ export function Abonnements() {
   const [deleteTarget, setDeleteTarget] = useState<SubscriptionAdminItem | null>(null)
   const [deleteWord, setDeleteWord] = useState('')
   const [activatedBanner, setActivatedBanner] = useState<string | null>(null)
+  const [rejectTarget, setRejectTarget] = useState<SubscriptionAdminItem | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectBanner, setRejectBanner] = useState<string | null>(null)
 
   const status: 'PENDING' | NonPendingStatus = tab === 'pending' ? 'PENDING' : historyStatus
 
@@ -131,6 +135,25 @@ export function Abonnements() {
     onError: (err) => {
       toast('error', storefrontError(err, 'Impossible de désactiver cette boutique. Réessayez.'))
       setDeactivateTarget(null)
+      invalidate()
+    },
+  })
+
+  // V8.2 — refus d'une demande PENDING : motif saisi par l'admin, e-mail best-effort envoyé au vendeur.
+  const rejectCtl = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => storefrontApi.adminReject(id, reason),
+    onSuccess: () => {
+      if (rejectTarget) {
+        setRejectBanner(`Abonnement « ${rejectTarget.slug} » refusé — e-mail envoyé au vendeur.`)
+      }
+      setRejectTarget(null)
+      setRejectReason('')
+      invalidate()
+    },
+    onError: () => {
+      toast('error', "Refus impossible pour l'instant ; la demande est conservée. Réessayez.")
+      setRejectTarget(null)
+      setRejectReason('')
       invalidate()
     },
   })
@@ -201,11 +224,8 @@ export function Abonnements() {
       cell: (row) => (
         <span className="flex min-w-0 flex-col">
           <span className="text-sm font-semibold text-ink">{paymentMethodLabel(row.paymentMethod)}</span>
-          <span
-            className="font-mono text-xs text-muted"
-            title="Référence masquée — seuls les derniers caractères sont visibles"
-          >
-            {safeReference(row.paymentReference)}
+          <span className="font-mono text-xs break-all text-ink" title="Référence complète — admin uniquement ; à recopier dans l'app Wave/OM/virement pour vérifier la transaction">
+            {row.paymentReference ?? 'référence absente'}
           </span>
         </span>
       ),
@@ -214,7 +234,26 @@ export function Abonnements() {
     {
       key: 'created',
       header: 'Demande',
-      cell: (row) => <span className="text-muted">{formatFrActivation(row.createdAt)}</span>,
+      cell: (row) => {
+        const isPending = tab === 'pending' || row.status === 'PENDING'
+        const overSla = isPending && isSlaBreach(row.createdAt)
+        return (
+          <span className="flex min-w-0 flex-col">
+            <span className="text-muted">{formatFrActivation(row.createdAt)}</span>
+            {isPending && (
+              <span
+                className={`mt-0.5 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                  overSla ? 'border-danger-border bg-danger-soft text-danger' : 'border-line bg-surface-sunken text-muted'
+                }`}
+                title={overSla ? 'Étude en attente depuis plus de 24h (SLA dépassé)' : 'Temps écoulé depuis la soumission'}
+              >
+                <i className="fas fa-clock" aria-hidden="true" />
+                {formatRemainingAge(row.createdAt)}{overSla ? ' · SLA' : ''}
+              </span>
+            )}
+          </span>
+        )
+      },
     },
     ...(tab === 'pending'
       ? [
@@ -223,7 +262,7 @@ export function Abonnements() {
             header: 'Action',
             widthClass: 'text-right',
             cell: (row: SubscriptionAdminItem) => (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <Button
                   variant="positive"
                   size="sm"
@@ -232,6 +271,18 @@ export function Abonnements() {
                 >
                   <i className="fas fa-circle-check" aria-hidden="true" />
                   Activer
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    setRejectTarget(row)
+                    setRejectReason('')
+                  }}
+                  aria-label={`Refuser la boutique « ${row.slug} » pour ${row.sellerDisplayName}`}
+                >
+                  <i className="fas fa-xmark" aria-hidden="true" />
+                  Refuser
                 </Button>
               </div>
             ),
@@ -320,6 +371,23 @@ export function Abonnements() {
             onClick={() => setActivatedBanner(null)}
             aria-label="Fermer le message"
             className="shrink-0 cursor-pointer rounded-md p-1 text-positive transition-colors hover:bg-positive/10"
+          >
+            <i className="fas fa-xmark" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {rejectBanner && (
+        <div role="status" aria-live="polite" className="mb-4 flex items-center justify-between gap-3 rounded-sm border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger">
+          <span className="flex min-w-0 items-center gap-2">
+            <i className="fas fa-circle-xmark shrink-0" aria-hidden="true" />
+            <span className="min-w-0">{rejectBanner}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setRejectBanner(null)}
+            aria-label="Fermer le message"
+            className="shrink-0 cursor-pointer rounded-md p-1 text-danger transition-colors hover:bg-danger/10"
           >
             <i className="fas fa-xmark" aria-hidden="true" />
           </button>
@@ -481,7 +549,7 @@ export function Abonnements() {
           { icon: 'fa-store', text: 'La boutique devient publique immédiatement.' },
           {
             icon: 'fa-money-bill-wave',
-            text: `Paiement à vérifier : ${paymentMethodLabel(target?.paymentMethod)} — référence masquée ${safeReference(target?.paymentReference)}`,
+            text: `Paiement à vérifier (Wave/OM/virement) : ${paymentMethodLabel(target?.paymentMethod)} — référence ${target?.paymentReference ?? 'absente'}`,
           },
           { icon: 'fa-signature', text: 'Votre nom et la date seront enregistrés (activated_by, activated_at).' },
         ]}
@@ -545,6 +613,55 @@ export function Abonnements() {
           />
         </label>
       </ConfirmAction>
+
+      {/* V8.2 — Refuser une demande PENDING : motif obligatoire + e-mail vendeur best-effort */}
+      {rejectTarget !== null && (
+        <Modal
+          open={rejectTarget !== null}
+          dismissable={false}
+          title="Refuser la demande ?"
+          onClose={() => setRejectTarget(null)}
+          size="md"
+        >
+          <div className="space-y-4 p-4">
+            <p className="text-sm text-ink">
+              Vendeur : <strong>{rejectTarget.sellerDisplayName}</strong> · Forfait
+              <strong> {rejectTarget.planName}</strong> · Adresse <strong>/boutique/{rejectTarget.slug}</strong>
+            </p>
+            <p className="text-sm text-muted">
+              Un motif est obligatoire : le vendeur le reçoit par e-mail (« Abonnement non validé ») pour corriger la situation.
+            </p>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">
+                Motif du refus (≥ 10 caractères)
+              </span>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                maxLength={2000}
+                rows={4}
+                placeholder="Référence introuvable dans Wave / montant supérieur / duplication…"
+                aria-label="Motif du refus"
+                className="field-input"
+              />
+            </label>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-muted">{rejectReason.trim().length} / 2000 caractères</span>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setRejectTarget(null)}>Annuler</Button>
+                <Button
+                  variant="danger"
+                  loading={rejectCtl.isPending}
+                  disabled={rejectReason.trim().length < 10}
+                  onClick={() => rejectCtl.mutate({ id: rejectTarget.id, reason: rejectReason.trim() })}
+                >
+                  <i className="fas fa-xmark" aria-hidden="true" /> Refuser et envoyer
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </DashboardLayout>
   )
 }

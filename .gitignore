@@ -69,3 +69,9 @@ web/public/catalog/
 /revends/
 
 web/*.tsbuildinfo
+
+web/tsconfig.tsbuildinfo
+web/tsconfig.node.tsbuildinfo
+web/tsconfig.app.tsbuildinfo
+web/tsconfig.e2e.tsbuildinfo
+tsconfig.tsbuildinfo

@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import { currentUser, requireAdmin } from '../middleware/auth.js';
+import { z } from 'zod';
 import { idParamSchema } from '../utils/storefront-validation.js';
 import {
   deactivateSubscription,
   deleteSubscription,
+  rejectSubscription,
 } from '../services/storefront-admin-ctl.service.js';
+import { sendSubscriptionRefusedMail } from '../services/subscription-notifications.service.js';
 
 // ---------------------------------------------------------------------------
 // V8.1 — « Contrôle boutique » — routeur SÉPARÉ monté sous /api/admin/subscriptions
@@ -16,6 +19,14 @@ import {
 // ---------------------------------------------------------------------------
 
 export const adminStorefrontCtlRouter = Router();
+
+const rejectSchema = z.object({
+  reason: z
+    .string({ error: 'Le motif est requis' })
+    .trim()
+    .min(10, { error: 'Le motif doit contenir au moins 10 caractères' })
+    .max(2000, { error: 'Le motif doit contenir au plus 2000 caractères' }),
+});
 
 adminStorefrontCtlRouter.use(requireAdmin);
 
@@ -29,4 +40,14 @@ adminStorefrontCtlRouter.post('/:id/deactivate', async (req, res) => {
 adminStorefrontCtlRouter.post('/:id/delete', async (req, res) => {
   const { id } = idParamSchema.parse(req.params);
   res.json(await deleteSubscription(currentUser(res).id, id));
+});
+
+/** POST /api/admin/subscriptions/:id/reject — PENDING → CANCELLED + e-mail vendeur (motif). */
+adminStorefrontCtlRouter.post('/:id/reject', async (req, res) => {
+  const { id } = idParamSchema.parse(req.params);
+  const { reason } = rejectSchema.parse(req.body ?? {});
+  const outcome = await rejectSubscription(currentUser(res).id, id, reason);
+  // Mail best-effort après commit : un échec d'envoi n'inverse jamais la décision.
+  await sendSubscriptionRefusedMail(outcome.mailAfterCommit.userId, outcome.mailAfterCommit.planName, outcome.mailAfterCommit.subscriptionId, outcome.mailAfterCommit.reason);
+  res.json(outcome.subscription);
 });

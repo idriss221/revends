@@ -80,6 +80,7 @@ export type MailEvent =
   | 'referral_milestone'
   | 'subscription_activated'
   | 'subscription_expiry_reminder'
+  | 'subscription_refused'
   | 'storefront_monthly_report';
 
 export interface TemplateVars {
@@ -841,6 +842,21 @@ export function renderTemplate(event: MailEvent, rawVars: TemplateVars): MailCon
         link ?? internalLink('/mon-abonnement'),
       );
       return { subject: 'Votre boutique est active sur ReVends', html, text };
+    }
+
+    case 'subscription_refused': {
+      const plan = vars.planName ?? 'Hébergement Boutique';
+      const motif = vars.reason ?? 'Consultez votre espace abonné pour les détails.';
+      const { html, text } = layout(
+        'Votre abonnement boutique n\’a pas été validé',
+        [
+          para(`Votre abonnement ${plan} n\’a pas pu être validé par l\’administration.`),
+          para('Motif communiqué :', `<strong>${escapeHtml(motif)}</strong>`),
+          para('Vous pouvez corriger la situation depuis votre espace abonné (paiement bien reçu ? nouvel essai ?) ou contacter le support. Aucun débit n\’a été effectué.'),
+        ],
+        link ?? internalLink('/mon-abonnement'),
+      );
+      return { subject: 'Votre abonnement boutique n\’a pas été validé', html, text };
     }
 
     case 'subscription_expiry_reminder': {

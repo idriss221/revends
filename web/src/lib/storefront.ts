@@ -146,6 +146,17 @@ export const storefrontApi = {
       { method: 'POST', body: JSON.stringify({}) },
     )
   },
+
+  /**
+   * POST /api/admin/subscriptions/:id/reject — PENDING → CANCELLED.
+   * Corps `{ reason: string }` ; e-mail best-effort au vendeur (motif).
+   */
+  adminReject(id: number, reason: string): Promise<SubscriptionCtlResponse> {
+    return request<SubscriptionCtlResponse>(
+      `/api/admin/subscriptions/${encodeURIComponent(String(id))}/reject`,
+      { method: 'POST', body: JSON.stringify({ reason }) },
+    )
+  },
 }
 
 /* ------------------------------------------------------------------ */

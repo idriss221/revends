@@ -263,6 +263,7 @@ function subjectOf(event: MailEvent): string {
     payout_available: 'Votre paiement vendeur est disponible',
     payout_paid: 'Votre paiement vendeur a été versé',
     reservation_expired_buyer: 'Votre réservation a expiré',
+    subscription_refused: 'Votre abonnement boutique n\'a pas été validé',
     article_reserved: 'Votre article a été réservé',
     order_product_received: 'Votre produit a été réceptionné',
     order_cancelled: 'Votre commande a été annulée',
