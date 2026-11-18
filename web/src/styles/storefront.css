@@ -33,6 +33,9 @@
 
 /* Deux colonnes ≥ 1024 px : contenu 8 / sidebar contact 4 (sticky) */
 .market-site .rv-shop-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start }
+.market-site .rv-shop-sticky, .market-site .rv-shop-panel, .market-site .rv-shop-gauge, .market-site .rv-shop-altplans { grid-template-columns: minmax(0, 1fr); min-width: 0 }
+.market-site .rv-shop-panel img, .market-site .rv-shop-sticky img { max-width: 100%; height: auto }
+.market-site .field, .market-site .field-input { min-width: 0; max-width: 100% }
 @media (min-width: 1024px) {
   .market-site .rv-shop-layout { grid-template-columns: minmax(0, 8fr) minmax(300px, 4fr) }
   .market-site .rv-shop-aside,
