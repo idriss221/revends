@@ -4654,3 +4654,14 @@ manuellement** (`RUN_MIGRATIONS=false`) AVANT tout déploiement.
 **Déploiement** — `bash scripts/deploy-vercel.sh`, Ready, alias `revends.vercel.app`.
 **Smoke prod** — health 200 ; slug inconnu 404 ; routes V8 publiques OK (`/boutique/:slug`, boutique, `/mon-abonnement`, admin abonnements) ; **auto-approve confirmée** : article publié directement **AVAILABLE** sans validation admin ; **boutique brandée 200** ; ajout au listing boutique OK ; `sellerBadge="verifiee"` visible dans le catalogue et la boutique.
 **À faire** — premier bilan mensuel le 1er déc. 2026 (attendu) ; surveiller `DISABLE_CRON` et `AUTO_APPROVE_V8` ; possible cleanup des comptes smoke (`@test.revends`).
+
+## 18/11/2026 — Cleanup smoke production (demandé par l'utilisateur)
+
+**Action** — nettoyage complet des données de smoke sur la prod :
+- suppression du listing `storefront_listings` du produit 39 (smoke V8) ;
+- soft-delete `products.id = 39` (deleted_at au 18/11 13:51, exit catalogue public) ;
+- `seller_subscriptions` #1 (smoke-v7), #2 (smoke2-v7), #4 (smoke-v8) → `CANCELLED`,
+  `ends_at` antérieur à la fenêtre ACTIVE (boutique publique → 404, conforme V7).
+**Résultats vérifiés** — `/api/storefront/smoke-v7-...` → 404 ; `/api/storefront/smoke2-...` → 404 ;
+`/api/storefront/smoke-v8-...` → 404 ; produit 39 invisible (deleted_at).
+**État** — la prod ne porte aucun reste de smoke visible. Comptes `@test.revends` conservés (inoffensifs : aucun produit public, aucun abonnement).
