@@ -364,6 +364,9 @@ export async function getMySubscription(sellerId: number) {
     activatedBy: sub.activated_by,
     activatedAt: toIso(sub.activated_at),
     createdAt: toIso(sub.created_at)!,
+    // V9/D-ARCH-3 — calculé serveur, sans lire la table Wave : vrai seulement
+    // pour une souscription Wave en attente (session API ou lien hébergé).
+    wavePaymentPending: sub.status === 'PENDING' && sub.payment_method === 'wave',
   };
   if (sub.status === 'EXPIRED' && sub.ends_at) {
     subscription.message = EXPIRED_MESSAGE(sub.ends_at);

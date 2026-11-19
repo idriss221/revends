@@ -51,6 +51,13 @@ const envSchema = z.object({
   // V8 — Secret du endpoint cron `/api/cron/monthly-report` (dual-auth Vercel Cron).
   // Jamais de valeur par défaut : absent ⇒ 401 systématique (fail-closed).
   CRON_SECRET: z.string().optional(),
+  // V9 — Wave Checkout + webhooks. Désactivé par défaut : la prod démarre
+  // sans clé ni secret. Aucune valeur littérale de secret, aucun VITE_*.
+  WAVE_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  WAVE_API_KEY: z.string().optional(),
+  WAVE_WEBHOOK_SECRET: z.string().optional(),
+  WAVE_SYSTEM_ADMIN_ID: z.coerce.number().int().positive().default(7),
+  WAVE_API_BASE_URL: z.string().url().default('https://api.wave.com'),
   ADMIN_EMAIL: z.string().default('admin@revends.com'),
   ADMIN_PASSWORD: z.string().default(''),
   // Adresses supplémentaires à alerter (produit en attente, nouvelle commande).
@@ -247,6 +254,26 @@ if (cronSecretError) {
   process.exit(1);
 }
 
+// V9 — Wave : `WAVE_ENABLED=false` ne bloque jamais le démarrage (mode prod
+// actuel). Dès que le flag passe à `true`, les deux secrets et une SITE_URL
+// HTTPS sont obligatoires. Seuls les messages sont journalisés, jamais les
+// valeurs (cohérent avec CRON_SECRET).
+const waveConfigError = !env.WAVE_ENABLED
+  ? null
+  : !env.WAVE_API_KEY || env.WAVE_API_KEY.trim().length === 0
+    ? 'WAVE_API_KEY est requis lorsque WAVE_ENABLED=true'
+    : !env.WAVE_WEBHOOK_SECRET || env.WAVE_WEBHOOK_SECRET.length < 32
+      ? 'WAVE_WEBHOOK_SECRET doit faire au moins 32 caractères lorsque WAVE_ENABLED=true'
+      : /^(change-me|change_me|secret|test|example|wave_sn_WHS_)/i.test(env.WAVE_WEBHOOK_SECRET)
+        ? 'WAVE_WEBHOOK_SECRET ne doit pas commencer par un littéral public/exemple'
+        : !env.SITE_URL.startsWith('https://')
+          ? 'SITE_URL doit utiliser https:// lorsque WAVE_ENABLED=true (URLs de retour Wave)'
+          : null;
+if (waveConfigError) {
+  logger.error(waveConfigError);
+  process.exit(1);
+}
+
 const adminPasswordError = validateAdminPassword(env.ADMIN_PASSWORD);
 if (adminPasswordError) {
   logger.error(adminPasswordError);
@@ -368,6 +395,13 @@ export const config = {
   disableCron: env.DISABLE_CRON,
   autoApproveV8: env.AUTO_APPROVE_V8,
   cronSecret: env.CRON_SECRET,
+  wave: {
+    enabled: env.WAVE_ENABLED,
+    apiKey: env.WAVE_API_KEY,
+    webhookSecret: env.WAVE_WEBHOOK_SECRET,
+    systemAdminId: env.WAVE_SYSTEM_ADMIN_ID,
+    apiBaseUrl: env.WAVE_API_BASE_URL,
+  },
   adminEmail: env.ADMIN_EMAIL,
   adminPassword: env.ADMIN_PASSWORD,
   /** Adresses admin supplémentaires (en plus des comptes `role = admin`). */

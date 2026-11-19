@@ -30,6 +30,8 @@ import { storefrontRouter } from './routes/storefront.routes.js';
 import { adminSubscriptionsRouter } from './routes/admin-subscriptions.routes.js';
 import { adminStorefrontCtlRouter } from './routes/admin-storefront-ctl.routes.js';
 import { adminV8Router } from './routes/admin-v8.routes.js';
+import { waveRouter } from './routes/wave.routes.js';
+import { waveWebhookRouter } from './routes/webhooks/wave.routes.js';
 import { cronRouter } from './routes/cron.routes.js';
 import { listPublicCategories } from './services/categories.service.js';
 
@@ -108,6 +110,7 @@ export function createApp(): express.Express {
   // double soumission n'a pas de sens pour un appel machine et casserait le
   // déclenchement manuel (`x-cron-secret`). Monté très haut pour ne pas hériter
   // de la politique CORS/Origin dédiée aux navigateurs.
+  app.use('/api/webhooks/wave', waveWebhookRouter);
   app.use('/api/cron', cronRouter);
   app.use('/api', csrfProtection);
 
@@ -265,6 +268,9 @@ export function createApp(): express.Express {
   // V7 — montage additif des routeurs Hébergement vendeurs (avant /api/admin
   // pour que /api/admin/subscriptions ne traverse pas l'adminRouter existant).
   app.use('/api/subscriptions', subscriptionsRouter);
+  // V9 — Wave : routeurs navigateur (cookie + CSRF) ; le webhook machine est
+  // monté plus haut, avant CSRF et express.json().
+  app.use('/api/wave', waveRouter);
   app.use('/api/storefront', storefrontRouter);
   // V8.1 — Contrôle boutique (admin) : POST /:id/deactivate et /:id/delete
   // (adminSubscriptionsRouter n'expose que GET / et POST /:id/activate).

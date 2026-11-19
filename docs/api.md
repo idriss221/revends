@@ -2,10 +2,125 @@
 
 | | |
 |---|---|
-| **Version** | **2.8 (2026-11-18)** — **fusion du contrat additif V8 « Hébergement Boutique »** (`docs/architecture-v8-hebergement-boutique.md`, décisions V8-D1…D10 arbitrées le 18/11/2026 ; **10 nouveaux endpoints** : profil boutique (PUT/POST/GET `/api/storefront/profile`, DELETE `/api/storefront/profile/logo`, DELETE `/api/storefront/profile/banner`), `GET /api/subscriptions/me/stats`, `GET /api/subscriptions/me/report` (PDF du bilan persisté), `GET /api/admin/auto-approvals`, `POST /api/admin/products/:id/retrograde`, `GET/POST /api/cron/monthly-report`) ; **6 extensions additives** (E1 corps `POST /api/subscriptions` + `paymentMethod`/`paymentReference` **obligatoires** — CA-V8-050), E2 payload boutique publique + `logoUrl?`/`bannerUrl?`/`publicDescription?`, E3 file admin + `paymentMethod`/`paymentReference` (**aucun `collecteAddress`** — §14.D clos 18/11/2026 : la valeur n'apparaît nulle part), E4 `GET /api/subscriptions/me` + bloc `profile{collecteAddressSet}` sans la valeur, E5 carte/fiche + `sellerBadge`, E6 ce document) ; **1 ALTER** (`seller_subscriptions` + `payment_reference varchar(64)`, + `payment_method varchar(32)` CHECK `wave`/`orange_money`/`virement` — PO-V8-05 RETENU) et **3 nouvelles tables** (`storefront_profiles`, `auto_approved_products`, `monthly_metrics` — R2 retenue §14.A, fusion reports+snapshots §14.B, migration `020_storefront_v8.sql`). Les encarts v2.7 (V7 Hébergement vendeurs), v2.4 (V5), v2.5 (V6) et v2.6 (V6.7) restent applicables, non répétés ici. Détail : encart V8 ci-dessous et §3.10. |
+| **Version** | **2.9 (2026-11-19)** — **fusion du contrat additif V9 « Wave Checkout + webhooks »** (`docs/api-v9-wave-checkout.md`, décisions `D-ARCH-1…10` ; **4 nouvelles routes API** : `POST /api/wave/checkout/sessions`, `POST /api/webhooks/wave`, `GET /api/wave/config`, `GET /api/wave/admin/events` ; **1 extension additive** : `GET /api/subscriptions/me` + `subscription.wavePaymentPending` ; **2 pages SPA de retour** : `/paiement-wave/succes`, `/paiement-wave/echec`). Additif strict : aucun chemin, code de succès, code d'erreur ou champ existant n'est modifié ; les sections v2.8 et antérieures restent la source de vérité pour tout ce que V9 ne décrit pas. **Aucune bascule de production incluse** : `WAVE_ENABLED=false` par défaut. Encart V8 ci-dessous (v2.8, 2026-11-18) : **fusion du contrat additif V8 « Hébergement Boutique »** (`docs/architecture-v8-hebergement-boutique.md`, décisions V8-D1…D10 arbitrées le 18/11/2026 ; **10 nouveaux endpoints** : profil boutique (PUT/POST/GET `/api/storefront/profile`, DELETE `/api/storefront/profile/logo`, DELETE `/api/storefront/profile/banner`), `GET /api/subscriptions/me/stats`, `GET /api/subscriptions/me/report` (PDF du bilan persisté), `GET /api/admin/auto-approvals`, `POST /api/admin/products/:id/retrograde`, `GET/POST /api/cron/monthly-report`) ; **6 extensions additives** (E1 corps `POST /api/subscriptions` + `paymentMethod`/`paymentReference` **obligatoires** — CA-V8-050), E2 payload boutique publique + `logoUrl?`/`bannerUrl?`/`publicDescription?`, E3 file admin + `paymentMethod`/`paymentReference` (**aucun `collecteAddress`** — §14.D clos 18/11/2026 : la valeur n'apparaît nulle part), E4 `GET /api/subscriptions/me` + bloc `profile{collecteAddressSet}` sans la valeur, E5 carte/fiche + `sellerBadge`, E6 ce document) ; **1 ALTER** (`seller_subscriptions` + `payment_reference varchar(64)`, + `payment_method varchar(32)` CHECK `wave`/`orange_money`/`virement` — PO-V8-05 RETENU) et **3 nouvelles tables** (`storefront_profiles`, `auto_approved_products`, `monthly_metrics` — R2 retenue §14.A, fusion reports+snapshots §14.B, migration `020_storefront_v8.sql`). Les encarts v2.7 (V7 Hébergement vendeurs), v2.4 (V5), v2.5 (V6) et v2.6 (V6.7) restent applicables, non répétés ici. Détail : encart V8 ci-dessous et §3.10. |
 | **Auteur** | Agent api-designer, pour l'équipe projet |
 | **Statut** | Source de vérité du contrat d'API — implémentation `@backend`, consommation `@frontend` |
 | **Sources** | `docs/cahier-des-charges-v5.md` (C1–C9, PO-V5-01…20, §5.1, §5.9) · `docs/architecture-v5.md` (§4.3 catégories d'index, §4.4, §5, §6.1–6.2 budgets, §10 décisions D2–D9) · `server/migrations/009_soft_delete_perf.sql` (index `idx_products_owner_deleted`, index partiel `uq_one_active_order_per_product`) · `server/src/mail/` (9 déclencheurs / 11 envois) · docs antérieures conservées : `docs/cahier-des-charges-v2.md` (base conservée hors périmètre V3) · `docs/cahier-des-charges-v3.md` (S1 — US E1/E2, CA-AUTH04/05, CA-ORD01..12, §5/§6/§7, Annexe A/B) · `docs/architecture.md` §11 (S2 — DDL 003, règles `order_events`, matrice, contrat esquissé) · `server/migrations/003_order_events.sql` (enum `order_status` 11 valeurs, table `order_events`, trigger de matrice) · `server/migrations/006_order_shipped.sql` + `007_order_shipped_cycle.sql` (**Évolution V4** : enum `order_status` 12 valeurs avec `SHIPPED`, `payout_status` `DUE`, `notification_type` `order_shipped`, matrice `PREPARING → SHIPPED → IN_DELIVERY`) · `docs/cahier-des-charges-v4-accueil.md` (**V4-Accueil** : D-ACC-1..8, PO-ACC-1..6 arbitrés, RG-PROD-1..8, §5 US/CA-ACC, §7.1 contrat cible, §8 « Voir plus ») · **DDL 008** (créé et appliqué : `server/migrations/008_accueil_v3.sql` — `products.old_price`, `products.view_count`, table `banners` + seed, `notification_type` + `product.contact`) |
+
+## Évolution V9 — Wave Checkout + webhooks (encart v2.9, 19/11/2026)
+
+> **Nature additivement contractuelle.** Les 4 routes ci-dessous, l'extension de `/api/subscriptions/me` et les 2 pages SPA de retour s'ajoutent au contrat v2.8 sans rien retirer ni renommer. Le passage `success_url` n'est **jamais** une preuve de paiement : seule une signature HMAC valide sur `POST /api/webhooks/wave` peut activer. Aucun `WAVE_*` n'est exposé au navigateur ; contact support `revendsen@gmail.com`.
+
+### V9.1 — Montage, authentification et idempotence
+
+| Route | Garde | CSRF | Montage / corps |
+|---|---|---|---|
+| `POST /api/wave/checkout/sessions` | `requireAuth` | Oui (double soumission) | Routeur `/api/wave` après `express.json()` ; `Content-Type: application/json` |
+| `POST /api/webhooks/wave` | Aucune (machine) | Non | **Avant** `/api/cron`, CSRF et `express.json()` ; `express.raw({ type: 'application/json', limit: '256kb' })` dans le routeur ; en-tête `Wave-Signature` |
+| `GET /api/wave/config` | `requireAuth` | Non (GET) | `/api/wave` ; réponse `{ waveEnabled: boolean }`, aucun autre champ |
+| `GET /api/wave/admin/events` | `requireAdmin` (`user` → 403) | Non (GET) | `/api/wave` ; query `subscriptionId?`, `page` (défaut 1), `per_page` (1..48, défaut 12 ; `perPage` alias interne) |
+
+- `WAVE_ENABLED` vaut `false` par défaut. Une tentative serveur Wave répond `503 WAVE_DISABLED` ; **le webhook répond `200 {received:true,ignored:true,reason:'WAVE_DISABLED'}`** sans vérifier HMAC ni écrire.
+- `event.id` est la clé d'idempotence (`uq_wave_event_id`, migration `023`). Un doublon reçoit `200 {received:true,duplicate:true}` ; aucun second e-mail. Les statuts `PROCESSING`/`FAILED` sont rejoués au retry Wave ; `FAILED` répond `503 INTERNAL_ERROR`.
+- Une intention `SESSION_CREATED` par souscription (`uq_wave_intent_per_subscription`) porte `client_reference = wave-sub-<subscriptionId>-<hmac8>`, où `hmac8` = 8 premiers hex de `HMAC-SHA256(SESSION_SECRET, 'wave-ref:' + subscriptionId)`. Aucun prix ni donnée vendeur dans la référence.
+- `success_url = ${SITE_URL}/paiement-wave/succes`, `error_url = ${SITE_URL}/paiement-wave/echec`, sans query. `SITE_URL` doit être HTTPS dès que `WAVE_ENABLED=true` (garde de démarrage, avec `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET` distinct et `WAVE_SYSTEM_ADMIN_ID`).
+- `UNAUTHENTICATED`/401 et `FORBIDDEN`/403 conservent les codes existants ; le message de session reste celui du middleware historique (`Vous devez être connecté`) pour ne pas modifier le comportement v2.8.
+
+### V9.2 — N1 : `POST /api/wave/checkout/sessions`
+
+Corps : `{ "subscriptionId": 41 }` (entier ≥ 1, propriété du vendeur connecté). Tout champ `amount` fourni est ignoré.
+
+Succès `200` : `{ "waveLaunchUrl": "https://pay.wave.com/c/cos-…", "sessionId": "cos-…" }`. Un seul appel sortant `POST https://api.wave.com/v1/checkout/sessions`, Bearer serveur, `{ amount: "2000"|"5000"|"10000", currency: "XOF", success_url, error_url, client_reference }`, timeout 5 s. Aucune activation, aucun e-mail, aucune écriture sur `seller_subscriptions`.
+
+| Code | HTTP | Quand |
+|---|---|---|
+| `VALIDATION_ERROR` | 400 | `subscriptionId` absent/non entier/≤ 0 |
+| `WAVE_SUBSCRIPTION_NOT_FOUND` | 404 | Introuvable **ou** appartenant à autrui (message unique « Abonnement introuvable ») |
+| `WAVE_SUBSCRIPTION_NOT_PENDING` | 409 | Statut `ACTIVE`/`EXPIRED`/`CANCELLED` — 0 appel Wave |
+| `WAVE_PAYMENT_METHOD_MISMATCH` | 409 | `payment_method ≠ 'wave'` (OM, virement, legacy) |
+| `WAVE_DISABLED` | 503 | `WAVE_ENABLED=false`, avant tout appel HTTP |
+| `WAVE_UPSTREAM_ERROR` | 502 | Échec/timeout Wave — message exact : « Impossible d'ouvrir Wave pour le moment. Le paiement manuel reste disponible ci-dessous. » |
+| `INTERNAL_ERROR` | 500 | Erreur serveur inattendue |
+
+Les contrôles de propriété et d'éligibilité (`404`/`409`) sont appliqués **avant** la garde `WAVE_DISABLED` ; celle-ci intervient ensuite, avant toute écriture et tout appel HTTP. Une souscription éligible avec `WAVE_ENABLED=false` répond donc `503 WAVE_DISABLED`.
+
+### V9.3 — N2 : `POST /api/webhooks/wave`
+
+Enveloppe signée (octets bruts) : `{ "id": "EV_…", "type": "checkout.session.completed"|"checkout.session.payment_failed", "data": { "id": "cos-…", "amount": "2000", "currency": "XOF", "client_reference": "wave-sub-…" } }`. Le payload officiel de `payment_failed` ne porte ni `amount`, ni `currency`, ni `client_reference` : la corrélation s'y fait par `data.id` en priorité.
+
+Signature : `Wave-Signature: t=<unix>,v1=<64 hex>[,v1=<64 hex>…]`. Payload signé = concaténation directe de la chaîne `t` et du **rawBody** (`express.raw`) ; plusieurs `v1` acceptés en rotation, comparaison en temps constant. Fenêtre : passé > 300 s ou futur > 30 s → `INVALID_SIGNATURE`. Corps réordonné/réespacé → HMAC invalide. Aucun secret, en-tête de signature, `rawBody` ou `client_reference` n'est journalisé.
+
+Accusés `200`, tous < 5 s :
+
+| Situation | Corps |
+|---|---|
+| `completed` valide | `{ "received": true }` |
+| `payment_failed` rattaché | `{ "received": true }` |
+| Doublon terminal | `{ "received": true, "duplicate": true }` |
+| Signé mais non pertinent (type inconnu, référence inconnue, montant/devise/méthode/statut incohérents) | `{ "received": true, "ignored": true }` |
+| `WAVE_ENABLED=false` | `{ "received": true, "ignored": true, "reason": "WAVE_DISABLED" }` |
+
+Contrôles opposables sur `completed` : rattachement à une intention, souscription `PENDING`, `payment_method='wave'`, `amount === String(plan.price_fcfa)` (chaîne entière ; `1000`, `2000.5` ou un autre plan → `ignored`), `currency='XOF'`, admin `WAVE_SYSTEM_ADMIN_ID` existant et `role='admin'`. L'activation passe **uniquement** par `activateSubscription(adminId, subscriptionId)` : 30 jours, `activated_by=7` par défaut, auto-approbation, e-mail unique post-commit. Aucun `FOR UPDATE` externe, aucun second `UPDATE ... SET status='ACTIVE'`. `INVALID_STATUS`/`SUBSCRIPTION_ALREADY_ACTIVE` renvoyés par ce service signifient « déjà gagné » → `200` sans écrasement ni second e-mail ; `SLUG_TAKEN` reste technique → `503`.
+
+| Code | HTTP | Quand |
+|---|---|---|
+| `INVALID_SIGNATURE` | 400 | En-tête absent/malformé, `t` hors fenêtre, HMAC invalide pour toutes les `v1` |
+| `INVALID_PAYLOAD` | 400 | `Content-Type` absent, JSON invalide ou enveloppe invalide |
+| `WAVE_MISCONFIGURED` | 503 | `WAVE_ENABLED=true` mais secret webhook inutilisable (filet défensif) |
+| `INTERNAL_ERROR` | **503** | Erreur technique pendant l'activation ; trace `FAILED`, retry Wave sans double effet |
+
+Aucun `401`, `403` ou `404` sur cette route machine.
+
+### V9.4 — N3 : `GET /api/wave/config`
+
+Réponse `200`, un seul champ : `{ "waveEnabled": true }` (ou `false` en prod actuelle). Aucune clé, préfixe de clé, URL d'API, secret webhook, id admin ni prix. Erreurs : `401 UNAUTHENTICATED`, `500 INTERNAL_ERROR`.
+
+### V9.5 — N4 : `GET /api/wave/admin/events`
+
+Query : `subscriptionId?` (entier ≥ 1), `page` ≥ 1 (défaut 1), `per_page` 1..48 (défaut 12). Hors bornes → `400 VALIDATION_ERROR` avec `details.field = "per_page"`. La réponse expose `perPage` (jamais `per_page`).
+
+```json
+{
+  "items": [{
+    "id": 17,
+    "subscriptionId": 41,
+    "sellerId": 12,
+    "eventId": "EV_…",
+    "sessionId": "cos-…",
+    "eventType": "checkout.session.completed",
+    "amountFcfa": 2000,
+    "currency": "XOF",
+    "status": "COMPLETED",
+    "activated": true,
+    "receivedAt": "2026-11-19T10:15:45.000Z",
+    "processedAt": "2026-11-19T10:15:46.000Z",
+    "createdAt": "2026-11-19T10:15:44.000Z"
+  }],
+  "page": 1, "perPage": 12, "total": 1, "totalPages": 1
+}
+```
+
+`items: []`, `total: 0`, `totalPages: 0` si vide. Statuts : `SESSION_CREATED`, `PROCESSING`, `COMPLETED`, `PAYMENT_FAILED`, `IGNORED`, `FAILED`. L'UI admin mappe vers « En attente / Confirmé / Échoué / — » et **n'affiche ni `eventId`, ni `sessionId`, ni `client_reference`**. Erreurs : `401`, `403 FORBIDDEN`, `400 VALIDATION_ERROR`, `500 INTERNAL_ERROR` (table `023` absente).
+
+### V9.6 — Extension additive de `GET /api/subscriptions/me`
+
+Méthode, chemin, garde, codes et enveloppe inchangés. Seul ajout, dans `subscription` :
+
+```json
+{ "wavePaymentPending": true }
+```
+
+Calcul serveur : `sub.status === 'PENDING' && sub.payment_method === 'wave'`. `false` pour OM, virement et legacy ; **champ absent si `subscription === null`**. Aucune lecture de la table `023`, aucune valeur de `paymentReference` exposée. Les clients v2.8 ignorent le champ.
+
+### V9.7 — Pages retour (hors API)
+
+`/paiement-wave/succes` et `/paiement-wave/echec`, **sans aucun query param**, gardées par `RequireUser`. Aucune écriture ni e-mail : l'état réel est relu via `/api/subscriptions/me`. Succès : badge « Wave — en attente de confirmation du paiement ». Échec : repli manuel + 3 liens hébergés, sans affirmer qu'aucun montant n'a été débité.
+
+### V9.8 — Non-régression
+
+`POST /api/subscriptions`, `GET /api/subscriptions/me/stats`, `GET /api/subscriptions/me/report`, `GET /api/admin/subscriptions`, `POST /api/admin/subscriptions/:id/activate`, tout `/api/storefront/*` et tout `/api/cron/*` restent inchangés. Aucune API de remboursement, aucune webview, aucune activation par `GET` ou par drapeau public, aucune automatisation OM/virement, aucun secret dans le bundle web ni dans les logs.
+
+---
 
 > ## Évolution V3 — changements de contrat (encart)
 >
