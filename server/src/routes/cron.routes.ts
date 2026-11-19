@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { config } from '../config.js';
+import { rateLimit } from '../middleware/rate-limit.js';
 import { logger } from '../utils/logger.js';
 import { runMonthlyReportIfDue } from '../services/storefront-reports.service.js';
 
@@ -17,6 +18,12 @@ import { runMonthlyReportIfDue } from '../services/storefront-reports.service.js
 // ---------------------------------------------------------------------------
 
 export const cronRouter = Router();
+
+// SEC-06 — le routeur cron est monté avant les limiteurs globaux (CSRF/Origin
+// n'ont pas de sens pour un appel machine) : il doit donc porter le sien.
+// 10 appels / 10 min suffisent largement au cron Vercel quotidien + aux
+// déclenchements manuels, et bornent les tentatives de devinette du secret.
+cronRouter.use(rateLimit({ windowMs: 600_000, max: 10, scope: 'cron' }));
 
 function safeEqual(candidate: string, secret: string): boolean {
   const a = Buffer.from(candidate);

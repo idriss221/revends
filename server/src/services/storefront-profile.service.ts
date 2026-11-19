@@ -19,13 +19,14 @@ import { validateProfileTextFields } from '../utils/storefront-validation.js';
 // adresse de collecte (INTERNE). 1:1 avec le vendeur.
 //
 // Règles :
-//  - édition possible DÈS PENDING (préparation) ; rendu public seulement si
-//    l'abonnement est ACTIVE (CA-V8-045) — appliqué dans getPublicStorefront ;
-//  - `collecte_address` : visible UNIQUEMENT du propriétaire (GET/POST/PUT
-//    /api/storefront/profile) et de l'admin (file /api/admin/subscriptions).
-//    JAMAIS dans la réponse publique, jamais dans un log, jamais dans un
-//    e-mail/PDF (CA-V8-044/049/075) — DEFIANCE consignée (§14.D assouplie
-//    par la consigne produit : « visible propriétaire/admin ») ;
+//  - V8.4 : AUCUN usage branding (PUT/POST/DELETE logo/bannière/description/
+//    adresse) sans abonnement ACTIVE et non expiré. Le garde-fou est partagé
+//    par les 3 mutations (voir `assertActiveStorefrontSubscription`).
+//  - CA-V8-045 amendé en V8.4 : l'édition n'est plus possible dès PENDING —
+//    elle exige ACTIVE non expiré ; rendu public identiquement conditionné ;
+//  - `collecte_address` : écrite par le propriétaire, JAMAIS renvoyée par
+//    l'API (booléen `collecteAddressSet` uniquement), jamais dans la réponse
+//    publique, jamais dans un log, jamais dans un e-mail/PDF (CA-V8-044/049/075) ;
 //  - noms de fichiers = UUID serveur (RG-MEDIA-1) ; MIME réel vérifié par
 //    magic bytes, jamais le header client ;
 //  - les anciens assets sont supprimés best-effort APRÈS le commit.
@@ -80,27 +81,38 @@ async function fileBufferAndMime(
 }
 
 /** PUT/POST /api/storefront/profile — upsert branding (transaction unique). */
+/**
+ * V8.4 — garde-fou unique des mutations branding.
+ *
+ * Miroir EXACT de `addListingToStorefront` : présence d'au moins une ligne
+ * `ACTIVE` dont `ends_at > now()` (horloge DB, pas `Date.now()` applicatif).
+ * Un vendeur peut avoir plusieurs lignes (ancien ACTIVE expiré + nouveau
+ * ACTIVE valide) : un `ORDER BY ... LIMIT 1` suivi d'un test JS pourrait
+ * refuser à tort. Ici la requête borne elle-même la lecture.
+ * Message unique, quel que soit le motif (absence / PENDING / EXPIRED /
+ * CANCELLED) : aucun statut n'est divulgué.
+ */
+export async function assertActiveStorefrontSubscription(sellerId: number): Promise<void> {
+  const { rowCount } = await pool.query(
+    `SELECT 1 FROM seller_subscriptions
+      WHERE seller_id = $1 AND status = 'ACTIVE' AND ends_at > now()
+      LIMIT 1`,
+    [sellerId],
+  );
+  if (!rowCount) {
+    throw forbidden(
+      'SUBSCRIPTION_REQUIRED',
+      'Votre abonnement n’est pas encore activé. Dès validation, tous les usages boutiques seront disponibles.',
+    );
+  }
+}
+
 export async function updateStorefrontProfile(
   sellerId: number,
   input: ProfileTextInput,
   files: ProfileFiles,
 ): Promise<Record<string, unknown>> {
-  // Une boutique PENDING n'est PAS éligible aux usages de l'abonnement : logo,
-  // bannière, description, adresse de collecte — tout est gelé tant que
-  // l'abonnement n'est pas ACTIVE (règle produit V8 §5 : l'accessibilité est
-  // conditionnée, jamais implicite). Les mêmes vedettes informatives sont
-  // disponibles uniquement dans le visage ACTIVE.
-  const { rows } = await pool.query<{ status: string; ends_at: Date | string | null }>(
-    `SELECT status, ends_at FROM seller_subscriptions
-      WHERE seller_id = $1
-      ORDER BY (status = 'ACTIVE') DESC, id DESC
-      LIMIT 1`,
-    [sellerId],
-  );
-  const sub = rows[0];
-  if (!sub || sub.status !== 'ACTIVE' || (sub.ends_at && new Date(sub.ends_at).getTime() <= Date.now())) {
-    throw forbidden('SUBSCRIPTION_REQUIRED', 'Votre abonnement n’est pas encore activé. Dès validation, tous les usages boutiques seront disponibles.');
-  }
+  await assertActiveStorefrontSubscription(sellerId);
 
   const text = validateProfileTextFields(input);
   const logo = await fileBufferAndMime(files.logo?.[0], 'logo');
@@ -148,6 +160,9 @@ export async function updateStorefrontProfile(
 
 /** DELETE /api/storefront/profile/logo — retire le logo (ligne conservée). */
 export async function deleteStorefrontLogo(sellerId: number): Promise<{ ok: true }> {
+  // V8.4 : suppression d'asset = usage de l'abonnement, donc verrouillée aussi
+  // (un PENDING/EXPIRED pouvait supprimer les assets conservés d'une boutique).
+  await assertActiveStorefrontSubscription(sellerId);
   const previous = await clearAsset(sellerId, 'logo');
   if (previous) afterCommit(() => deleteStorefrontAsset(previous));
   return { ok: true };
@@ -155,6 +170,7 @@ export async function deleteStorefrontLogo(sellerId: number): Promise<{ ok: true
 
 /** DELETE /api/storefront/profile/banner — retire la bannière (ligne conservée). */
 export async function deleteStorefrontBanner(sellerId: number): Promise<{ ok: true }> {
+  await assertActiveStorefrontSubscription(sellerId);
   const previous = await clearAsset(sellerId, 'banner');
   if (previous) afterCommit(() => deleteStorefrontAsset(previous));
   return { ok: true };

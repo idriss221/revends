@@ -37,7 +37,7 @@ ROOT="$(pwd)"
 # mots de passe Google/Facebook et l'historique du session secret, s'est
 # retrouvé dans `.vercel/output/functions/*.func/.env` → exposé en prod).
 # On refuse donc de déployer tant qu'un `.env*` traîne à la racine.
-LEAKED=$(find "$ROOT" -maxdepth 1 -name ".env*" -not -name ".env.example" -not -name ".env.local" -print 2>/dev/null)
+LEAKED=$(find "$ROOT" -maxdepth 1 -name ".env*" -not -name ".env.example" -print 2>/dev/null)
 if [ -n "$LEAKED" ]; then
   echo "❌ Fichier(s) .env* à la racine — secrets embarqués dans la fonction :" >&2
   echo "$LEAKED" | sed 's/^/     /' >&2

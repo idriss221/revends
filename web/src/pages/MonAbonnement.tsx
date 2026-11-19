@@ -449,18 +449,13 @@ export function MonAbonnement() {
           <p className="rv-shop-recall">Votre slug /boutique/{subscription.slug} vous est réservé.</p>
 
           <div style={{ marginTop: 26, display: 'grid', gap: 22 }}>
-            <StatsPanel
-              slug={subscription.slug}
-              planName={subscription.plan.name}
-              priceFcfa={subscription.plan.priceFcfa}
-              activatedAt={subscription.activatedAt}
-              endsAt={subscription.endsAt}
-            />
-            {/* V8.4 — EXPIRED : branding verrouillé (boutique non ACTIVE). */}
+            {/* V8.4 — EXPIRED : aucun usage de l'abonnement, y compris les
+                statistiques et le bilan PDF (plus de StatsPanel ici). */}
             <Notice tone="info">
-              Votre abonnement est expiré. Le branding (logo, bannière, description,
-              adresse de collecte) ne pourra être modifié qu’une fois votre nouvelle
-              demande validée par l’administration.
+              Votre abonnement est expiré. Le branding, les annonces de boutique,
+              les statistiques et le bilan ne seront accessibles qu’une fois votre
+              nouvelle demande validée par l’administration. Vos annonces du
+              catalogue restent en ligne.
             </Notice>
           </div>
         </div>
@@ -514,13 +509,11 @@ export function MonAbonnement() {
             {/* V8.4 — tant que l'abonnement n'est pas activé, aucun usage de l'abonnement
                 n'est accessible (logo, bannière, annonces, stats). Le serveur refuse
                 aussi toute écriture branding tant que l'abonnement n'est pas ACTIVE. */}
-            <>
-              <Notice tone="info">
-                Votre boutique n’est pas encore validée par l’administration. Tant qu’elle
-                ne l’est pas, le logo, la bannière, les annonces et les statistiques ne
-                seront pas accessibles.
-              </Notice>
-            </>
+            <Notice tone="info">
+              Votre boutique n’est pas encore validée par l’administration. Tant qu’elle
+              ne l’est pas, le logo, la bannière, les annonces et les statistiques ne
+              seront pas accessibles.
+            </Notice>
           </div>
         </div>
 

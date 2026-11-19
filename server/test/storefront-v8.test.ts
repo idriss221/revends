@@ -1085,10 +1085,19 @@ describe('V8.4 — verrou PENDING : aucun usage de l\'abonnement sans activation
     assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
   });
 
-  it('PENDING : POST /api/storefront/profile avec files → 403', async () => {
+  it('PENDING : PUT /api/storefront/profile avec logo → 403', async () => {
     const seller = await registerUser(server, 'v8lock2');
     const res = await seller.client.request('/api/storefront/profile', 'PUT', {
       form: profileForm({}, [{ name: 'logo', data: png, type: 'image/png' }]),
+    });
+    assert.equal(res.status, 403);
+    assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
+  });
+
+  it('PENDING : POST /api/storefront/profile (JSON) → 403', async () => {
+    const seller = await registerUser(server, 'v8lock2b');
+    const res = await seller.client.post('/api/storefront/profile', {
+      publicDescription: 'pas activé (JSON)',
     });
     assert.equal(res.status, 403);
     assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
@@ -1114,5 +1123,31 @@ describe('V8.4 — verrou PENDING : aucun usage de l\'abonnement sans activation
     });
     assert.equal(res.status, 403);
     assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
+  });
+
+  it('PENDING : DELETE /profile/logo et /profile/banner → 403 (contournement V8.4 clos)', async () => {
+    const seller = await registerUser(server, 'v8lock5');
+    for (const path of ['/api/storefront/profile/logo', '/api/storefront/profile/banner']) {
+      const res = await seller.client.request(path, 'DELETE');
+      assert.equal(res.status, 403, `${path} → ${res.status}`);
+      assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
+    }
+  });
+
+  it('EXPIRED : DELETE /profile/logo → 403 (assets conservés non supprimables)', async () => {
+    const seller = await registerUser(server, 'v8lock6');
+    await activateFor(seller, 1, 'v8-lock-expired-del-' + Date.now().toString(36));
+    await expireSubscription(seller.id!);
+    const res = await seller.client.request('/api/storefront/profile/logo', 'DELETE');
+    assert.equal(res.status, 403);
+    assert.equal(errorCode(res.body), 'SUBSCRIPTION_REQUIRED');
+  });
+
+  it('ACTIVE : DELETE /profile/logo reste autorisé (régression CA-V8-047)', async () => {
+    const seller = await registerUser(server, 'v8lock7');
+    await activateFor(seller, 1, 'v8-lock-active-del-' + Date.now().toString(36));
+    const res = await seller.client.request('/api/storefront/profile/logo', 'DELETE');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal((res.body as any).ok, true);
   });
 });

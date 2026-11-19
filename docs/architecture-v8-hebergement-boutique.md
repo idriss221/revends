@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS storefront_profiles (
 );
 
 COMMENT ON TABLE  storefront_profiles IS
-    'Branding boutique V8 (1:1 vendeur). Rendu public UNIQUEMENT si abonnement ACTIVE (CA-V8-045). collecte_address : strictement interne (vue admin détail) — CA-V8-044/049.';
+    'Branding boutique V8 (1:1 vendeur). Écriture ET rendu public UNIQUEMENT si abonnement ACTIVE non expiré (CA-V8-045 amendé V8.4). collecte_address : strictement interne (aucune réponse API) — CA-V8-044/049.';
 COMMENT ON COLUMN storefront_profiles.collecte_address IS
     'Adresse de collecte INTERNE (admin/logistique). Aucune surface publique, e-mail, PDF, log, ni serializer (CA-V8-044/049/075).';
 ```
@@ -556,12 +556,12 @@ export const deleteStorefrontAsset = deletePhoto;   // réutilisé tel quel (bes
 
 **`PUT /api/storefront/profile` — détails (R1/R2/R3 **RETENUS**, §14.D clos)**
 
-- Disponible **dès `PENDING`** (préparation, CA-V8-045) ; le rendu public n'a lieu que si `ACTIVE` (sinon `/boutique/:slug` 404 inchangé).
+- **Amendement V8.4 (18/11/2026)** : plus disponible dès `PENDING`. Écriture (`PUT`/`POST`) **et** suppression assets (`DELETE /logo|/banner`) exigent `status='ACTIVE' AND ends_at > now()` (horloge DB, même prédicat que `addListingToStorefront`), sinon `403 SUBSCRIPTION_REQUIRED`. CA-V8-045 amendé ; le rendu public reste conditionné à `ACTIVE` (sinon `/boutique/:slug` 404 inchangé).
 - `collecteAddress` : **jamais renvoyée dans aucune réponse API ni UI** (arbitrage §14.D clos). Saisie en écriture seule (`PUT`) ; aucune lecture possible via l'API — la valeur existante n'est affichable nulle part (le propriétaire ressaisit pour corriger ; le front n'affiche qu'un indicateur `collecteAddressSet: boolean`). Lecture réservée au SQL trusted (DBA/logistique hors produit).
 - Réponse `200` : `{ profile: { logoUrl, bannerUrl, publicDescription, collecteAddressSet, updatedAt } }` (propriétaire uniquement).
 - Erreurs : `401 UNAUTHENTICATED` · `400 VALIDATION_ERROR` (description > 500 graphèmes, graphes combinants comptés — `Intl.Segmenter`, test Unicode `👨‍👩‍👧` = 1 grapheme — CA-V8-043 ; collecteAddress hors 10–500, CA-V8-042) · `400 INVALID_IMAGE` (MIME ≠ magic bytes, ou non-image — `application/pdf` → 400) · `413 FILE_TOO_LARGE` (> 2 Mo logo · > 4 Mo bannière, message clair) · `500 INTERNAL_ERROR`.
 - Écriture : upsert `storefront_profiles` (même transaction que suppression éventuelle de l'ancien blob — blob supprimé **après** commit, best-effort).
-- **Édition dès `PENDING` mais jamais rendue publique hors `ACTIVE`** — le serializer public (§7.3) ignore le profil si pas `ACTIVE` (CA-V8-045).
+- **Édition et suppression d'assets jamais hors `ACTIVE` non expiré** (V8.4) — le serializer public (§7.3) ignore le profil si pas `ACTIVE` (CA-V8-045 amendé).
 - XSS : `public_description` stockée brute, **rendue échappée** (React) ; `<script>alert(1)</script>` inerte (CA-V8-042) ; jamais `dangerouslySetInnerHTML` ; alt bannière vide / `aria-hidden="true"`, logo `alt=« Logo de la boutique {nom} »` (CA-V8-041/048).
 
 ### 7.3 Lecture publique — `GET /api/storefront/:slug` (route **inchangée**, payload **étendu additivement**)

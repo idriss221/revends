@@ -81,8 +81,9 @@ export function SubscriptionStatusPanel({ subscription }: { subscription: Subscr
       <StatusBadge kind={badge.kind} label={badge.label} dot />
       <h1 id="sub-cancelled-title">Votre abonnement est annulé</h1>
       <p className="rv-shop-deadline">
-        Cet abonnement a été remplacé par un autre forfait. Vos annonces de boutique restent rattachées à votre
-        forfait actif.
+        {subscription.supersedesId
+          ? 'Cet abonnement a été remplacé par un autre forfait. Vos annonces de boutique restent rattachées à votre forfait actif.'
+          : 'Cet abonnement n’est plus actif (demande refusée ou boutique désactivée). Vos annonces du catalogue restent en ligne ; contactez l’administration pour en connaître le motif.'}
       </p>
     </section>
   )

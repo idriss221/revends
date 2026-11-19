@@ -2179,11 +2179,11 @@ Source détaillée : **`docs/architecture-v8-hebergement-boutique.md`** (DDL §2
 
 | # | Méthode & chemin | Accès | Corps / Query | Succès |
 |---|---|---|---|---|
-| R1 | `PUT /api/storefront/profile` | `requireAuth` (propriétaire) | **multipart** : `logo?` (fichier ≤ 2 Mo), `banner?` (≤ 4 Mo), `publicDescription?` (≤ 500 graphèmes), `collecteAddress?` (10–500 car.) | `200` |
-| R1b | `POST /api/storefront/profile` | `requireAuth` (propriétaire) | `{ publicDescription?, collecteAddress? }` (même écriture en JSON, sans fichiers) | `200` |
+| R1 | `PUT /api/storefront/profile` | `requireAuth` + abonnement `ACTIVE` non expiré (V8.4) | **multipart** : `logo?` (fichier ≤ 2 Mo), `banner?` (≤ 4 Mo), `publicDescription?` (≤ 500 graphèmes), `collecteAddress?` (10–500 car.) | `200` |
+| R1b | `POST /api/storefront/profile` | `requireAuth` + abonnement `ACTIVE` non expiré (V8.4) | `{ publicDescription?, collecteAddress? }` (même écriture en JSON, sans fichiers) | `200` |
 | R1c | `GET /api/storefront/profile` | `requireAuth` (propriétaire) | — | `200` |
-| R2 | `DELETE /api/storefront/profile/logo` | `requireAuth` (propriétaire) | — | `200` `{ ok: true }` |
-| R3 | `DELETE /api/storefront/profile/banner` | `requireAuth` (propriétaire) | — | `200` `{ ok: true }` |
+| R2 | `DELETE /api/storefront/profile/logo` | `requireAuth` + abonnement `ACTIVE` non expiré (V8.4) | — | `200` `{ ok: true }` |
+| R3 | `DELETE /api/storefront/profile/banner` | `requireAuth` + abonnement `ACTIVE` non expiré (V8.4) | — | `200` `{ ok: true }` |
 | R4 | `GET /api/subscriptions/me/stats` | `requireAuth` | — | `200` |
 | R5 | `GET /api/admin/auto-approvals` | `requireAdmin` | `page, per_page` (`per_page` 1..48, défaut 12) | `200` |
 | R6 | `POST /api/admin/products/:id/retrograde` | `requireAdmin` | `{ reason }` (trim, ≥ 10 caractères) | `200` |
@@ -2191,9 +2191,9 @@ Source détaillée : **`docs/architecture-v8-hebergement-boutique.md`** (DDL §2
 
 **Règles opposables :**
 
-1. **Écriture branding (R1/R1b)** — crée la ligne `storefront_profiles` au 1er appel (upsert 1:1 par `seller_id`). Disponible **dès `PENDING`** (préparation) ; le **rendu public n'a lieu que si l'abonnement est `ACTIVE`** (sinon `/boutique/:slug` → 404 identique V7, non divulguée). Fichiers : **magic bytes** vérifiés (JPEG/PNG/WebP), nom **toujours UUID serveur**, stockage Vercel Blob (`put`/`del`) ou repli disque (`uploads/storefront/`), suppression des anciens assets **après** succès. Nombres : `publicDescription` vide ⇒ effacement (`NULL`) ; `collecteAddress` vide ⇒ effacement.
+1. **Écriture branding (R1/R1b/R2/R3)** — crée la ligne `storefront_profiles` au 1er appel (upsert 1:1 par `seller_id`). **Amendement V8.4 : disponible uniquement si l'abonnement est `ACTIVE` et `ends_at > now()`** (horloge DB, miroir de `addListingToStorefront`) — `PENDING`/`EXPIRED`/`CANCELLED` → `403 SUBSCRIPTION_REQUIRED`, y compris pour les `DELETE` de logo/bannière. Le **rendu public** est soumis à la même condition (sinon `/boutique/:slug` → 404 identique V7, non divulguée). CA-V8-045 amendé en conséquence. Fichiers : **magic bytes** vérifiés (JPEG/PNG/WebP), nom **toujours UUID serveur**, stockage Vercel Blob (`put`/`del`) ou repli disque (`uploads/storefront/`), suppression des anciens assets **après** succès. Nombres : `publicDescription` vide ⇒ effacement (`NULL`) ; `collecteAddress` vide ⇒ effacement.
 2. **`collecte_address` (INTERNE)** — **JAMAIS** dans une réponse d'API (§14.D clos le 18/11/2026). Le propriétaire écrit via `POST/PUT /api/storefront/profile` ; il reçoit un **booléen** `collecteAddressSet` à la lecture. L'admin ne voit qu'un **booléen** dans la file. La logistique manuelle passe par SQL/trusted uniquement. Aucun log, aucune trace, aucun PDF/e-mail ne porte la valeur.
-3. **Erreurs (R1)** — `401 UNAUTHENTICATED` · `400 VALIDATION_ERROR` (description > 500 graphèmes/compteurs, `collecteAddress` hors 10–500 — `details[]` pointe le champ) · `400 INVALID_IMAGE` (MIME réel invalide) · `413 FILE_TOO_LARGE` (logo > 2 Mo, bannière > 4 Mo) · `500 INTERNAL_ERROR`.
+3. **Erreurs (R1/R1b/R2/R3)** — `401 UNAUTHENTICATED` · `403 SUBSCRIPTION_REQUIRED` (V8.4 : abonnement absent, `PENDING`, `EXPIRED` ou `CANCELLED` — message unique, aucun statut divulgué) · `400 VALIDATION_ERROR` (description > 500 graphèmes/compteurs, `collecteAddress` hors 10–500 — `details[]` pointe le champ) · `400 INVALID_IMAGE` (MIME réel invalide) · `413 FILE_TOO_LARGE` (logo > 2 Mo, bannière > 4 Mo) · `500 INTERNAL_ERROR`.
 4. **Réponse `{ profile }`** (R1/R1b/R1c) : `{ logoUrl, bannerUrl, publicDescription, collecteAddressSet, updatedAt, sellerBadge? }` — les URLs sont **relatives** (`/uploads/storefront/…`) ou absolues (Blob) ; **aucun `collecteAddress`** — booléen `collecteAddressSet` uniquement ; `sellerBadge` = badge palier dérivé (`pro`/`verifiee`/`boutique`/`null`).
 5. **Lecture boutique (E2, extension additive v2.8)** — `GET /api/storefront/:slug` gagne `logoUrl?`, `bannerUrl?`, `publicDescription?` dans l'objet `storefront` — **uniquement si** abonnement `ACTIVE` + profil présent (sinon 404 identique V7). `items[]` gagne `sellerBadge` par carte. **`collecteAddress` n'apparaît dans AUCUNE réponse publique.**
 6. **Stats vendeur (R4)** — `requireAuth`, périmètre session (un autre vendeur ne peut pas lire les vôtres — `/me`), `401` anonyme. Réponse :
@@ -2503,6 +2503,8 @@ Côté **flux** (non modifié par ce contrat) : transactions + verrous (`FOR UPD
 | `CREATED` | (jamais exposé — D-V3-2) | 1 — « Commande créée » |
 | `PAYMENT_PENDING` | « Paiement en attente » | 2 — « Paiement en attente » |
 | `PAID` | « Payée » | 3 — « Paiement confirmé » |
+| `PRODUCT_WAITING` | « Produit en attente » | 4 — « Produit en attente » |
+| `PRODUCT_RECEIVEDe » | 3 — « Paiement confirmé » |
 | `PRODUCT_WAITING` | « Produit en attente » | 4 — « Produit en attente » |
 | `PRODUCT_RECEIVED` | « Produit reçu » | 5 — « Produit reçu » |
 | `PREPARING` | « En préparation » | 6 — « En préparation » |

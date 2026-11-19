@@ -4729,21 +4729,80 @@ Cause racine : un contenu à `min-content` > 336 px (bouton « Passer à X — 2
 
 **Bug** : une boutique en attente d'activation pouvait configurer logo, bannière,
 description publique, adresse de collecte — bien que tout soit désactivé côté V8
-publique (404 lint publicProfile). L\'utilisateur a demandé : « si l'abonnement
+publique (404 lint publicProfile). L'utilisateur a demandé : « si l'abonnement
 n'est pas encore approuvé, l'utilisateur ne doit avoir aucun accès sur les uses
 cases de l'abonnement ».
 
-**Fix serveur** : `updateStorefrontProfile` lève désormais `403 SUBSCRIPTION_REQUIRED`
-si le vendeur n'a pas d'abonnement **ACTIVE non expiré**. `addListingToStorefront`
-déjà verrouillé par ACTIVE (V7). Tests V8.4 ajoutés ; tests V8-D5 mis à jour.
+**Fix serveur** : `assertActiveStorefrontSubscription()` lève désormais
+`403 SUBSCRIPTION_REQUIRED` si le vendeur n'a pas d'abonnement **ACTIVE non expiré**
+(prédicat SQL `ends_at > now()`, miroir de `addListingToStorefront`). Appliqué aux
+3 mutations branding : `PUT`/`POST /profile` **et** `DELETE /profile/logo|banner`.
+Tests V8.4 ajoutés ; tests V8-D5 mis à jour.
 
-**Fix front (`/mon-abonnement`)** : le visage PENDING (et EXPIRED / CANCELLED)
-n'affiche plus ni BrandingPanel ni StatsPanel — seulement l'état d\'attente
-d'activation, les options de changement de forfait et un rappel verrouillé.
+**Fix front (`/mon-abonnement`)** : les visages PENDING et EXPIRED n'affichent plus
+ni BrandingPanel ni StatsPanel — seulement l'état d'attente d'activation / d'expiration,
+les options de forfait et un rappel verrouillé. Le message CANCELLED distingue
+désormais un remplacement de forfait d'un refus/désactivation.
 
 **Comportement expiration** : après ends_at (30 jours), l'abonnement passe EXPIRED
 (lazy materialization) → boutique 404 côté public (aucune visibilité), badges
 retirés du catalogue, listings retirées, **abri live reste vendable au catalogue** ;
 le vendeur voit « Annonces conservées » dans `/mon-abonnement`, peut re-souscrire.
-J-3 avant expiration, l'e-mail recoit un rappel (subscription_expiry_reminder)
-le 1er du mois suivant.0 Voir docs/journal.md historique pour les variantes.
+J-3 avant expiration, l'e-mail reçoit un rappel (subscription_expiry_reminder)
+par le cron quotidien.
+
+## 19/11/2026 — V8.5 « audit sécurité » : verrou DELETE, dépendances 0 vuln., durcissement CI/CD
+
+**Déclencheur** : demande de vérification « tout est-il concret et sécurisé dans le site ? ».
+Audit `@securite` + revue `@reviewer` en lecture seule, puis rejeu personnel de chaque
+constat (`verifie-toujours`) avant correction.
+
+### Findings confirmés et corrigés
+- **SEC-08 / I3 — contournement du verrou V8.4** : `DELETE /api/storefront/profile/logo|banner`
+  restait accessible à un vendeur `PENDING` (preuve agent : `200 {"ok":true}`).
+  → `assertActiveStorefrontSubscription()` extraite et appelée par les **3 mutations**
+  (`PUT`, `POST`, `DELETE logo`, `DELETE banner`). Test de non-régression ajouté.
+- **I2 — divergence de résolution d'abonnement** : l'ancien gate triait
+  `ORDER BY (status='ACTIVE') DESC, id DESC LIMIT 1` puis testait `ends_at` en JS :
+  avec un ACTIVE valide + un ACTIVE expiré plus récent, il refusait à tort alors que
+  `addListingToStorefront` autorisait. → prédicat SQL unique
+  `status='ACTIVE' AND ends_at > now()` (horloge DB), miroir exact de V7.
+- **I1 — EXPIRED exposait encore StatsPanel** (PDF/stats accessibles) : remplacé par
+  la notice de verrou. **I4 — CANCELLED** : copy « remplacé par un autre forfait »
+  désormais conditionnée à `supersedesId` (sinon message refus/désactivation).
+- **B1 — contrat non aligné** : CA-V8-045, `docs/api.md` (R1/R1b/R2/R3 + règles 1/3)
+  et `docs/architecture-v8-hebergement-boutique.md` §7 amendés : écriture **et**
+  suppression exigent ACTIVE non expiré depuis V8.4. Décision tracée, pas une simple ligne de journal.
+- **SEC-02 — dépendances** : `npm audit fix` (body-parser, multer, nodemailer, qs,
+  autocannon 9), `@vercel/blob` **épinglé 2.4.0** (la 2.8.2 tirait `@vercel/oidc` →
+  zod vulnérable), `zod` retiré des `dependencies` web (0 import dans `src/`).
+  Preuve : `npm audit --omit=dev` → **0 vulnérabilité** côté serveur **et** côté web.
+- **SEC-04/05/06** : garde-fou `deploy-vercel.sh` n'exclut plus `.env.local` ;
+  `.vercelignore` étendu (`.aider*`, `.backup/`, `uploads/`, `revends/`, `cookies.txt`,
+  `nginx/certs/`, `docs/`, session e2e) ; limiteur dédié `scope: cron` 10/10 min sur
+  `/api/cron` (route montée avant les limiteurs globaux).
+- **Dette mineure** : commentaires V8-D5 et journal V8.4 corrigés, test « POST » mal
+  intitulé renommé + vrai cas POST JSON ajouté, fragment JSX inutile retiré.
+
+### Finding rejeté après vérification
+- **SEC-07 (contact `revends@gmail.com`)** : aucune occurrence de cette adresse dans
+  `docs/` ; le code est uniformément `revendsen@gmail.com` (9 occurrences) et c'est
+  l'adresse retenue. Fausse alerte de l'agent, **aucune modification appliquée**.
+
+### Preuves de non-régression
+- serveur : `npx tsc --noEmit` OK ; `npm test` → **ALL SUITES GREEN** ;
+  `storefront-v8.test.ts` → **63/63**.
+- web : `npx tsc -b` OK ; `npm test` → **273/273** ; `npm run build` → OK.
+
+### Risques ouverts (actions hors de portée code)
+- 🔴 **SEC-01 — rate limiting en mémoire en prod** : `/api/system/health` remonte
+  `redis.used:false, backend:"memory"` ; `REDIS_URL` absent de la config prod.
+  Action : fournir une URL Redis partagée (ex. Upstash) et poser `REDIS_URL` +
+  `RATE_LIMIT_BACKEND=redis` sur Vercel, puis rejouer le health. En l'absence,
+  le plafond 20 logins/10 min est **par instance** et contournable en scale-out.
+- 🔴 **SEC-03 — rotation des secrets exposés non prouvée** : Gmail/Whapi historiquement
+  collés dans un chat (journal :3862). Les valeurs actives ont len=16/32 mais aucune
+  attestation datée de rotation. Action : confirmer la date de rotation et révoquer
+  les anciennes valeurs côté fournisseurs.
+- ⚠️ Compte admin `mamariss.proj@gmail.com` absent, 18 numéros vendeurs non conformes,
+  callback Facebook obsolète : inchangés, nécessitent accès DB/console.

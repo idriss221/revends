@@ -25,7 +25,17 @@ node_modules/
 .github/
 .vercel/
 
-# Divers
+# Divers — historiques d'outils, backups, certificats et cookies de dev :
+# inoffensifs aujourd'hui (déploiement --prebuilt), mais NE DOIVENT JAMAIS
+# partir dans un upload Vercel si le mode de déploiement change.
+.aider*
+.backup/
+uploads/
+revends/
+web/e2e/.session.json
+server/cookies.txt
+server/nginx/certs/
+docs/
 *.log
 npm-debug.log*
 .DS_Store
