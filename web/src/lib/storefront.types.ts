@@ -30,6 +30,8 @@ export interface Subscription {
   createdAt: string
   /** Présent en EXPIRED uniquement — message affichable tel quel (CA-V7-016). */
   message?: string
+  /** V9 — vrai uniquement si une session Wave a été créée et non encore confirmée. */
+  wavePaymentPending?: boolean
 }
 
 export interface SubscriptionUsage {

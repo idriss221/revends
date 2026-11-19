@@ -88,6 +88,10 @@
   --color-terracotta-deep: #8C3817;  --color-terracotta-soft: #F8E7DC;  /* survol de lien · fond de badge */
   --color-terracotta-wash: rgba(200, 90, 42, 0.08);   --color-terracotta-glow: rgba(200, 90, 42, 0.25);  /* survol de tuile · halo du CTA */
 
+  /* ── V9 — Wave : SEULE paire de tokens ajoutée (aplat du chip + texte) ── */
+  --color-wave: #1DC8FF;      /* aplat du chip UNIQUEMENT — jamais filet/CTA/texte sur clair */
+  --color-on-wave: #1A1714;   /* texte sur l'aplat : 9,14:1 (AA) */
+
   /* ── États (jamais décoratifs) ───────────────────────────── */
   --color-positive: #2F6B4F;  --color-positive-dark: #24573F;  --color-positive-soft: #E1EFE6;  /* payé, livré, réussi (5.30:1) */
   --color-danger: #A32C22;    --color-danger-dark: #86211A;    --color-danger-soft: #F7E4E1;     /* erreur, suppression (5.83:1) */

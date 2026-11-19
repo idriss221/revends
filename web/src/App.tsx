@@ -32,6 +32,10 @@ import { PrivacyPage } from './pages/PrivacyPage'
 import { Boutique } from './pages/Boutique'
 import { MonAbonnement } from './pages/MonAbonnement'
 
+/* V9 « Wave Checkout » — routes de retour, ajout pur (aucune route existante modifiée). */
+import { WaveSucces } from './pages/WaveSucces'
+import { WaveEchec } from './pages/WaveEchec'
+
 /* Espace administrateur — conservé tel quel (hors SiteShell, coquille dédiée). */
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
 import { AdminPendingPage } from './pages/admin/AdminPendingPage'
@@ -127,6 +131,10 @@ export function App() {
         {/* ── V7 « Hébergement des vendeurs » — ajouts (aucune route existante modifiée) ── */}
         <Route path="/boutique/:slug" element={<Boutique />} />
         <Route path="/mon-abonnement" element={<RequireUser><MonAbonnement /></RequireUser>} />
+
+        {/* ── V9 — retours Wave : 0 query lue, 0 écriture au montage ─────── */}
+        <Route path="/paiement-wave/succes" element={<RequireUser><WaveSucces /></RequireUser>} />
+        <Route path="/paiement-wave/echec" element={<RequireUser><WaveEchec /></RequireUser>} />
 
         {/* ── Liens légaux du pied de page (CA-V5-142, PO-V5-20) ───── */}
         <Route path="/conditions" element={<ConditionsPage />} />

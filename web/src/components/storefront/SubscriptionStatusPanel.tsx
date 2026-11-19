@@ -5,6 +5,7 @@ import { fmt } from '../site/SiteBits'
 import { formatFrLongDate, formatFrLongDateTime } from '../../lib/storefront'
 import type { Subscription } from '../../lib/storefront.types'
 import type { StatusBadgeKind } from '../../lib/constants'
+import { WaveChip } from './WaveCheckoutPanel'
 
 /**
  * Panneau statut (design §3.2 / §3.4) — `aria-live="polite"` : si le statut
@@ -27,6 +28,51 @@ export function SubscriptionStatusPanel({ subscription }: { subscription: Subscr
   if (subscription.status === 'ACTIVE') return null
   const badge = STATUS_BADGE[subscription.status]
   const planLine = `${subscription.plan.name} — ${fmt(subscription.plan.priceFcfa)} / mois`
+
+  // V9 — variante Wave strictement conditionnelle. Le libellé OM/virement/legacy
+  // « En attente d'activation » ci-dessous reste mot pour mot inchangé.
+  if (subscription.status === 'PENDING' && subscription.wavePaymentPending === true) {
+    return (
+      <section className="rv-shop-panel wave-pending-panel" aria-live="polite" aria-labelledby="sub-pending-title">
+        <div className="rv-shop-subhead">
+          <WaveChip />
+          <StatusBadge
+            kind="pending"
+            dot
+            label="Wave — en attente de confirmation du paiement"
+            className="wave-status-badge"
+          />
+          <Link className="rv-shop-shop-link" to="/shop">
+            Retour au catalogue
+          </Link>
+        </div>
+        <HeartMark />
+        <h1 id="sub-pending-title">Votre boutique est en attente d’activation</h1>
+        <p className="rv-shop-sub wave-pending-note">
+          Votre paiement Wave est en cours de vérification. Vous pouvez fermer cette page : votre boutique s'ouvrira dès
+          que Wave confirmera le paiement.
+        </p>
+        <dl className="rv-shop-recap">
+          <div className="rv-shop-recap-row" data-stagger="0">
+            <dt>Forfait</dt>
+            <dd>{planLine}</dd>
+          </div>
+          <div className="rv-shop-recap-row" data-stagger="1">
+            <dt>Quotité</dt>
+            <dd>{subscription.plan.quota} annonces de boutique</dd>
+          </div>
+          <div className="rv-shop-recap-row" data-stagger="2">
+            <dt>Adresse</dt>
+            <dd>boutique/{subscription.slug}</dd>
+          </div>
+          <div className="rv-shop-recap-row" data-stagger="3">
+            <dt>Demandé le</dt>
+            <dd>{formatFrLongDateTime(subscription.createdAt)}</dd>
+          </div>
+        </dl>
+      </section>
+    )
+  }
 
   if (subscription.status === 'PENDING') {
     return (

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { storefrontApi, storefrontError, formatFrActivation } from '../../lib/storefront'
+import { waveApi, waveAdminStatus, type WaveAdminEvent } from '../../lib/wave'
 import { paymentMethodLabel, formatRemainingAge, isSlaBreach } from '../../lib/v8'
 import { adminMenu } from '../../lib/menus'
 import { useAdminStats } from '../../hooks/useAdminStats'
@@ -13,6 +14,7 @@ import { AdminTable, type AdminColumn } from '../../components/admin/AdminTable'
 import { ConfirmAction } from '../../components/admin/ConfirmAction'
 import { Modal } from '../../components/ui/Modal'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { WaveChip } from '../../components/storefront/WaveCheckoutPanel'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../lib/toast'
 
@@ -100,6 +102,27 @@ export function Abonnements() {
     queryFn: () => storefrontApi.adminList({ status: 'ACTIVE', page: 1, perPage: 5 }),
     staleTime: 30_000,
   })
+
+  // V9 — colonne « Paiement Wave » : un seul appel en lecture, jointure faite
+  // côté client par subscriptionId. Les colonnes V8 restent indépendantes.
+  const waveEvents = useQuery({
+    queryKey: ['wave', 'admin', 'events'],
+    queryFn: () => waveApi.adminEvents({ page: 1, perPage: 48 }),
+    staleTime: 15_000,
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (waveEvents.isError) toast('error', 'Paiement Wave indisponible — réessayez.')
+  }, [waveEvents.isError, toast])
+
+  /** Dernier événement par abonnement (le serveur renvoie le plus récent en premier). */
+  const waveBySubscription = new Map<number, WaveAdminEvent>()
+  if (waveEvents.data) {
+    for (const event of waveEvents.data.items) {
+      if (!waveBySubscription.has(event.subscriptionId)) waveBySubscription.set(event.subscriptionId, event)
+    }
+  }
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['admin', 'subscriptions'] })
@@ -229,6 +252,36 @@ export function Abonnements() {
           </span>
         </span>
       ),
+    },
+    // V9 — colonne additive : statut Wave uniquement, jamais d'identifiant ni de référence.
+    {
+      key: 'wave-payment',
+      header: 'Paiement Wave',
+      cell: (row) => {
+        if (waveEvents.isError) return <span className="text-muted">Indisponible</span>
+        const event = waveBySubscription.get(row.id)
+        const state = waveAdminStatus(event)
+        if (state === 'none') return <StatusBadge kind="neutral" dot label="—" />
+        const badge =
+          state === 'confirmed' ? (
+            <StatusBadge kind="approved" dot label="Confirmé" />
+          ) : state === 'failed' ? (
+            <StatusBadge kind="rejected" dot label="Échoué" />
+          ) : (
+            <StatusBadge kind="pending" dot label="En attente" />
+          )
+        return (
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="flex flex-wrap items-center gap-1">
+              <WaveChip />
+              {badge}
+            </span>
+            {state === 'confirmed' && event?.activated && row.activatedBy !== null ? (
+              <span className="text-xs text-muted">Activé par {activatedByLabel(row.activatedBy)}</span>
+            ) : null}
+          </span>
+        )
+      },
     },
     // §14.D clos — aucune adresse de collecte dans l'UI (admin inclus).
     {
@@ -473,7 +526,7 @@ export function Abonnements() {
         id="subscriptions-panel"
         role="tabpanel"
         aria-labelledby={tab === 'pending' ? 'tab-pending' : 'tab-all'}
-        aria-busy={list.isFetching}
+        aria-busy={list.isFetching || waveEvents.isFetching}
         className="grid grid-cols-[1fr_340px] items-start gap-6 max-[1280px]:grid-cols-1"
       >
         <AdminTable

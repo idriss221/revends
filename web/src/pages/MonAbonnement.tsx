@@ -13,6 +13,7 @@ import { ListingManager } from '../components/storefront/ListingManager'
 import { AddListingSheet } from '../components/storefront/AddListingSheet'
 import { PlanChangeConfirm } from '../components/storefront/PlanChangeConfirm'
 import { storefrontApi, storefrontError, formatFrLongDate } from '../lib/storefront'
+import { waveApi } from '../lib/wave'
 import { api } from '../lib/api'
 import { resolveImageUrl } from '../lib/catalogPhotos'
 import { useToast } from '../lib/toast'
@@ -22,6 +23,7 @@ import { BrandingPanel } from '../components/storefront/BrandingPanel'
 import { StatsPanel } from '../components/storefront/StatsPanel'
 import { PaymentReferenceFields } from '../components/storefront/PaymentReferenceFields'
 import { validatePaymentFields, type PaymentFieldErrors } from '../lib/v8'
+import { WaveCheckoutPanel } from '../components/storefront/WaveCheckoutPanel'
 import type { SubscriptionPlan, SubscribeWithPaymentBody } from '../lib/storefront.types'
 import type { OwnerProduct } from '../lib/types'
 
@@ -59,6 +61,16 @@ export function MonAbonnement() {
     queryFn: () => api.myProducts(),
     staleTime: 30_000,
   })
+
+  // V9 — disponibilité du bouton Wave. Fail-closed : une réponse absente,
+  // erronée ou `false` masque le bouton sans toucher au formulaire manuel.
+  const waveConfig = useQuery({
+    queryKey: ['wave-config'],
+    queryFn: () => waveApi.config(),
+    staleTime: 60_000,
+    retry: false,
+  })
+  const waveEnabled = waveConfig.data?.waveEnabled === true
 
   /* ── États (tous les hooks AVANT les retours anticipés) ──────────── */
   const [planId, setPlanId] = useState<number | null>(null)
@@ -270,6 +282,8 @@ export function MonAbonnement() {
             Vous pourrez suivre son état ici.
           </p>
 
+          <WaveCheckoutPanel waveEnabled={waveEnabled} subscription={null} />
+
           <form onSubmit={onSubmitPlans} noValidate>
             <PlanPicker plans={plans} value={planId} onChange={setPlanId} name="plan" />
             {plans.length === 0 ? (
@@ -373,6 +387,7 @@ export function MonAbonnement() {
         <div className="section tight" style={{ maxWidth: 880, marginInline: 'auto' }}>
           <h1 className="rv-shop-h1">Mon abonnement</h1>
           <SubscriptionStatusPanel subscription={subscription} />
+          <WaveCheckoutPanel waveEnabled={waveEnabled} subscription={subscription} />
           <div style={{ marginTop: 18 }}>
             <PaymentReferenceFields
               idPrefix="resubscribe"
@@ -473,6 +488,7 @@ export function MonAbonnement() {
         <div className="section tight" style={{ maxWidth: 640, marginInline: 'auto' }}>
           <h1 className="rv-shop-h1">Mon abonnement</h1>
           <SubscriptionStatusPanel subscription={subscription} />
+          <WaveCheckoutPanel waveEnabled={waveEnabled} subscription={subscription} />
           {isPendingSub && plans.length > 1 && (
             <div style={{ marginTop: 18 }}>
               <PaymentReferenceFields
