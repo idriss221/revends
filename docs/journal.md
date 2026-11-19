@@ -4806,3 +4806,17 @@ constat (`verifie-toujours`) avant correction.
   les anciennes valeurs côté fournisseurs.
 - ⚠️ Compte admin `mamariss.proj@gmail.com` absent, 18 numéros vendeurs non conformes,
   callback Facebook obsolète : inchangés, nécessitent accès DB/console.
+
+### Décisions utilisateur (19/11/2026) — risques ouverts
+- **SEC-01** : l'utilisateur choisit de **fournir une URL Redis externe** (Upstash ou
+  équivalent) — aucune URL publique présente dans `~/.revends-secrets` (seul
+  `redis://redis:6379` local Docker, injoignable depuis Vercel). Action en attente :
+  déposer `REDIS_URL=<url publique>` dans `~/.revends-secrets/revends.env.local`
+  (jamais dans le chat), puis poser `REDIS_URL` + `RATE_LIMIT_BACKEND=redis` sur Vercel
+  et rejouer `/api/system/health` jusqu'à `redis.used:true, backend:"redis"`.
+  Jusqu'à cette preuve, le risque reste **ouvert**.
+- **SEC-03 / Gmail & Whapi** : décision explicite de l'utilisateur — **« ne touche pas
+  à gmail ça marche déjà bien »**. Aucune rotation effectuée, aucun secret modifié.
+  Risque **accepté en connaissance de cause**, consigné ; plan B : si un envoi
+  frauduleux ou une facture anormale apparaît, révoquer alors les valeurs côté
+  fournisseur. Le blog de journal historique (`:3862`) garde la trace de l'exposition.
