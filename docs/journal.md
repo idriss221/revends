@@ -4820,3 +4820,13 @@ constat (`verifie-toujours`) avant correction.
   Risque **accepté en connaissance de cause**, consigné ; plan B : si un envoi
   frauduleux ou une facture anormale apparaît, révoquer alors les valeurs côté
   fournisseur. Le blog de journal historique (`:3862`) garde la trace de l'exposition.
+
+### Arbitrage final (19/11/2026) — SEC-01 laissé en l'état
+L'utilisateur a demandé de **ne pas changer l'URL Redis** (« mettez url redis comme
+il était, je ne peux rien faire là »). Aucune variable `REDIS_URL` n'a été ajoutée
+ni modifiée (prod comme dépôt) : le health reste
+`redis.used:false, rateLimit.backend:"memory"`, état identique à l'avant-audit.
+Risque **accepté en connaissance de cause** : le plafond 20 logins/10 min reste
+par instance en cas de scale-out Vercel. Mesures compensatoires conservées :
+limiteur dédié sur `/api/cron` (10/10 min, prouvé 401×10 puis 429 en prod),
+monitoring des 429 et du health. Aucune action supplémentaire requise.
