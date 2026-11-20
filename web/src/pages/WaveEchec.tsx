@@ -75,11 +75,12 @@ export function WaveEchec() {
       <WaveCheckoutPanel waveEnabled={false} subscription={null} mode="liens-seuls" />
 
       <p className="wave-checkout-note">
-        Si vous avez utilisé un lien Wave, indiquez ensuite sa référence dans le formulaire manuel.
+        Si vous avez utilisé un lien Wave, l’administration vérifiera votre paiement dans le portail Wave ; votre
+        boutique restera en attente jusqu’à confirmation.
       </p>
 
       <p className="wave-return-support">
-        Si le montant a été débité, écrivez à revendsen@gmail.com en précisant la référence de votre paiement.
+        Si le montant a été débité, écrivez à revendsen@gmail.com.
       </p>
     </>,
   )

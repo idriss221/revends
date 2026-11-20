@@ -280,7 +280,13 @@ describe('V9 — E3/E4 : pages retour sans effet de bord', () => {
     expect(source).toContain('role="alert"')
     expect(source).toContain('Choisissez votre repli')
     expect(source).toContain('Voir le paiement manuel')
-    expect(source).toContain('Si le montant a été débité, écrivez à revendsen@gmail.com en précisant la référence de votre paiement.')
+    // V9.1 (audit sécurité M1) : plus aucune référence Wave à saisir — le champ
+    // est masqué pour Wave. Le repli est vérifié par l'admin dans le portail.
+    expect(source).toContain('l’administration vérifiera votre paiement dans le portail Wave')
+    expect(source).toMatch(/boutique\s+restera en attente jusqu’à confirmation/)
+    expect(source).toContain('Si le montant a été débité, écrivez à revendsen@gmail.com.')
+    expect(source).not.toContain('indiquez ensuite sa référence')
+    expect(source).not.toContain('en précisant la référence de votre paiement')
     expect(source).not.toMatch(/mailto:|tel:/)
     expect(source).not.toContain('aucun montant n’a été débité')
   })
