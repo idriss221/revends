@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildPaymentFields,
   deltaPct,
   formatDeltaPct,
   formatMonthPeriod,
@@ -94,6 +95,32 @@ describe('validatePaymentFields — miroir client de E1 (le serveur arbitre)', (
     expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: 'A'.repeat(65) }).paymentReference).toBeTruthy()
     expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: 'WAVE<>01118' }).paymentReference).toBeTruthy()
     expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: '-ABCD12345' }).paymentReference).toBeTruthy()
+  })
+})
+
+describe('buildPaymentFields — payload envoyé à POST /api/subscriptions (V9.1, revue F1)', () => {
+  it('Wave : la référence est TOUJOURS vide, même si un état OM périmé subsiste (bascule OM → Wave)', () => {
+    // Scénario exact du finding F1 : l'utilisateur saisit une référence pour
+    // Orange Money, puis bascule sur Wave sans l'effacer.
+    expect(buildPaymentFields('wave', 'REF-OM-1234')).toEqual({
+      paymentMethod: 'wave',
+      paymentReference: '',
+    })
+  })
+  it('Wave : vide/blanche/null → chaîne vide envoyée (le serveur génère WAVE-AUTO-…)', () => {
+    for (const ref of ['', '   ', null, undefined]) {
+      expect(buildPaymentFields('wave', ref).paymentReference).toBe('')
+    }
+  })
+  it('Orange Money / virement : la référence saisie est conservée et trimée', () => {
+    expect(buildPaymentFields('orange_money', '  OM 11 22 33  ')).toEqual({
+      paymentMethod: 'orange_money',
+      paymentReference: 'OM 11 22 33',
+    })
+    expect(buildPaymentFields('virement', ' VIR/2026/118 ')).toEqual({
+      paymentMethod: 'virement',
+      paymentReference: 'VIR/2026/118',
+    })
   })
 })
 

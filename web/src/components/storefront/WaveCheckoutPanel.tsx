@@ -112,8 +112,8 @@ export function WaveCheckoutPanel({
 
       <p className="wave-checkout-note">
         {resolved === 'liens-seuls'
-          ? "Après votre paiement, utilisez le formulaire ci-dessous pour indiquer la référence. L'administration vérifiera avant d'ouvrir votre boutique."
-          : 'Ces liens sont un repli manuel : saisissez ensuite la référence dans le formulaire ci-dessous.'}
+          ? "Après votre paiement via ces liens, l'administration vérifiera la transaction dans le portail Wave avant d'ouvrir votre boutique."
+          : "Ces liens sont un repli manuel : l'administration vérifiera votre paiement dans le portail Wave."}
       </p>
     </section>
   )

@@ -87,6 +87,23 @@ const V9_APP_ALLOWLIST = new Set([
   'web/src/v9-wave.test.tsx',
 ]);
 
+/**
+ * V9.1 — extension du périmètre applicatif, approuvée dans
+ * `docs/cahier-des-charges-v9.1-reference-wave.md` (référence Wave optionnelle).
+ * On garde `V9_APP_ALLOWLIST` intacte et `V9_BASE` immuable : cet ajout ne
+ * fait qu'autoriser les 4 fichiers que V9.1 modifie légitimement. Tout
+ * autre fichier hors périmètre reste bloqué par CA-V9-071.
+ *
+ * - storefront-validation.ts : génération `WAVE-AUTO-…` côté serveur.
+ * - PaymentReferenceFields.tsx / v8.ts / v8.test.ts : champ masqué pour Wave.
+ */
+const V91_APP_ALLOWLIST = new Set([
+  'server/src/utils/storefront-validation.ts',
+  'web/src/components/storefront/PaymentReferenceFields.tsx',
+  'web/src/lib/v8.ts',
+  'web/src/lib/v8.test.ts',
+]);
+
 const changedSinceBase = (...paths: string[]): string[] =>
   git('diff', '--name-only', `${V9_BASE}..HEAD`, '--', ...paths).trim().split('\n').filter(Boolean);
 
@@ -299,13 +316,15 @@ describe('V9 — zones interdites et conventions', () => {
     );
   });
 
-  it('[MIROIR] CA-V9-071 — tout fichier applicatif modifié depuis la base est dans le périmètre V9', () => {
+  it('[MIROIR] CA-V9-071/V9.1 — tout fichier applicatif modifié depuis la base est dans le périmètre V9 ou V9.1', () => {
     const changed = changedSinceBase(
       'server/src', 'web/src', 'server/migrations',
       'server/package.json', 'web/package.json',
     );
-    const outside = changed.filter((file) => !V9_APP_ALLOWLIST.has(file));
-    assert.deepEqual(outside, [], `fichier applicatif hors périmètre V9 : ${outside.join(', ')}`);
+    const outside = changed.filter(
+      (file) => !V9_APP_ALLOWLIST.has(file) && !V91_APP_ALLOWLIST.has(file),
+    );
+    assert.deepEqual(outside, [], `fichier applicatif hors périmètre V9/V9.1 : ${outside.join(', ')}`);
   });
 
   it('[MIROIR] F2 — table de rattachement des 11 audits d’origine complète', () => {

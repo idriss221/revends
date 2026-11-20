@@ -22,7 +22,7 @@ import { fmt } from '../components/site/SiteBits'
 import { BrandingPanel } from '../components/storefront/BrandingPanel'
 import { StatsPanel } from '../components/storefront/StatsPanel'
 import { PaymentReferenceFields } from '../components/storefront/PaymentReferenceFields'
-import { validatePaymentFields, type PaymentFieldErrors } from '../lib/v8'
+import { validatePaymentFields, buildPaymentFields, type PaymentFieldErrors } from '../lib/v8'
 import { WaveCheckoutPanel } from '../components/storefront/WaveCheckoutPanel'
 import type { SubscriptionPlan, SubscribeWithPaymentBody } from '../lib/storefront.types'
 import type { OwnerProduct } from '../lib/types'
@@ -101,14 +101,12 @@ export function MonAbonnement() {
   const quota = usage?.quota ?? subscription?.plan.quota ?? 0
   const quotaFull = isActive && usage !== null && usage.used >= usage.quota
 
-  // V8 — référence de paiement (E1) : le bouton n'est actif que si les deux
+  // V8/V9.1 — référence de paiement (E1) : le bouton n'est actif que si les deux
   // champs sont valides côté client (le serveur reste l'arbitre).
   const paymentCheck = validatePaymentFields({ paymentMethod, paymentReference })
   const paymentValid = Object.keys(paymentCheck).length === 0
-  const paymentPayload = (): Pick<SubscribeWithPaymentBody, 'paymentMethod' | 'paymentReference'> => ({
-    paymentMethod: paymentMethod as SubscribeWithPaymentBody['paymentMethod'],
-    paymentReference: paymentReference.trim(),
-  })
+  const paymentPayload = (): Pick<SubscribeWithPaymentBody, 'paymentMethod' | 'paymentReference'> =>
+    buildPaymentFields(paymentMethod, paymentReference)
   /** Valide au clic : pose paymentErrors si invalide ; sinon null. */
   const guardPayment = (): boolean => {
     const errors = validatePaymentFields({ paymentMethod, paymentReference })

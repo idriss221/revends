@@ -167,7 +167,10 @@ describe('V9 — E1 : fail-closed du bouton', () => {
     expect(html).toContain('Découverte — 2 000 FCFA')
     expect(html).toContain('Boutique — 5 000 FCFA')
     expect(html).toContain('Atelier — 10 000 FCFA')
-    expect(html).toContain("Après votre paiement, utilisez le formulaire ci-dessous pour indiquer la référence.")
+    // V9.1 (revue F2) : le texte ne renvoie plus vers le champ référence (masqué pour Wave).
+    expect(html).toContain('Après votre paiement via ces liens')
+    expect(html).toContain('vérifiera la transaction dans le portail Wave')
+    expect(html).not.toContain('indiquer la référence')
     expect(html).toContain('target="_blank"')
     expect(html).toContain('rel="noopener noreferrer"')
   })

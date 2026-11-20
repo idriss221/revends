@@ -105,6 +105,27 @@ export function validatePaymentFields(input: PaymentFields): PaymentFieldErrors 
   return errors
 }
 
+/**
+ * V9.1 (revue F1) — Construit la partie « paiement » du payload de souscription.
+ *
+ * Wave : la référence n'est jamais envoyée. Le serveur génère la sienne et le
+ * webhook signé fait foi. On force donc `''` même si un état périmé subsiste
+ * après un basculement Orange Money → Wave (l'ancienne saisie reste en mémoire
+ * dans le state du formulaire, mais ne doit jamais atteindre l'API).
+ *
+ * Orange Money / virement : la référence saisie est conservée (trimée) — le
+ * flux manuel et ses codes d'erreur restent inchangés.
+ */
+export function buildPaymentFields(
+  paymentMethod: string,
+  paymentReference: string | null | undefined,
+): { paymentMethod: PaymentMethod; paymentReference: string } {
+  return {
+    paymentMethod: paymentMethod as PaymentMethod,
+    paymentReference: paymentMethod === 'wave' ? '' : (paymentReference ?? '').trim(),
+  }
+}
+
 /** Delta en pourcentage vs le mois précédent, arrondi à l'entier. Null si non calculable (précédent nul/absent). */
 export function deltaPct(current: number, previous: number | null | undefined): number | null {
   if (previous === null || previous === undefined || previous === 0) return null
