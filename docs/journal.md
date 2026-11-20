@@ -5133,3 +5133,84 @@ Dernière étape : recette finale `@cahier-des-charges` → `docs/recette-v9-wav
   écart `origin..HEAD = 0 commit`, arbre de travail propre.
 - La production reste sur le déploiement `dpl_GfAr3Ey3sFuQc4vEX3ExudGDsBY2` (code
   identique à `ce941a3` + docs ; aucun changement applicatif depuis le déploiement).
+
+---
+
+## 20/11/2026 — V9.1 « Référence de paiement optionnelle pour Wave »
+
+**Demande.** L'utilisateur veut que le paiement Wave validé par webhook active directement
+l'abonnement, sans que le vendeur saisisse une référence inutile. Le webhook signé était
+**déjà** la seule source d'activation en V9 : V9.1 retire l'obligation de saisie et génère
+la référence côté serveur pour **traçabilité/affichage admin uniquement**, jamais pour activer.
+
+### Cadrage et livrables (6 commits)
+1. **Avenant approuvé** — `docs/cahier-des-charges-v9.1-reference-wave.md`, 6 critères
+   `CA-V9.1-001`→`006` (`aeccf3d`). Statut passé « Approuvé » en `87bc18f`. Cahier V9 et
+   recette V9 (55/55 CONFORME) **intacts**. Aucune migration : `payment_reference` est déjà
+   `varchar(64) NULL` depuis `020_storefront_v8.sql:20`.
+2. **Backend** (`2d0c411`) — `storefront-validation.ts` génère
+   `WAVE-AUTO-<8 hexadécimales majuscules>` (18 car., conforme à `PAYMENT_REFERENCE_REGEX`)
+   quand `paymentMethod='wave'` et référence absente/vide/`null`. OM/virement strictement
+   inchangés (mêmes codes/messages). 8 tests nommés (`wave-v9.1-reference.test.ts`).
+3. **Web** (`3f314c3`) — champ « Référence de paiement » non rendu pour Wave (remplacé par
+   une `Notice` d'auto-confirmation), conservé et obligatoire pour OM/virement ; validateur
+   miroir adapté ; tests SSR du vrai composant.
+4. **Revue de code** (`04ddda4`) — **F1 (important)** : `buildPaymentFields()` force
+   `paymentReference: ''` pour Wave **même si un état OM périmé subsiste** après bascule
+   (test OM→Wave dédié), centralisant les points d'appel de `MonAbonnement.tsx` ; **F2** :
+   textes du panneau de repli ne renvoyant plus vers le champ masqué ; `V91_APP_ALLOWLIST`
+   ajoute explicitement les 4 fichiers du périmètre V9.1 sans toucher à `V9_BASE` ni à
+   `V9_APP_ALLOWLIST` (le garde-fou bloque toujours tout autre fichier).
+5. **Audit sécurité** — `APPROUVÉ SOUS RÉSERVE`, **0 bloquant / 0 critique / 0 important**.
+   Diff du webhook, de la signature, de la validation et des migrations = **0 ligne**.
+   Réserve **M1** corrigée en `5983fbf` : les textes de `WaveEchec.tsx` ne demandent plus de
+   référence Wave et renvoient vers la vérification admin dans le portail Wave.
+6. **Recette finale** (`87bc18f`) — `docs/recette-v9.1-reference-wave.md` :
+   **6/6 🟢 — `VERDICT : CONFORME`**, risque des liens hébergés consigné comme accepté.
+
+### Porte de vérification (avant déploiement)
+`npm test` serveur **ALL SUITES GREEN** (822/822, `EXIT=0`) · `npm test` web **21 fichiers /
+301 tests** (`EXIT=0`) · `npx tsc --noEmit` serveur OK · `npx tsc -b` web OK · `npm run build`
+×2 OK · `npm audit --omit=dev` → **0 vulnérabilité** serveur et web · `git diff --check` OK ·
+**0 secret** dans `web/dist/assets/` · diff de code ajouté contenant secret/`REDIS_URL` = **0**.
+
+### Séquence de production (20/11/2026, 15:05 UTC)
+1. **Contrôles préalables** : `RUN_MIGRATIONS="false"`, **0 `WAVE_*`**, **0 `REDIS_URL`** en
+   config Vercel (vérifié via fichier temporaire `umask 077` détruit immédiatement) ;
+   0 `.env*` à la racine ; prod de base `/api/health` 200 ; arbre git propre.
+2. **Backup avant changement** : `pg_dump` via image `postgres:18` avec `DATABASE_URL_UNPOOLED`
+   (URL directe, valeur jamais affichée) →
+   `~/.revends-secrets/backups/revends-prod-20261120T150556Z-v9.1.backup`
+   (**175 Ko, 375 objets, 37 tables avec données** vérifiées par `pg_restore --list`).
+   Rollback code : déploiement READY précédent `dpl_GfAr3Ey3sFuQc4vEX3ExudGDsBY2`.
+3. **Aucune migration** : `schema_migrations` reste à **22** lignes ; la colonne
+   `payment_reference` existe déjà. `RUN_MIGRATIONS=false` empêche toute migration au boot.
+4. **Déploiement** : `bash scripts/deploy-vercel.sh` → `dpl_4htFpxgCR9JUFvL2jBUdTtsE8YZA`,
+   `status READY`, `target production`, alias `https://revends.vercel.app`.
+
+### Smoke post-déploiement (preuves réelles)
+| Contrôle | Résultat |
+|---|---|
+| `GET /api/health` | **HTTP 200** `{"status":"ok"}` |
+| `GET /` | **HTTP 200** |
+| `GET /api/wave/config` sans session | **HTTP 401** (garde intacte) |
+| `POST /api/webhooks/wave` sans signature | **HTTP 200** `{"received":true,"ignored":true,"reason":"WAVE_DISABLED"}` → preuve runtime que Wave reste désactivé |
+| Bundle JS servi (`index-CxunLkjQ.js`) | 3 liens `pay.wave.com/m/…?amount=` (2000/5000/10000) ; **0 secret** ; **0 appel** `api.wave.com` ; texte V9.1 « aucune référence à saisir » **×1** et « portail Wave » **×3** → preuve que le nouveau code est bien en prod |
+| `SELECT count(*) FROM wave_checkout_events` | **0** — aucune session, aucun webhook, **aucun paiement test** |
+| Config Vercel prod | `RUN_MIGRATIONS="false"` ; **0 `WAVE_*`** ; **0 `REDIS_URL`** |
+| Bascule Wave | **Non effectuée** — aucune clé, aucun `WAVE_ENABLED=true`, aucun webhook enregistré, aucun paiement réel |
+
+### Verdict DoD — V9.1
+Exigences ✅ · Code ✅ · Vérifications ✅ · Sécurité ✅ (0 secret, 0 élévation) ·
+Documentation ✅ (recette 6/6) · Recette ✅ · Production ✅ (déployé désactivé).
+**VERDICT : TERMINÉ — V9.1 livrée et déployée en mode « prêt mais désactivé ».**
+
+### Risque assumé — rappel au chef de projet
+Si le vendeur choisit Wave mais paie depuis l'un des **3 liens hébergés de repli** (aucune
+session `cos-…`), le webhook ne peut corréler l'événement et aucune référence n'a été saisie :
+l'admin n'a pas de référence pour retrouver la transaction. **Plan B** : activation manuelle
+depuis `/admin/abonnements` après vérification dans le portail Wave ; la souscription reste
+`PENDING` jusque-là. Ce risque est **accepté** (avenant §5). Aucune mesure compensatoire
+(champ réintroduit pour Wave, activation sur retour navigateur) n'est autorisée.
+**Hors V9.1, décision utilisateur à venir** : obtenir les clés Wave, enregistrer
+`https://revends.vercel.app/api/webhooks/wave`, faire un paiement test, puis `WAVE_ENABLED=true`.
