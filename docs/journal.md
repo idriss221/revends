@@ -5124,3 +5124,12 @@ Dernière étape : recette finale `@cahier-des-charges` → `docs/recette-v9-wav
 - **DoD final** : Exigences ✅ · Code ✅ (0 ligne applicative en clôture) · Vérifications ✅
   · Sécurité ✅ (0 secret, aucune clé posée) · Documentation ✅ · Recette ✅.
   **VERDICT : TERMINÉ — V9 livré et déployé en mode « prêt mais désactivé ».**
+
+### Mise à jour du dépôt distant (20/11/2026)
+- **Push effectué** : `git push origin fix/v6-on-799a7ab` → `42f9bd8..28a8ed0`
+  (8 commits V9 : backend, web, diagnostics, recette, réserves revue, correctif
+  sécurité SEC-01/02, recette finale CONFORME, journal de clôture).
+- **Vérification** : `HEAD local == HEAD distant == 28a8ed01b1bec38bee08c9743751348390bb68d9`,
+  écart `origin..HEAD = 0 commit`, arbre de travail propre.
+- La production reste sur le déploiement `dpl_GfAr3Ey3sFuQc4vEX3ExudGDsBY2` (code
+  identique à `ce941a3` + docs ; aucun changement applicatif depuis le déploiement).
