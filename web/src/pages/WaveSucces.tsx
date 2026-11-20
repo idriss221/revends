@@ -62,12 +62,17 @@ export function WaveSucces() {
 
       <div className="wave-return-badges">
         <WaveChip />
-        <StatusBadge
-          kind="pending"
-          dot
-          label="Wave — en attente de confirmation du paiement"
-          className="wave-status-badge"
-        />
+        {/* Le badge « en attente » et sa pastille pulsée s'arrêtent dès que /me
+            indique ACTIVE (design V9 §3 E3 / §6). Aucun abonnement = aucun
+            paiement à confirmer : le badge n'a pas lieu d'être non plus. */}
+        {subscription && !isActive && (
+          <StatusBadge
+            kind="pending"
+            dot
+            label="Wave — en attente de confirmation du paiement"
+            className="wave-status-badge"
+          />
+        )}
       </div>
 
       {subscription ? (

@@ -4830,3 +4830,210 @@ Risque **accepté en connaissance de cause** : le plafond 20 logins/10 min reste
 par instance en cas de scale-out Vercel. Mesures compensatoires conservées :
 limiteur dédié sur `/api/cron` (10/10 min, prouvé 401×10 puis 429 en prod),
 monitoring des 429 et du health. Aucune action supplémentaire requise.
+
+---
+
+## V9 — Wave Checkout + webhooks (cadrage, 19/11/2026)
+
+**Demande** : intégrer Wave API Checkout + webhooks pour automatiser la validation des
+abonnements boutique, **sans toucher** au flux manuel Wave / Orange Money / virement.
+
+**Docs officielles vérifiées le 19/11/2026** (skill `docs-officielles`) :
+- `https://docs.wave.com/checkout` → `POST https://api.wave.com/v1/checkout/sessions`,
+  `amount` (string), `currency: "XOF"`, `success_url`, `error_url`, `client_reference`
+  ≤255 ; réponse `wave_launch_url` à ouvrir par le navigateur (jamais en webview) ;
+  `GET /v1/checkout/sessions/:id` pour vérification ; auth par clé API Bearer.
+- `https://docs.wave.com/webhook` → `checkout.session.completed`,
+  `checkout.session.payment_failed` ; en-tête `Wave-Signature: t=<unix>,v1=<hmac>` ;
+  **payload signé = `timestamp + rawBody`** (concaténation directe, confirmée dans
+  l'exemple JS officiel) ; HMAC-SHA256 en hexadécimal ; plusieurs `v1` possibles en
+  rotation de clé ; rejouer >5 min à rejeter ; idempotence par `event.id` ; répondre
+  2xx en <5 s ; Wave retry jusqu'à 3 jours. Secret webhook **distinct** de la clé API.
+  Request signing et IP whitelisting optionnels — **écartés** (Vercel sans IP fixes).
+
+**Décisions utilisateur (19/11/2026) — non négociables** :
+1. **Accès Wave** : aucun accès au portail Wave Business, aucune variable `WAVE_*`
+   dans `~/.revends-secrets/revends.env.local`. → livraison en mode **« prêt mais
+   désactivé »** : `WAVE_ENABLED=false` en prod, code + tests mock + endpoint webhook
+   sécurisé livrés, flux manuel strictement inchangé. Bascule en 2 variables dès
+   réception des clés.
+2. **Automatisation** : **activation immédiate** sur `checkout.session.completed`
+   valide (signature + montant + devise + `client_reference` conformes), sans passage
+   admin. Orange Money et virement **restent manuels**.
+3. **Identité admin** : `admin@revends.com` (id 7) porte `activated_by`, via
+   `WAVE_SYSTEM_ADMIN_ID=7` configurable — aucune migration sur la table `users`.
+
+**Verrous rappelés** : gratuit illimité, commission 10 %, V6.4 (aucune notification
+vendeur avant confirmation paiement), aucun « ranga », contact
+`revendsen@gmail.com`, numéros strictement `+221 7XXXXXXXX`, ne pas toucher
+Gmail/Whapi, ne pas modifier `REDIS_URL`.
+
+**État** : cadrage terminé → étape 2 (cahier des charges V9) lancée. Aucun code Wave
+écrit, aucun commit Wave créé.
+
+### Complément de cadrage (19/11/2026) — liens de paiement Wave
+L'utilisateur a fourni trois liens Wave hébergés (créés depuis le tableau de bord,
+format `pay.wave.com/m/M_sn_nLXzUBh809Au/c/sn/`) correspondant aux 3 forfaits :
+`?amount=2000` (Découverte), `?amount=5000` (Boutique), `?amount=10000` (Atelier).
+- Le premier lien annonçait initialement `?amount=1000` : l'utilisateur a confirmé
+  **« remplace le 1000 par 2000 »**. Le plan Découverte reste donc à **2 000 FCFA**
+  (BDD id 1) — aucun chiffre n'est modifié, l'erreur était dans le lien.
+- **Mécanisme retenu : API Checkout sessions** (`POST /v1/checkout/sessions`) avec
+  montant figé côté serveur et `client_reference` rattaché à la souscription. Les
+  3 liens hébergés restent affichés en **repli manuel** et ne déclenchent **aucune**
+  activation automatique (pas de `client_reference`, montant modifiable dans l'URL).
+- Le webhook signé reste la **seule** preuve d'activation : le retour `success_url`
+  ne suffit pas (« le paiement doit être bien envoyé pour que l'abonnement soit valide »).
+- Faits de doc utiles : URL d'une session API = `pay.wave.com/c/cos-…` (différente des
+  liens tableau de bord) ; `GET /v1/checkout/sessions/search?client_reference=` permet
+  la réconciliation ; pour `XOF`, aucun décimal autorisé.
+
+### Porte 2 — cahier des charges V9 approuvé (19/11/2026)
+- **Livrable** : `docs/cahier-des-charges-v9-wave-checkout.md` — **361 lignes**, **55 critères**
+  `CA-V9-001`→`CA-V9-075` (8 groupes), **12 scénarios mocks** `SC-V9-01`→`12`,
+  **14 risques** `R-V9-01`→`14`, verdict DONE de l'agent.
+- **Audit du chef de projet** : toutes les références `fichier:ligne` vérifiées une à une
+  (`journal.md:4836/4874/4879`, `cahier-des-charges-v8…md:15/17/38/119/404/411/413`,
+  `api.md:5/130/142/2093/2176/2225/2227/2234`) → exactes. Comptages recalculés :
+  55 critères uniques, 361 lignes.
+- **Correction appliquée par le chef de projet** : contradiction interne levée entre
+  `CA-V9-003` (3 liens hébergés contenant `?amount=2000|5000|10000` affichés) et
+  `CA-V9-011/017` (0 occurrence de ces chiffres dans `web/src`). Les liens sont désormais
+  spécifiés comme **configuration statique fournie par l'utilisateur** : 0 occurrence
+  utilisée pour calculer/afficher/valider un prix ou un montant de session.
+- **VERDICT DoD (cahier) : DONE → approuvé.** Porte ouverte sur l'architecture (étape 3).
+
+### Porte 3 — architecture V9 approuvée (19/11/2026)
+- **Livrable** : `docs/architecture-v9-wave-checkout.md` — **622 lignes**, 10 sections,
+  matrice de couverture des 55 critères `CA-V9-xxx`, 6 risques d'architecture `R-ARCH-01..06`.
+- **Audit du chef de projet sur le code réel** : `server/src/app.ts` monte `/api/cron` en
+  `:111` **avant** `csrfProtection` (`:112`) et `express.json()` (`:114`) → le montage du
+  webhook avant CSRF avec `express.raw` dédié est faisable ; `SESSION_SECRET` existe
+  (`config.ts:38`) avec garde prod ≥32 caractères ; `activateSubscription`
+  (`storefront.service.ts:653+`) contient déjà l'`afterCommit` et la clé anti-doublon
+  `subscription-activated:<userId>:<subscriptionId>` → **1 seul e-mail** ; DDL `023`
+  = 1 table nouvelle (`wave_checkout_events`) + 4 index, **0 colonne** sur une table
+  existante, `001`→`022` et `chk_activation_pair` intacts.
+- **10 arbitrages acceptés** (`D-ARCH-1..10`) : table de trace dédiée ; `client_reference`
+  déterministe `wave-sub-<id>-<hmac8>` ; indicateur additif `wavePaymentPending` sur
+  `/api/subscriptions/me` ; `GET /api/wave/config` → `{ waveEnabled }` **uniquement** ;
+  webhook avant CSRF/body-parser ; `fetchImpl` injectable ; `uq_wave_event_id` +
+  `UPDATE … WHERE status='PENDING'` sans `FOR UPDATE` externe (piège de deadlock
+  documenté) ; 2 pages retour sans query params ; file admin dédiée ; suite de tests
+  `wave-v9-*`. Contrôles métier : `payment_method='wave'`, `amount=String(price_fcfa)`,
+  `XOF` — `payment_failed` corrélé par `session_id` (payload sans référence).
+- **VERDICT DoD (architecture) : DONE → approuvée.** Aucun bloquant technique.
+  Portes 4 et 5 ouvertes en parallèle : design (`@design`) et contrat API (`@api-designer`).
+
+### Portes 4 & 5 — design et contrat d'API approuvés (19/11/2026)
+- **Design** : `docs/design-v9-wave-checkout.md` — **485 lignes**, 8 sections, 5 écrans/états
+  (E1 `WaveCheckoutPanel`, E2 panneau PENDING, E3 succès, E4 échec, E5 file admin), 20 libellés
+  mappés sur les `CA-V9`. Arbitrage contraste vérifié : `#1DC8FF` fait **1,86:1** sur fond clair
+  → interdit en texte/filet, réservé aux aplats avec texte sombre `#1A1714` (**9,14:1**) ;
+  CTA bordeaux et focus existants conservés. Libellés verrouillés : « Payer avec Wave »,
+  « Wave — en attente de confirmation du paiement », « Le paiement Wave n'a pas abouti ».
+- **Contrat d'API** : `docs/api-v9-wave-checkout.md` — **735 lignes**, 4 routes
+  (`POST /api/wave/checkout/sessions`, `POST /api/webhooks/wave`, `GET /api/wave/config`,
+  `GET /api/wave/admin/events`) + extension additive `GET /api/subscriptions/me` + 2 pages
+  retour, **14 codes d'erreur**, 36 scénarios simulés. Décisions tranchées : `WAVE_SUBSCRIPTION_NOT_FOUND`
+  = 404 non divulgatrice ; `per_page` paramètre / `perPage` réponse ; camelCase côté API ;
+  `INVALID_SIGNATURE` = 400 ; `INTERNAL_ERROR` = 500 sauf webhook = 503 (retry Wave) ;
+  `payment_failed` sans montant/devise/référence, corrélé par `session_id` ; webhook avec
+  `WAVE_ENABLED=false` → **200 ignoré** (pas de 503) ; `Content-Type: application/json` obligatoire.
+- **Audit du chef de projet** : le résumé de l'agent annonçait `POST /api/wave/webhook`, mais
+  le document contient bien `POST /api/webhooks/wave` (5 occurrences, **0** occurrence de
+  l'autre forme), cohérent avec l'architecture et l'URL d'enregistrementfuture. Aucune correction.
+- **VERDICT DoD (design + API) : DONE → approuvés.** Porte 6 ouverte : implémentation backend.
+
+### Porte 6 — backend V9 livré (commit `0640bf0`, 19/11/2026)
+- **Livrable** : 20 fichiers, +3 994 insertions. Migration `023_wave_checkout.sql`, 5 variables
+  `WAVE_*` fail-closed, 4 routes, extension additive `/me`, `api.md` v2.9, 30 tests V9
+  (`wave-v9-checkout.test.ts` 13, `wave-v9-webhook.test.ts` 17).
+- **Audit du chef de projet sur le code réel** : webhook monté `app.ts:113` **avant**
+  `cronRouter` (`:114`), CSRF (`:115`) et `express.json()` (`:117`), avec `express.raw` dans
+  le routeur ; `WAVE_ENABLED` défaut `false`, garde enabled ⇒ secrets + `SITE_URL` https ;
+  `wave-signature.ts` = HMAC-SHA256 `Buffer.concat([t,rawBody])`, multi-`v1`,
+  `timingSafeEqual`, fenêtre 300 s passé / 30 s futur ; `wave-webhook.service.ts` appelle
+  `activateSubscription(config.wave.systemAdminId, …)` une seule fois ; **0 ligne** sur
+  Gmail/Whapi/`REDIS_URL` et sur `storefront-admin-ctl.service.ts`.
+- **Vérifications de l'agent** : `npx tsc --noEmit` OK ; `npm test` exit 0 → **760 tests,
+  0 échec** (37 fichiers) ; build OK ; `npm audit --omit=dev` → **0 vulnérabilité** ;
+  `git diff --check` OK. Commit unique, **aucun déploiement**, aucune clé posée.
+- **Arbitrage documentaire tranché** : `CA-V9-016` disait « 0 écriture en base » alors que
+  l'architecture (approuvée, §5.1 étapes 5→7) crée la ligne d'intention `SESSION_CREATED`
+  **avant** l'appel Wave (stabilité du `client_reference`, corrélation d'un webhook rapide).
+  Le critère est amendé en **« 0 écriture métier »**, la trace interne étant explicitement
+  autorisée et n'étant ni une activation ni une écriture sur `seller_subscriptions`.
+- **Risque ouvert transmis à `@tester`** : test préexistant `emails.test.ts:689` intermittent
+  (1 échec sur 3 exécutions en isolement, fichier non modifié par V9) — cause identifiée :
+  `clearSentMails()` sans `flushAfterCommit()` préalable. Correctif à appliquer par `@tester`
+  avec `debug-systematique` avant la recette finale.
+- **VERDICT DoD (backend) : DONE → approuvé**, sous réserve du correctif du test intermittent
+  et de la grille complète `@tester`. Porte 7 ouverte : frontend web. (Mobile natif = hors
+  périmètre V9, aucun écran à implémenter.)
+
+### Porte 7 — frontend web V9 livré (commit `15bc675`, 19/11/2026)
+- **Livrable** : 12 fichiers, +829 insertions / 2 suppressions. `lib/wave.ts`, `WaveCheckoutPanel.tsx`
+  (bouton rendu seulement si `waveEnabled && PENDING && wavePaymentPending`), extension de
+  `SubscriptionStatusPanel.tsx` (libellé exact « Wave — en attente de confirmation du paiement »,
+  « En attente d'activation » préservé), pages `/paiement-wave/succes` et `/echec` (0 query lue,
+  0 écriture), colonne admin additive « Paiement Wave », 2 tokens CSS, 17 tests frontend.
+- **Vérifications de l'agent** : `npx tsc -b` OK ; `npm test` → **290/290** ; `npm run build`
+  OK (5,68 s) ; `npm audit --omit=dev` → 0 vulnérabilité ; 0 secret dans `web/dist/assets/`.
+- **Limite assumée** : recette visuelle `R9` (`scrollWidth` à 280/320/360/375 px) non exécutée
+  ici (nécessite session authentifiée + API) → transférée à `@tester`.
+- **Mobile natif = hors périmètre V9** : le cahier approuvé ne prévoit aucune cible native
+  (expo non concerné) ; aucun écran `@mobile` à livrer sur cette version.
+- **VERDICT DoD (frontend) : DONE → approuvé.** Porte 8 ouverte : tests + grille de recette.
+
+### Porte 8 — tests et recette V9 livrés (commits `ea22317` / `89d8555`, 19/11/2026)
+- **Recette** : `docs/recette-v9-wave-checkout.md` v2.0 — **54 critères 🟢 / 1 ⚪**,
+  **12/12 scénarios 🟢**. Verdict : **NON CONFORME — 1 bloquant de phase (`CA-V9-074`),
+  0 défaut de code**.
+- **5 écarts initiaux traités** : `CA-V9-004` (SQL prod : id 7 = `admin@revends.com`, id 23
+  inchangé), `CA-V9-005` (4 variables `WAVE_*` **ABSENTES** du coffre, aucune valeur affichée),
+  `CA-V9-013`/`018` (commit backend `89d8555` : `retrieveCheckoutSession` +
+  `searchCheckoutSessions` en client diagnostique mocké, 8 tests, GET `COMPLETED` **non
+  activateur**), `CA-V9-074` maintenu ⚪ jusqu'au déploiement.
+- **Correction test intermittent** : `server/test/emails.test.ts` — `flushAfterCommit()`
+  avant `clearSentMails()`, **5/5 relances isolées vertes** (43/43).
+- **Preuves rejouées par `@tester`** : serveur `tsc --noEmit` OK ; `npm test` **807/807 deux
+  fois de suite**, `storefront-v8` 63/63 ; build OK ; `npm audit --omit=dev` 0 ; web `tsc -b`
+  OK, **291/291**, build OK, audit 0 ; `git diff --check` OK ; responsive Chromium
+  280/320/360/375 px `scrollWidth=clientWidth`, 6 liens, 3 clics, **0 requête `/api`** ;
+  0 secret, 0 appel réseau Wave, 0 ligne sur zones interdites.
+- **Amendement cahier (chef de projet)** : `CA-V9-075` — le code V9 **est déployé en mode
+  désactivé** en clôture (backup → migration `023` avant le code → `deploy-vercel.sh` → smoke) ;
+  seule la **bascale** (clés + `WAVE_ENABLED=true` + webhook + paiement test) reste hors V9.
+  `R-V9-07` aligné. Cela rend `CA-V9-074` prouvable après déploiement.
+- **Séquence restante** : revue (`@reviewer`) → sécurité (`@securite`) → déploiement désactivé
+  (`@devops`) → smoke → recette finale (`@cahier-des-charges`) → clôture.
+
+### Porte 9 — revue de code V9 : APPROUVÉ SOUS RÉSERVE, réserves levées (20/11/2026)
+- **Revue `@reviewer`** : aucun bloquant de code ; **3 réserves importantes** :
+  - **F1** (`server/test/wave-v9-audit.test.ts:161-166`, `:194-209`) : les contrôles
+    « 0 ligne / 0 fichier » comparaient à `HEAD` → preuve tautologique une fois V9
+    commité (0 octet). **Corrigé** : base immuable `V9_BASE = 42f9bd8` (dernier
+    commit pré-V9) + allow-list explicite des 24 fichiers applicatifs V9.
+    Vérification réelle : `git diff 42f9bd8..HEAD -- server/migrations/` →
+    **1 seul fichier** (`023_wave_checkout.sql`) ; zones verrouillées (refus V8.2,
+    Gmail, Whapi, `.env.production`) → **0 ligne** ; 0 ligne `REDIS_URL` ajoutée.
+  - **F2** (11 audits miroirs) : 11/12 audits n'exécutaient rien (regex sur le
+    source). **Corrigé** : tous les contrôles étiquetés `[MIROIR]` (13 = 11
+    d'origine + 2 garde-fous) ou `[EXEC]` (1 = migration `023` rejouée 2×),
+    table `MIRROR_TO_BEHAVIOR` rattachant chaque miroir à sa suite comportementale.
+    **Preuve comportementale ajoutée** : `wave-v9-webhook.test.ts` capture
+    stdout/stderr sur un webhook à signature invalide (sonde positive + 0 fuite
+    secret/signature/rawBody). La recette ne compte plus ces miroirs comme preuves.
+  - **F3** (`web/src/pages/WaveSucces.tsx:63-71`) : badge « Wave — en attente de
+    confirmation du paiement » rendu même quand `/me` répond `ACTIVE`. **Corrigé**
+    : `{subscription && !isActive && <StatusBadge …/>}` → pastille pulsée arrêtée
+    dès `ACTIVE` et absente sans abonnement. **3 tests SSR ajoutés** (`/me ACTIVE`,
+    `PENDING`, `null`) avec QueryClient prérempli — preuve de rendu, pas de source.
+- **Vérifications après correctifs** : `tsc --noEmit` serveur OK ; `npm test`
+  serveur **2 passes consécutives ALL SUITES GREEN** ; `npx tsc -b` web OK ;
+  `npm test` web **294/294** (291 + 3 F3) ; builds OK ; `npm audit --omit=dev`
+  → 0 vulnérabilité des deux côtés ; 0 secret dans `web/dist/assets` ;
+  `git diff --check` OK.
+- **VERDICT DoD (revue) : réserves levées.** Porte 10 ouverte : audit sécurité
+  `@securite`, puis déploiement V9 désactivé.

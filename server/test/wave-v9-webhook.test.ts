@@ -21,6 +21,7 @@ setWaveEnv({
 
 const { bootTestServer, registerUser, loginAdmin, dbQuery, errorCode } = await import('./helpers.js');
 const { verifyWaveSignature } = await import('../src/utils/wave-signature.js');
+const { logger } = await import('../src/utils/logger.js');
 const { flushAfterCommit } = await import('../src/utils/db.js');
 const { clearSentMails, recentSentMails } = await import('../src/mail/mailer.js');
 const { config } = await import('../src/config.js');
@@ -137,7 +138,7 @@ before(async () => {
       sessionSeq += 1;
       const id = `cos-v9-webhook-${sessionSeq}`;
       assert.equal(body.currency, 'XOF');
-      assert.equal(body.amount, '2000');
+      assert.ok(['2000', '5000', '10000'].includes(body.amount), `montant inattendu: ${body.amount}`);
       return { body: { id, wave_launch_url: `https://pay.wave.com/c/${id}` } };
     }),
   );
@@ -195,6 +196,45 @@ describe('V9 — webhook Wave haché, idempotent et non activateur hors contrôl
     const res = await sendWebhook(event, { secret: 'b'.repeat(32) });
     assert.equal(res.status, 400);
     assert.equal(errorCode(res.body), 'INVALID_SIGNATURE');
+  });
+
+  it('CA-V9-052 — aucun secret, signature ni corps brut dans la journalisation', async () => {
+    const pending = await createWavePending('whnolog');
+    const event = completedEvent(pending);
+    const raw = Buffer.from(JSON.stringify(event));
+    const badSecret = 'c'.repeat(32);
+    const signature = waveSignatureHeader(badSecret, Math.floor(Date.now() / 1000), raw);
+
+    const captured: string[] = [];
+    const sink = (chunk: Uint8Array | string): boolean => {
+      captured.push(String(chunk));
+      return true;
+    };
+    const originalStdout = process.stdout.write;
+    const originalStderr = process.stderr.write;
+    process.stdout.write = sink as typeof process.stdout.write;
+    process.stderr.write = sink as typeof process.stderr.write;
+    let status = 0;
+    try {
+      // Sonde positive : prouve que l'interception des flux fonctionne. Sans
+      // elle, une capture vide ferait passer le test par défaut.
+      logger.info('V9 sonde de capture journal');
+      const res = await postRaw(server.baseUrl, '/api/webhooks/wave', raw, {
+        'content-type': 'application/json',
+        'wave-signature': signature,
+      });
+      status = res.status;
+    } finally {
+      process.stdout.write = originalStdout;
+      process.stderr.write = originalStderr;
+    }
+
+    assert.equal(status, 400);
+    const logs = captured.join('');
+    assert.ok(logs.includes('V9 sonde de capture journal'), 'la capture des flux n’a pas fonctionné');
+    assert.ok(!logs.includes(badSecret), 'le secret de test a fuité dans un log');
+    assert.ok(!logs.includes(signature), 'la signature a fuité dans un log');
+    assert.ok(!logs.includes(raw.toString('utf8')), 'le corps brut a fuité dans un log');
   });
 
   it('rejeu à 6 minutes → 400 INVALID_SIGNATURE', async () => {
@@ -438,6 +478,242 @@ describe('V9 — webhook Wave haché, idempotent et non activateur hors contrôl
     assert.equal(res.status, 200);
     assert.deepEqual(res.body, { received: true, ignored: true });
     assert.equal(await trace(event.id), undefined);
+  });
+
+  it('CA-V9-030/036 — doublon séquentiel 2× puis 3× : 2xx partout, 1 trace, 1 e-mail', async () => {
+    const pending = await createWavePending('whseqduplicate');
+    const event = completedEvent(pending);
+    await flushAfterCommit();
+    clearSentMails();
+
+    const first = await sendWebhook(event);
+    assert.deepEqual(first.body, { received: true });
+    const second = await sendWebhook(event);
+    assert.deepEqual(second.body, { received: true, duplicate: true });
+    const third = await sendWebhook(event);
+    assert.deepEqual(third.body, { received: true, duplicate: true });
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    assert.equal(third.status, 200);
+    await flushAfterCommit();
+
+    const traces = await dbQuery('SELECT id, status FROM wave_checkout_events WHERE event_id = $1', [event.id]);
+    assert.equal(traces.length, 1);
+    assert.equal(traces[0]!.status, 'COMPLETED');
+    const active = await dbQuery("SELECT id FROM seller_subscriptions WHERE id = $1 AND status = 'ACTIVE'", [pending.subscriptionId]);
+    assert.equal(active.length, 1);
+    assert.equal(recentSentMails().length, 1);
+  });
+
+  it('CA-V9-032 — horodatage HTTP : 4 min accepté, 6 min / absent / non numérique / futur rejetés', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const accepted = await createWavePending('whtime4min');
+    const okEvent = completedEvent(accepted);
+    const ok = await sendWebhook(okEvent, { timestamp: now - 240 });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    await flushAfterCommit();
+    assert.equal((await dbQuery('SELECT status FROM seller_subscriptions WHERE id = $1', [accepted.subscriptionId]))[0]!.status, 'ACTIVE');
+
+    const cases: Array<{ label: string; timestamp?: number; mode?: 'no-t' | 'bad-t' }> = [
+      { label: '6 minutes', timestamp: now - 360 },
+      { label: 'futur +40 s', timestamp: now + 40 },
+      { label: 't absent', mode: 'no-t' },
+      { label: 't non numérique', mode: 'bad-t' },
+    ];
+    for (const { label, timestamp, mode } of cases) {
+      const pending = await createWavePending(`whtime${label.replace(/[^a-z0-9]/gi, '')}`);
+      const event = completedEvent(pending);
+      const raw = Buffer.from(JSON.stringify(event));
+      const t = timestamp ?? now;
+      const header = mode === 'no-t'
+        ? waveSignatureHeader(WEBHOOK_SECRET, t, raw, { includeTimestamp: false })
+        : mode === 'bad-t'
+          ? `t=pas-un-nombre,v1=${'0'.repeat(64)}`
+          : waveSignatureHeader(WEBHOOK_SECRET, t, raw);
+      const res = await postRaw(server.baseUrl, '/api/webhooks/wave', raw, { 'wave-signature': header });
+      assert.equal(res.status, 400, `${label} → ${res.status}`);
+      assert.equal(errorCode(res.body), 'INVALID_SIGNATURE', label);
+      assert.equal((await dbQuery('SELECT status FROM seller_subscriptions WHERE id = $1', [pending.subscriptionId]))[0]!.status, 'PENDING');
+    }
+  });
+
+  it('CA-V9-033/034 — montant d’un autre plan et devise absente → ignored, 0 activation', async () => {
+    const user = await registerUser(server, 'whplan2');
+    const subscriptionId = await subscribe(user, 'wh-plan-2', 2);
+    const session = await user.client.post('/api/wave/checkout/sessions', { subscriptionId });
+    assert.equal(session.status, 200);
+    const sessionId = (session.body as any).sessionId as string;
+
+    for (const [label, data] of [
+      ['montant plan Découverte sur un plan Boutique', { id: sessionId, amount: '2000', currency: 'XOF' }],
+      ['devise absente', { id: sessionId, amount: '5000' }],
+    ] as const) {
+      const event = { id: nextEventId(), type: 'checkout.session.completed', data };
+      clearSentMails();
+      const res = await sendWebhook(event);
+      assert.equal(res.status, 200, label);
+      assert.deepEqual(res.body, { received: true, ignored: true });
+      await flushAfterCommit();
+      assert.equal((await trace(event.id))!.status, 'IGNORED');
+      assert.equal((await dbQuery('SELECT status FROM seller_subscriptions WHERE id = $1', [subscriptionId]))[0]!.status, 'PENDING');
+      assert.equal(recentSentMails().length, 0);
+    }
+  });
+
+  it('CA-V9-035/041/046 — référence d’autrui, EXPIRED/CANCELLED et virement → 2xx ignored, 0 activation', async () => {
+    const victim = await createWavePending('whvictim');
+    const foreign = await createWavePending('whforeign');
+    const foreignEvent = completedEvent(foreign);
+    clearSentMails();
+    const foreignRes = await sendWebhook(foreignEvent);
+    assert.equal(foreignRes.status, 200);
+    await flushAfterCommit();
+    assert.equal((await dbQuery('SELECT status FROM seller_subscriptions WHERE id = $1', [victim.subscriptionId]))[0]!.status, 'PENDING');
+    assert.equal(recentSentMails().length, 1, 'seule la souscription rattachée à la référence est activée');
+
+    for (const [label, status] of [['EXPIRED', 'EXPIRED'], ['CANCELLED', 'CANCELLED']] as const) {
+      const pending = await createWavePending(`wh${status.toLowerCase()}`);
+      if (status === 'EXPIRED') {
+        await dbQuery(
+          `UPDATE seller_subscriptions
+              SET status = 'EXPIRED', started_at = now() - interval '40 days', ends_at = now() - interval '10 days',
+                  activated_at = now() - interval '40 days', activated_by = (SELECT id FROM users WHERE role='admin' LIMIT 1)
+            WHERE id = $1`,
+          [pending.subscriptionId],
+        );
+      } else {
+        await dbQuery("UPDATE seller_subscriptions SET status = 'CANCELLED' WHERE id = $1", [pending.subscriptionId]);
+      }
+      const before = (await dbQuery('SELECT activated_by FROM seller_subscriptions WHERE id = $1', [pending.subscriptionId]))[0]!;
+      clearSentMails();
+      const res = await sendWebhook(completedEvent(pending));
+      assert.equal(res.status, 200, label);
+      assert.deepEqual(res.body, { received: true, ignored: true });
+      await flushAfterCommit();
+      const after = (await dbQuery('SELECT status, activated_by FROM seller_subscriptions WHERE id = $1', [pending.subscriptionId]))[0]!;
+      assert.equal(after.status, status);
+      assert.equal(after.activated_by, before.activated_by, `${label} : activated_by non écrasé`);
+      assert.equal(recentSentMails().length, 0);
+    }
+
+    const transferUser = await registerUser(server, 'whvirement');
+    const transferId = await subscribe(transferUser, 'wh-virement', 1, 'virement');
+    const transferSession = await transferUser.client.post('/api/wave/checkout/sessions', { subscriptionId: transferId });
+    assert.equal(transferSession.status, 409, 'aucune session Wave pour un virement');
+    const event = {
+      id: nextEventId(),
+      type: 'checkout.session.completed',
+      data: { id: 'cos-virement-fictif', amount: '2000', currency: 'XOF', client_reference: 'wave-sub-inconnu' },
+    };
+    const res = await sendWebhook(event);
+    assert.equal(res.status, 200);
+    assert.equal((await dbQuery('SELECT status FROM seller_subscriptions WHERE id = $1', [transferId]))[0]!.status, 'PENDING');
+  });
+
+  it('CA-V9-036 — 2xx en < 5 s pour traité et non pertinent, 4xx rapide pour signature invalide', async () => {
+    const pending = await createWavePending('whtiming');
+    const event = completedEvent(pending);
+    await sendWebhook(event);
+    await flushAfterCommit();
+
+    const duplicateStart = performance.now();
+    const duplicate = await sendWebhook(event);
+    const duplicateMs = performance.now() - duplicateStart;
+    assert.equal(duplicate.status, 200);
+    assert.ok(duplicateMs < 5_000, `doublon en ${duplicateMs.toFixed(1)} ms`);
+
+    const other = await createWavePending('whtiming2');
+    const ignoredEvent = {
+      id: nextEventId(),
+      type: 'checkout.session.expired',
+      data: { id: other.sessionId, client_reference: other.clientReference },
+    };
+    const ignoredStart = performance.now();
+    const ignored = await sendWebhook(ignoredEvent);
+    const ignoredMs = performance.now() - ignoredStart;
+    assert.equal(ignored.status, 200);
+    assert.ok(ignoredMs < 5_000, `ignoré en ${ignoredMs.toFixed(1)} ms`);
+
+    const raw = Buffer.from(JSON.stringify(completedEvent(other)));
+    const badStart = performance.now();
+    const bad = await postRaw(server.baseUrl, '/api/webhooks/wave', raw, {
+      'wave-signature': `t=${Math.floor(Date.now() / 1000)},v1=${'0'.repeat(64)}`,
+    });
+    const badMs = performance.now() - badStart;
+    assert.equal(bad.status, 400);
+    assert.ok(badMs < 5_000, `signature invalide en ${badMs.toFixed(1)} ms`);
+  });
+
+  it('CA-V9-044 — parité des effets webhook vs activation admin (statut, dates, activation, e-mail)', async () => {
+    const auto = await createWavePending('whparityauto');
+    const manualUser = await registerUser(server, 'whparityadmin');
+    const manualId = await subscribe(manualUser, 'wh-parity-admin');
+    const autoBefore = (await dbQuery('SELECT payment_method, payment_reference FROM seller_subscriptions WHERE id = $1', [auto.subscriptionId]))[0]!;
+    const manualBefore = (await dbQuery('SELECT payment_method, payment_reference FROM seller_subscriptions WHERE id = $1', [manualId]))[0]!;
+    clearSentMails();
+
+    const res = await sendWebhook(completedEvent(auto));
+    assert.equal(res.status, 200);
+    const adminRes = await admin.post(`/api/admin/subscriptions/${manualId}/activate`, {});
+    assert.equal(adminRes.status, 200);
+    await flushAfterCommit();
+
+    const columns = 'status, payment_method, activated_by, EXTRACT(EPOCH FROM (ends_at - started_at)) / 86400 AS days';
+    const byWebhook = (await dbQuery(`SELECT ${columns} FROM seller_subscriptions WHERE id = $1`, [auto.subscriptionId]))[0]!;
+    const byAdmin = (await dbQuery(`SELECT ${columns} FROM seller_subscriptions WHERE id = $1`, [manualId]))[0]!;
+    assert.deepEqual(byWebhook, byAdmin, 'les effets métier sont identiques');
+    assert.equal(byWebhook.status, 'ACTIVE');
+    assert.equal(byWebhook.activated_by, config.wave.systemAdminId);
+    assert.equal(Number(byWebhook.days), 30);
+
+    const autoAfter = (await dbQuery('SELECT payment_method, payment_reference FROM seller_subscriptions WHERE id = $1', [auto.subscriptionId]))[0]!;
+    const manualAfter = (await dbQuery('SELECT payment_method, payment_reference FROM seller_subscriptions WHERE id = $1', [manualId]))[0]!;
+    assert.deepEqual(autoAfter, autoBefore, 'CA-V9-045 : référence conservée par le webhook');
+    assert.deepEqual(manualAfter, manualBefore, 'référence conservée par l’activation admin');
+
+    const mails = recentSentMails().filter((mail) => mail.event === 'subscription_activated');
+    assert.equal(mails.length, 2, '1 e-mail par activation, aucun doublon');
+    assert.equal(mails[0]!.subject, mails[1]!.subject);
+
+    for (const id of [auto.subscriptionId, manualId]) {
+      const me = id === auto.subscriptionId ? auto.user : manualUser;
+      const detail = await me.client.get('/api/subscriptions/me');
+      assert.equal((detail.body as any).subscription.status, 'ACTIVE');
+    }
+  });
+
+  it('CA-V9-045 — activation automatique : payment_method et payment_reference intacts', async () => {
+    const pending = await createWavePending('whrefconservee');
+    const columns = 'payment_method, payment_reference';
+    const before = (await dbQuery(`SELECT ${columns} FROM seller_subscriptions WHERE id = $1`, [pending.subscriptionId]))[0]!;
+    assert.equal(before.payment_method, 'wave');
+    assert.ok(before.payment_reference, 'une référence manuelle est saisie à la souscription');
+    clearSentMails();
+
+    const res = await sendWebhook(completedEvent(pending));
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    await flushAfterCommit();
+
+    const after = (await dbQuery(`SELECT ${columns}, status, activated_by FROM seller_subscriptions WHERE id = $1`, [pending.subscriptionId]))[0]!;
+    assert.deepEqual(
+      { payment_method: after.payment_method, payment_reference: after.payment_reference },
+      before,
+      'V9 ne réécrit aucun champ de paiement',
+    );
+    assert.equal(after.status, 'ACTIVE');
+    assert.equal(after.activated_by, config.wave.systemAdminId);
+  });
+
+  it('CA-V9-047 — deux événements distincts simultanés pour la même souscription → 1 seul ACTIVE', async () => {
+    const pending = await createWavePending('whdistinctrace');
+    clearSentMails();
+    const events = [completedEvent(pending), completedEvent(pending)];
+    const responses = await Promise.all(events.map((event) => sendWebhook(event)));
+    for (const res of responses) assert.equal(res.status, 200, JSON.stringify(res.body));
+    await flushAfterCommit();
+
+    assert.equal((await dbQuery("SELECT COUNT(*)::text AS n FROM seller_subscriptions WHERE id = $1 AND status = 'ACTIVE'", [pending.subscriptionId]))[0]!.n, '1');
+    assert.equal(recentSentMails().length, 1);
   });
 
   it('le webhook n’appelle jamais l’API Wave : seuls les appels de création de session ont été stubés', () => {

@@ -18,7 +18,7 @@ import { SubscriptionStatusPanel } from './components/storefront/SubscriptionSta
 import { WaveSucces } from './pages/WaveSucces'
 import { WaveEchec } from './pages/WaveEchec'
 import { WAVE_HOSTED_LINKS, waveAdminStatus } from './lib/wave'
-import type { Subscription } from './lib/storefront.types'
+import type { MySubscriptionResponse, Subscription } from './lib/storefront.types'
 import type { WaveAdminEvent } from './lib/wave'
 
 const SRC = fileURLToPath(new URL('./', import.meta.url))
@@ -29,6 +29,18 @@ const wrap = (node: React.ReactNode) =>
       <MemoryRouter>{node}</MemoryRouter>
     </QueryClientProvider>,
   )
+
+/** Rendu SSR avec `/me` déjà résolu — permet de prouver un état ACTIVE réel. */
+const wrapWithMe = (node: React.ReactNode, subscription: Subscription | null) => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const data: MySubscriptionResponse = { subscription, usage: null, listings: [], plans: [] }
+  qc.setQueryData(['my-subscription'], data)
+  return renderToString(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{node}</MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 const subscription = (status: Subscription['status'], wavePaymentPending?: boolean): Subscription => ({
   id: 42,
@@ -176,6 +188,31 @@ describe('V9 — E3/E4 : pages retour sans effet de bord', () => {
     expect(source).toContain('Retour au catalogue')
   })
 
+  // F3 revue 20/11 : le badge « en attente » était rendu même quand /me
+  // répondait ACTIVE — contradiction visible avec le message « à jour ».
+  it('E3 : /me ACTIVE ⇒ aucun badge « en attente » ni pastille pulsée', () => {
+    const html = wrapWithMe(<WaveSucces />, subscription('ACTIVE'))
+    expect(html).toContain('Votre abonnement est à jour. Retrouvez votre boutique depuis « Mon abonnement ».')
+    expect(html).not.toContain('Wave — en attente de confirmation du paiement')
+    expect(html).not.toContain('wave-status-badge')
+    expect(html).toContain('Voir mon abonnement')
+  })
+
+  it('E3 : /me PENDING Wave ⇒ badge « en attente » et pastille pulsée présents', () => {
+    const html = wrapWithMe(<WaveSucces />, subscription('PENDING', true))
+    expect(html).toContain('Wave — en attente de confirmation du paiement')
+    expect(html).toContain('wave-status-badge')
+    expect(html).toContain(
+      'Votre paiement est en attente de confirmation de la part de Wave. Votre abonnement reste en attente : il sera activé automatiquement dès que le paiement sera confirmé.',
+    )
+  })
+
+  it('E3 : /me sans abonnement ⇒ aucun badge « en attente »', () => {
+    const html = wrapWithMe(<WaveSucces />, null)
+    expect(html).toContain('Aucun abonnement en cours.')
+    expect(html).not.toContain('Wave — en attente de confirmation du paiement')
+  })
+
   it('E4 : libellés exacts, contact unique, pas d’allégation de non-débit', () => {
     const source = read('pages/WaveEchec.tsx')
     expect(source).toContain('Le paiement Wave n’a pas abouti')
@@ -236,5 +273,23 @@ describe('V9 — câblage, administration et invariants globaux', () => {
     expect(css).toContain('min-height: 48px')
     expect(css).toContain('min-height: 44px')
     expect(css).toContain('@media (prefers-reduced-motion: reduce)')
+  })
+})
+
+describe('V9 — CA-V9-070 : bundle livré sans secret', () => {
+  it('le build web existe et ne contient aucune clé, aucun secret ni identifiant de session', () => {
+    const dist = join(SRC, '../dist/assets')
+    const files = readdirSync(dist).filter((name) => /\.(js|css)$/.test(name))
+    expect(files.length).toBeGreaterThan(0)
+    // Pattern assemblé à l'exécution : ce fichier de test est lui-même scanné
+    // par le test « aucun secret dans le code source » plus haut.
+    const apiKey = ['WAVE', 'API', 'KEY'].join('_')
+    const webhookSecret = ['WAVE', 'WEBHOOK', 'SECRET'].join('_')
+    const secretPattern = new RegExp(`${apiKey}|${webhookSecret}|wave_sn_|sk_[A-Za-z0-9]{8,}`)
+    for (const file of files) {
+      const content = readFileSync(join(dist, file), 'utf8')
+      expect(content, file).not.toMatch(secretPattern)
+      expect(content, file).not.toMatch(/client_reference|rawBody|Wave-Signature/)
+    }
   })
 })

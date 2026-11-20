@@ -684,6 +684,10 @@ describe('CA-V5-002 / CA-V5-012 — Un échec d\'envoi ne casse rien', () => {
     const product = await createProduct(owner, { name: 'Objet sans envoi' });
 
     process.env.MAIL_ENABLED = 'false';
+    // `createProduct` programme l'alerte admin `product_submitted_admin` via
+    // afterCommit : sans ce flush, cet envoi atterrit APRÈS `clearSentMails()`
+    // et fausse l'assertion « aucun envoi tenté » (~1 exécution sur 3 en isolement).
+    await flushAfterCommit();
     clearSentMails();
     const res = await admin.request(`/api/admin/products/${product.id}/approve`, 'POST', { json: {} });
     process.env.MAIL_ENABLED = 'true';
