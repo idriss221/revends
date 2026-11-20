@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { badRequest } from './errors.js';
 
@@ -15,12 +16,13 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 /**
  * POST /api/subscriptions — planId obligatoire ; slug optional.
- * V8 (E1 / CA-V8-050) : `paymentMethod` + `paymentReference` sont **OBLIGATOIRES**
- * — le service les exige via `validatePaymentFields` (codes dédiés
- * INVALID_PAYMENT_METHOD / PAYMENT_REFERENCE_REQUIRED) : toute souscription sans
- * référence Wave/OM/virement est rejetée (400). Les lignes legacy antérieures
- * à la V8 (payment_* = NULL) restent **activables** par l'admin (CA-V8-053),
- * fabrication hors ce schéma.
+ * V8 (E1 / CA-V8-050) : `paymentMethod` est OBLIGATOIRE et `paymentReference`
+ * l'est pour OM/virement — le service les exige via `validatePaymentFields`
+ * (codes dédiés INVALID_PAYMENT_METHOD / PAYMENT_REFERENCE_REQUIRED).
+ * V9.1 (avenant §4.1) : Wave seul peut omettre la référence : le serveur en
+ * génère une pour traçabilité (jamais source d'activation). Les lignes legacy
+ * antérieures à la V8 (payment_* = NULL) restent **activables** par l'admin
+ * (CA-V8-053), fabrication hors ce schéma.
  */
 export const subscribeSchema = z.object({
   planId: z.coerce
@@ -35,7 +37,8 @@ export const subscribeSchema = z.object({
     .positive({ error: 'supersedesId doit être un entier ≥ 1' })
     .nullish(),
   paymentMethod: z.string().trim().max(32).optional(),
-  paymentReference: z.string().trim().max(64).optional(),
+  // V9.1 (avenant §4.1) : `null` compte comme « non saisi » ; normalisé avant validatePaymentFields.
+  paymentReference: z.string().trim().max(64).nullish().transform((v) => v ?? undefined),
 });
 
 /** POST /api/storefront/listings */
@@ -99,7 +102,7 @@ export type ContactInput = z.infer<typeof contactSchema>;
 //                INVALID_IMAGE / FILE_TOO_LARGE / VALIDATION_ERROR
 // ---------------------------------------------------------------------------
 
-/** Valide (et normalise) paymentMethod/paymentReference fournis requis. Lève AppError 400 dédiée sinon. */
+/** Valide (et normalise) paymentMethod/paymentReference ; génère la référence Wave absente (V9.1). Lève AppError 400 dédiée sinon. */
 export function validatePaymentFields(input: { paymentMethod?: string; paymentReference?: string }): {
   paymentMethod: PaymentMethod;
   paymentReference: string;
@@ -116,6 +119,14 @@ export function validatePaymentFields(input: { paymentMethod?: string; paymentRe
 
   const ref = (input.paymentReference ?? '').trim();
   if (ref === '') {
+    if (paymentMethod === 'wave') {
+      // V9.1 — Wave est confirmé par webhook signé ; la référence n'est plus saisie par le vendeur.
+      // Générée pour traçabilité/affichage admin uniquement, jamais utilisée pour activer.
+      return {
+        paymentMethod,
+        paymentReference: `WAVE-AUTO-${randomBytes(4).toString('hex').toUpperCase()}`,
+      };
+    }
     throw badRequest('PAYMENT_REFERENCE_REQUIRED', 'La référence de paiement est requise à la souscription');
   }
   if (ref.length < 4 || ref.length > 64 || !PAYMENT_REFERENCE_REGEX.test(ref)) {

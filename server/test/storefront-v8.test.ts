@@ -577,11 +577,11 @@ describe('V8-D8 / E1 — souscription avec référence de paiement (Wave | Orang
     assert.equal(errorCode(r2.body), 'INVALID_PAYMENT_REFERENCE');
   });
 
-  it('CA-V8-050/053 — la référence est OBLIGATOIRE pour toute nouvelle souscription (400 sinon) ; un PENDING legacy (NULL) reste activable', async () => {
+  it('CA-V8-050/053 + V9.1 — référence OBLIGATOIRE pour OM/virement (400 sinon) ; Wave sans référence couvert par wave-v9.1-reference.test.ts ; un PENDING legacy (NULL) reste activable', async () => {
     const seller = await registerUser(server, 'v8req');
     const noRef = await seller.client.post('/api/subscriptions', {
-      planId: 1, slug: 'Sans Ref', paymentMethod: 'wave',
-      // paymentReference volontairement ABSENTE (CA-V8-050)
+      planId: 1, slug: 'Sans Ref', paymentMethod: 'orange_money',
+      // Référence volontairement ABSENTE : V9.1 ne dispense QUE Wave.
     });
     assert.equal(noRef.status, 400);
     assert.equal(errorCode(noRef.body), 'PAYMENT_REFERENCE_REQUIRED');

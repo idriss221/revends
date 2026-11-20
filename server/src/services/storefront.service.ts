@@ -162,8 +162,9 @@ export interface SubscribeInput {
 
 /** POST /api/subscriptions — crée TOUJOURS un PENDING (jamais d'accès abonné, CA-V7-012). */
 export async function createSubscription(sellerId: number, input: SubscribeInput) {
-  // V8 (E1/CA-V8-050) — reference + méthode OBLIGATOIRES pour toute nouvelle souscription ;
-  // les lignes legacy (payment_* = NULL) restent activables côté admin (CA-V8-053).
+  // V8 (E1/CA-V8-050) — méthode OBLIGATOIRE ; référence OBLIGATOIRE pour OM/virement,
+  // générée par validatePaymentFields pour Wave sans saisie (V9.1). Les lignes legacy
+  // (payment_* = NULL) restent activables côté admin (CA-V8-053).
   const { paymentMethod, paymentReference } = validatePaymentFields(input);
   return withTransaction(async (client) => {
     const planRes = await client.query<PlanRow>(
