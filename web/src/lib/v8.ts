@@ -87,8 +87,13 @@ export function validatePaymentFields(input: PaymentFields): PaymentFieldErrors 
     errors.paymentMethod = 'Choisissez votre mode de paiement : Wave, Orange Money ou virement.'
   }
   const ref = input.paymentReference.trim()
+  // V9.1 : Wave n'exige aucune référence saisie — le serveur génère une
+  // référence interne et le webhook signé active la souscription. Une
+  // référence Wave volontairement fournie reste validée comme avant.
   if (ref.length === 0) {
-    errors.paymentReference = 'Indiquez la référence de votre paiement (obligatoire).'
+    if (input.paymentMethod !== 'wave') {
+      errors.paymentReference = 'Indiquez la référence de votre paiement (obligatoire).'
+    }
   } else if (ref.length < 4) {
     errors.paymentReference = 'La référence doit contenir au moins 4 caractères.'
   } else if (ref.length > 64) {

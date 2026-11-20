@@ -74,10 +74,20 @@ describe('validatePaymentFields — miroir client de E1 (le serveur arbitre)', (
   it('méthode absente/invalide → message FR', () => {
     expect(validatePaymentFields({ paymentMethod: '', paymentReference: 'WAVE-1' }).paymentMethod).toBeTruthy()
     expect(validatePaymentFields({ paymentMethod: 'carte', paymentReference: 'WAVE-1' }).paymentMethod).toBeTruthy()
+    expect(validatePaymentFields({ paymentMethod: '', paymentReference: '' }).paymentReference).toMatch(/obligatoire/)
   })
-  it('référence manquante → obligatoire', () => {
-    expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: '' }).paymentReference).toMatch(/obligatoire/)
-    expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: '   ' }).paymentReference).toMatch(/obligatoire/)
+  it('V9.1 — Wave sans référence (vide/blanche) → aucune erreur', () => {
+    expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: '' })).toEqual({})
+    expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: '   ' })).toEqual({})
+  })
+  it('référence manquante pour Orange Money / virement → obligatoire (message inchangé)', () => {
+    for (const paymentMethod of ['orange_money', 'virement']) {
+      for (const paymentReference of ['', '   ']) {
+        expect(validatePaymentFields({ paymentMethod, paymentReference }).paymentReference).toBe(
+          'Indiquez la référence de votre paiement (obligatoire).',
+        )
+      }
+    }
   })
   it('référence trop courte / trop longue / caractères interdits', () => {
     expect(validatePaymentFields({ paymentMethod: 'wave', paymentReference: 'AB1' }).paymentReference).toBeTruthy()

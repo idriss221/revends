@@ -14,6 +14,7 @@ import { renderToString } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
 import { WaveCheckoutPanel } from './components/storefront/WaveCheckoutPanel'
+import { PaymentReferenceFields } from './components/storefront/PaymentReferenceFields'
 import { SubscriptionStatusPanel } from './components/storefront/SubscriptionStatusPanel'
 import { WaveSucces } from './pages/WaveSucces'
 import { WaveEchec } from './pages/WaveEchec'
@@ -99,6 +100,60 @@ describe('V9 — service et configuration Wave', () => {
     expect(waveAdminStatus(ev('FAILED'))).toBe('failed')
     expect(waveAdminStatus(ev('IGNORED'))).toBe('none')
     expect(waveAdminStatus(ev('COMPLETED', true))).toBe('confirmed')
+  })
+})
+
+describe('V9.1 — CA-V9.1-004 : référence masquée pour Wave, requise pour OM/virement', () => {
+  const fields = (method: string, errors: Record<string, string> = {}) =>
+    renderToString(
+      <PaymentReferenceFields
+        idPrefix="abo"
+        method={method}
+        reference=""
+        onMethodChange={() => {}}
+        onReferenceChange={() => {}}
+        errors={errors}
+      />,
+    )
+
+  it('Wave : ni input ni label de référence, note d’auto-confirmation, 3 options de moyen', () => {
+    const html = fields('wave')
+    expect(html).not.toContain('name="paymentReference"')
+    expect(html).not.toContain('Référence de paiement')
+    expect(html).toContain('Paiement Wave : aucune référence à saisir.')
+    expect(html).toContain('Votre abonnement sera activé automatiquement dès que le paiement sera confirmé.')
+    expect(html).toContain('role="status"')
+    for (const [value, label] of [
+      ['wave', 'Wave'],
+      ['orange_money', 'Orange Money'],
+      ['virement', 'Virement bancaire'],
+    ]) {
+      expect(html).toMatch(new RegExp(`<option value="${value}"(?: selected="")?>`))
+      expect(html).toContain(`>${label}</option>`)
+    }
+  })
+
+  it('Orange Money et virement : input présent, required, libellé et hint inchangés', () => {
+    for (const method of ['orange_money', 'virement']) {
+      const html = fields(method)
+      const inputTag = html.match(/<input\b[^>]*>/)?.[0] ?? ''
+      expect(inputTag).toContain('name="paymentReference"')
+      expect(inputTag).toContain('required=""')
+      expect(html).toContain('aria-required="true"')
+      expect(html).toContain('Référence de paiement')
+      expect(html).toContain('La référence de votre paiement')
+      expect(html).not.toContain('aucune référence à saisir')
+    }
+  })
+
+  it('OM/virement : aria-invalid, aria-describedby et role="alert" conservés sur erreur', () => {
+    const html = fields('virement', {
+      paymentReference: 'Indiquez la référence de votre paiement (obligatoire).',
+    })
+    expect(html).toContain('aria-invalid="true"')
+    expect(html).toContain('aria-describedby="abo-payment-reference-hint abo-payment-reference-err"')
+    expect(html).toContain('role="alert"')
+    expect(html).toContain('Indiquez la référence de votre paiement (obligatoire).')
   })
 })
 
