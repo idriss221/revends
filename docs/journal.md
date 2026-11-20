@@ -5064,3 +5064,63 @@ format `pay.wave.com/m/M_sn_nLXzUBh809Au/c/sn/`) correspondant aux 3 forfaits :
   que Wave le fournit. Aucune clé posée, aucun webhook enregistré, aucun paiement
   test. **VERDICT DoD (sécurité) : réserves levées** — aucune pour le déploiement
   désactivé. Prochaine étape : déploiement de clôture `CA-V9-074/075`.
+
+## 20/11/2026 — Clôture V9 : déploiement prod désactivé + smoke (CA-V9-074/075)
+
+### Séquence exécutée (cahier amendé CA-V9-075)
+1. **Vérifications préalables (lecture seule)** : HEAD `ce941a3`, arbre de travail propre,
+   aucune `.env*` à la racine. Vercel CLI 65.8.0. Variables prod : **0 `WAVE_*`**,
+   **0 `REDIS_URL`** (intentional — décision utilisateur « laissez Redis comme il était »),
+   `RUN_MIGRATIONS="false"` (lu via fichier temp `umask 077` détruit immédiatement,
+   aucune valeur de secret affichée). Coffre local : 0 `WAVE_*`, 0 `REDIS_URL`.
+2. **Backup avant changement** : `pg_dump` local v16 refusé par le serveur v18.7
+   (`server version mismatch`) → cause isolée, correction minimale : image Docker
+   `postgres:18` (`pg_dump 18.7`). URL **directe** (`DATABASE_URL_UNPOOLED`) utilisée
+   car `DATABASE_URL` est le pooler. Backup : `~/.revends-secrets/backups/revends-prod-20261120T101757Z.backup`
+   (168 Ko, **36 tables avec données** vérifiées via `pg_restore --list`). Rollback code :
+   déploiement READY précédent `revends-d54hrbh0o-wwwidrissadiouf007-6996.vercel.app`.
+3. **Migration `023` AVANT le code** : `schema_migrations` avant = **21 lignes**
+   (001…022, dont les 2 variantes `013`), `wave_checkout_events` absente. Commande :
+   `RUN_MIGRATIONS=true DATABASE_URL=<directe> MIGRATIONS_DIR=$(pwd)/migrations npx tsx src/db/migrate.ts`
+   → `{"msg":"migration appliquée","file":"023_wave_checkout.sql"}`, `count:1`, exit 0.
+   **Vérification après** : `023_wave_checkout.sql | 2026-11-20 10:19:49.807482+00`,
+   table présente (**15 colonnes**), contraintes `uq_wave_event_id`, `chk_wave_row_kind`,
+   FK et checks, **6 index**, `chk_activation_pair` inchangée. Rejeu : 0 nouvelle migration.
+4. **Déploiement** : `bash scripts/deploy-vercel.sh` (build local + `vercel build --prod`
+   + `vercel deploy --prebuilt --prod --yes`) → `dpl_GfAr3Ey3sFuQc4vEX3ExudGDsBY2`,
+   `status READY`, `target production`, alias `https://revends.vercel.app`.
+   Aucune migration lancée par le code (`RUN_MIGRATIONS=false` en config).
+
+### Smoke post-déploiement (preuves réelles)
+| Contrôle | Résultat |
+|---|---|
+| `GET /api/health` | **HTTP 200** `{"status":"ok"}` |
+| `GET /` | **HTTP 200**, 6 144 o |
+| `GET /api/wave/config` sans session | **HTTP 401** `UNAUTHENTICATED` (garde intacte) |
+| `POST /api/webhooks/wave` sans signature | **HTTP 200** `{"received":true,"ignored":true,"reason":"WAVE_DISABLED"}` → preuve runtime que `config.wave.enabled=false` |
+| Variables Vercel prod | **0 `WAVE_*`** — aucune clé, aucun secret, aucun flag |
+| Bundle JS réellement servi | 3 liens héberges `pay.wave.com/m/M_sn_nLXzUBh809Au/c/sn/?amount=` pour **2000 / 5000 / 10000** (1 occurrence chacun) ; **0 secret** (`wave_sn_`, `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET`) ; **0 appel** à `api.wave.com` au chargement |
+| `SELECT count(*) FROM wave_checkout_events` (prod) | **0** — aucune session créée, aucun webhook reçu, **aucun paiement test** |
+| Webhook enregistré chez Wave | **Aucun** — impossible par construction : aucun accès portail, aucune clé API, aucun secret. Aucun webhook créé par cette mission. |
+| Bascule Wave | **Non effectuée** — `WAVE_ENABLED` reste absent (défaut `false`) ; Orange Money / virement / parrainage inchangés |
+
+### Verdict DoD — déploiement
+**CA-V9-074 levé** : configuration effective prouvée en production, sans aucune bascule.
+**CA-V9-075 exécuté** : séquence complète backup → migration → code → smoke respectée.
+Reste **hors V9** (décision utilisateur) : obtaintention des clés Wave, enregistrement de
+`https://revends.vercel.app/api/webhooks/wave`, paiement test, puis `WAVE_ENABLED=true`.
+Dernière étape : recette finale `@cahier-des-charges` → `docs/recette-v9-wave-checkout.md`.
+
+### Clôture finale — verdict `definition-done`
+- **Recette finale `@cahier-des-charges`** (20/11/2026) : **CONFORME** — 55/55 critères 🟢,
+  12/12 scénarios 🟢, 0 bloquant. `docs/recette-v9-wave-checkout.md` v3.0 commité en `2370a39`.
+- Le recetteur a rejoué indépendamment : migration `023` en prod (22 lignes dans
+  `schema_migrations`), deploy `READY`/production, `/api/health` 200, `/api/wave/config`
+  401, webhook 200 `WAVE_DISABLED`, 0 `WAVE_*`/`REDIS_URL`, bundle servi (3 liens,
+  0 secret, 0 appel Wave), typechecks + `git diff --check` verts.
+- **Correction de narration** : le journal indiquait « 12 lignes » pour
+  `schema_migrations` avant `023` (résultat d'un `tail -12`) ; le réel est **21 → 22**
+  (22 fichiers `.sql` dans le dépôt). Corrigé ci-dessus, sans incidence sur les critères.
+- **DoD final** : Exigences ✅ · Code ✅ (0 ligne applicative en clôture) · Vérifications ✅
+  · Sécurité ✅ (0 secret, aucune clé posée) · Documentation ✅ · Recette ✅.
+  **VERDICT : TERMINÉ — V9 livré et déployé en mode « prêt mais désactivé ».**
