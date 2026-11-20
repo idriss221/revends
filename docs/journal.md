@@ -5037,3 +5037,30 @@ format `pay.wave.com/m/M_sn_nLXzUBh809Au/c/sn/`) correspondant aux 3 forfaits :
   `git diff --check` OK.
 - **VERDICT DoD (revue) : réserves levées.** Porte 10 ouverte : audit sécurité
   `@securite`, puis déploiement V9 désactivé.
+
+### Porte 10 — audit sécurité V9 et correctif de bascule (20/11/2026)
+- **Audit `@securite` (read-only)** : **APPROUVÉ SOUS RÉSERVE**, 0 bloquant pour le
+  déploiement désactivé, 0 secret exposé, 0 vulnérabilité (`npm audit --omit=dev`
+  server + web). 8 axes vérifiés avec `fichier:ligne` : HMAC `t+rawBody` multi-`v1`
+  + `timingSafeEqual` + fenêtre 300/30 s, idempotence `event_id`, contrôles
+  montant/devise/méthode, fail-closed, secrets, OWASP, non-régression, mode désactivé.
+  2 soupçons écartés comme faux positifs (absence de rate-limit sur le webhook et
+  `eventId`/`sessionId` dans l'API admin = contrats documentés).
+- **V9-SEC-01 (critique, latent)** : `server/src/config.ts:267` rejetait le préfixe
+  officiel `wave_sn_WHS_` des secrets webhook Wave (docs.wave.com/webhook) →
+  `process.exit(1)` de **toute l'API** à la bascule. Reproduit localement avec une
+  valeur fictive : `EXIT=1`, message « ne doit pas commencer par un littéral
+  public/exemple ». **Corrigé** : retrait du préfixe de la regex ; seuls
+  `change-me|change_me|secret|test|example` restent interdits.
+- **V9-SEC-02 (mineur)** : aucune garde d'égalité entre `WAVE_API_KEY` et
+  `WAVE_WEBHOOK_SECRET`. **Corrigé** : refus de démarrage si égaux, message sans
+  valeur (cohérent avec la convention des autres gardes).
+- **Preuves ajoutées** : `server/test/wave-v9-config-guard.test.ts` — **4 tests en
+  processus enfant** avec valeurs fictives (jamais affichées) : préfixe officiel
+  accepté, secret nu accepté, secrets égaux refusés sans fuite, mode désactivé
+  non bloquant. `tsc --noEmit` OK ; `npm test` serveur **2 passes ALL SUITES GREEN** ;
+  build OK ; audit 0 ; `git diff --check` OK.
+- **Conséquence** : la procédure de bascule (hors V9) peut utiliser le secret tel
+  que Wave le fournit. Aucune clé posée, aucun webhook enregistré, aucun paiement
+  test. **VERDICT DoD (sécurité) : réserves levées** — aucune pour le déploiement
+  désactivé. Prochaine étape : déploiement de clôture `CA-V9-074/075`.

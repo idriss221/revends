@@ -258,17 +258,24 @@ if (cronSecretError) {
 // actuel). Dès que le flag passe à `true`, les deux secrets et une SITE_URL
 // HTTPS sont obligatoires. Seuls les messages sont journalisés, jamais les
 // valeurs (cohérent avec CRON_SECRET).
+// Audit sécurité 20/11 (V9-SEC-01) : `wave_sn_WHS_` EST le préfixe officiel des
+// secrets webhook remis par Wave (docs.wave.com/webhook). Le rejeter ferait
+// refuser le démarrage de TOUTE l'API à la bascule. Seuls les littéraux
+// génériques « change-me / test / example » restent interdits.
+// V9-SEC-02 : les deux secrets doivent être distincts (cahier V9-D1 / API v2.9).
 const waveConfigError = !env.WAVE_ENABLED
   ? null
   : !env.WAVE_API_KEY || env.WAVE_API_KEY.trim().length === 0
     ? 'WAVE_API_KEY est requis lorsque WAVE_ENABLED=true'
     : !env.WAVE_WEBHOOK_SECRET || env.WAVE_WEBHOOK_SECRET.length < 32
       ? 'WAVE_WEBHOOK_SECRET doit faire au moins 32 caractères lorsque WAVE_ENABLED=true'
-      : /^(change-me|change_me|secret|test|example|wave_sn_WHS_)/i.test(env.WAVE_WEBHOOK_SECRET)
+      : /^(change-me|change_me|secret|test|example)/i.test(env.WAVE_WEBHOOK_SECRET)
         ? 'WAVE_WEBHOOK_SECRET ne doit pas commencer par un littéral public/exemple'
-        : !env.SITE_URL.startsWith('https://')
-          ? 'SITE_URL doit utiliser https:// lorsque WAVE_ENABLED=true (URLs de retour Wave)'
-          : null;
+        : env.WAVE_WEBHOOK_SECRET === env.WAVE_API_KEY
+          ? 'WAVE_API_KEY et WAVE_WEBHOOK_SECRET doivent être distincts'
+          : !env.SITE_URL.startsWith('https://')
+            ? 'SITE_URL doit utiliser https:// lorsque WAVE_ENABLED=true (URLs de retour Wave)'
+            : null;
 if (waveConfigError) {
   logger.error(waveConfigError);
   process.exit(1);
